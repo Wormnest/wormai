@@ -1,3 +1,42 @@
+// ---------------------------------------
+// WormAI: A test in writing an OpenTTD AI
+// First version based on WrightAI
+// ---------------------------------------
+//
+// License: GNU GPL - version 2 (see license.txt)
+// Author: Wormnest (Jacob Boerema)
+// Copyright: Jacob Boerema - 2013-2013
+//
+// 
+
+// Import SuperLib
+import("util.superlib", "SuperLib", 32);	// TODO: add version number in version.nut and use python to update that number */
+
+Result <- SuperLib.Result;
+Log <- SuperLib.Log;
+Helper <- SuperLib.Helper;
+Data <- SuperLib.DataStore;
+ScoreList <- SuperLib.ScoreList;
+Money <- SuperLib.Money;
+
+Tile <- SuperLib.Tile;
+Direction <- SuperLib.Direction;
+
+Engine <- SuperLib.Engine;
+Vehicle <- SuperLib.Vehicle;
+
+Station <- SuperLib.Station;
+Airport <- SuperLib.Airport;
+Industry <- SuperLib.Industry;
+Town <- SuperLib.Town;
+
+Order <- SuperLib.Order;
+OrderList <- SuperLib.OrderList;
+
+Road <- SuperLib.Road;
+RoadBuilder <- SuperLib.RoadBuilder;
+
+
 class WormAI extends AIController {
 	name = null;
 	towns_used = null;
@@ -369,7 +408,7 @@ function WormAI::Start()
 		if (ticker % 2000 == 0) {
 			this.ManageAirRoutes();
 		}
-		/* Try to get ride of our loan once in a while */
+		/* Try to get rid of our loan once in a while */
 		if (ticker % 5000 == 0) {
 			AICompany.SetLoanAmount(0);
 		}
