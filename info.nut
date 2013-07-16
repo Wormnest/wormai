@@ -6,7 +6,7 @@ class WormAI extends AIInfo {
 	function GetVersion()     { return SELF_VERSION; }
 	function GetDate()        { return "2013-07-15"; }
 	function CreateInstance() { return "WormAI"; }
-	function GetAPIVersion()  { return "1.0"; } 
+	function GetAPIVersion()  { return "1.2"; } 
 
 	function GetSettings() {
 		AddSetting({
