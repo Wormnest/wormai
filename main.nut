@@ -335,7 +335,7 @@ function WormAI::Start()
 	}
 	this.name = AICompany.GetName(AICompany.COMPANY_SELF);
 	/* Say hello to the user */
-	AILog.Info("Welcome to WormAI. I will be building airports all day long.");
+	AILog.Info("Welcome to WormAI. I am currently in development.");
 	AILog.Info("  - Minimum Town Size: " + GetSetting("min_town_size"));
 
 	/* We start with almost no loan, and we take a loan when we want to build something */
@@ -359,8 +359,8 @@ function WormAI::Start()
 			}
 			else if (ret < 0 && ticker == 0) {
 				/* The AI failed to build a first airport and is deemed */
-				AICompany.SetName("Failed " + this.name);
-				AILog.Error("Failed to build first airport route, now giving up building. Repaying loan. Have a nice day!");
+				/* AICompany.SetName("Failed " + this.name); */
+				AILog.Error("Failed to build first airport route. Repaying loan.");
 				AICompany.SetLoanAmount(0);
 				/* return; - Wormnest: we don't wanna end with a crash even if we can't build anything! */
 			}
