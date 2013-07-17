@@ -55,7 +55,7 @@ class WormAI extends AIController {
 		this.route_2 = AIList();
 
 		local list = AICargoList();
-		for (local i = list.Begin(); list.HasNext(); i = list.Next()) {
+		for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
 			if (AICargo.HasCargoClass(i, AICargo.CC_PASSENGERS)) {
 				this.passenger_cargo_id = i;
 				break;
@@ -171,8 +171,8 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 		return -6;
 	}
 	/* Send him on his way */
-	AIOrder.AppendOrder(vehicle, tile_1, AIOrder.AIOF_NONE);
-	AIOrder.AppendOrder(vehicle, tile_2, AIOrder.AIOF_NONE);
+	AIOrder.AppendOrder(vehicle, tile_1, AIOrder.OF_NONE);
+	AIOrder.AppendOrder(vehicle, tile_2, AIOrder.OF_NONE);
 	AIVehicle.StartStopVehicle(vehicle);
 	this.distance_of_route.rawset(vehicle, AIMap.DistanceManhattan(tile_1, tile_2));
 	this.route_1.AddItem(vehicle, tile_1);
@@ -206,7 +206,7 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 	town_list.Valuate(AIBase.RandItem);
 
 	/* Now find 2 suitable towns */
-	for (local town = town_list.Begin(); town_list.HasNext(); town = town_list.Next()) {
+	for (local town = town_list.Begin(); !town_list.IsEnd(); town = town_list.Next()) {
 		/* Don't make this a CPU hog */
 		Sleep(1);
 
@@ -234,7 +234,7 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 			local test = AITestMode();
 			local good_tile = 0;
 
-			for (tile = list.Begin(); list.HasNext(); tile = list.Next()) {
+			for (tile = list.Begin(); !list.IsEnd(); tile = list.Next()) {
 				Sleep(1);
 				if (!AIAirport.BuildAirport(tile, airport_type, AIStation.STATION_NEW)) continue;
 				good_tile = tile;
@@ -265,7 +265,7 @@ function WormAI::ManageAirRoutes()
 	list.KeepAboveValue(365 * 2);
 	list.Valuate(AIVehicle.GetProfitLastYear);
 
-	for (local i = list.Begin(); list.HasNext(); i = list.Next()) {
+	for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
 		local profit = list.GetValue(i);
 		/* Profit last year and this year bad? Let's sell the vehicle */
 		if (profit < 10000 && AIVehicle.GetProfitThisYear(i) < 10000) {
@@ -295,7 +295,7 @@ function WormAI::ManageAirRoutes()
 	list.Valuate(AIStation.GetCargoWaiting, this.passenger_cargo_id);
 	list.KeepAboveValue(250);
 
-	for (local i = list.Begin(); list.HasNext(); i = list.Next()) {
+	for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
 		local list2 = AIVehicleList_Station(i);
 		/* No vehicles going to this station, abort and sell */
 		if (list2.Count() == 0) {
@@ -343,7 +343,7 @@ function WormAI::HandleEvents()
 	while (AIEventController.IsEventWaiting()) {
 		local e = AIEventController.GetNextEvent();
 		switch (e.GetEventType()) {
-			case AIEvent.AI_ET_VEHICLE_CRASHED: {
+			case AIEvent.ET_VEHICLE_CRASHED: {
 				local ec = AIEventVehicleCrashed.Convert(e);
 				local v = ec.GetVehicleID();
 				AILog.Info("We have a crashed vehicle (" + v + "), buying a new one as replacement");
