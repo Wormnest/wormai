@@ -46,6 +46,10 @@ class WormAI extends AIController {
 	vehicle_to_depot = {};
 	delay_build_airport_route = 1000;
 	passenger_cargo_id = -1;
+	/* WormAI: New variables added:
+		- UpperCase: should be considered a constant
+	*/
+	MINIMUM_BALANCE_AIRCRAFT = 25000;	/* Minimum bank balance to allow buying a new aircraft. */
 
 	function Start();
 
@@ -151,6 +155,12 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 	/* When bank balance < 300000, buy cheaper planes */
 	local balance = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
 	
+	/* Balance below a certain minimum? Wait until we buy more planes. */
+	if (balance < MINIMUM_BALANCE_AIRCRAFT) {
+		AILog.Info("We are low on money. We are not gonna buy an aircraft right now.");
+		return -6;
+	}
+	
 	engine_list.Valuate(AIEngine.GetPrice);
 	engine_list.KeepBelowValue(balance < 300000 ? 50000 : (balance < 1000000 ? 300000 : 1000000));
 
@@ -163,13 +173,17 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 	engine = engine_list.Begin();
 
 	if (!AIEngine.IsValidEngine(engine)) {
-		AILog.Error("Couldn't find a suitable aircraft");
+		AILog.Warning("Couldn't find a suitable aircraft. Most likely we don't have enough available funds,");
 		return -5;
+	}
+	/* Price of cheapest engine can be more than our bank balance, check for that. */
+	if (AIEngine.GetPrice(engine) > balance) {
+		AILog.Info("Can't buy aircraft. The cheapest aircraft costs more than our available funds.");
+		return -6;
 	}
 	local vehicle = AIVehicle.BuildVehicle(hangar, engine);
 	if (!AIVehicle.IsValidVehicle(vehicle)) {
-		AILog.Info("Bank Balance: " + balance + ", Engine cost: " + AIEngine.GetPrice(engine))
-		AILog.Error("Couldn't build the aircraft");
+		AILog.Error("Couldn't build the aircraft: " + AIEngine.GetName(engine));
 		return -6;
 	}
 	/* Send him on his way */
