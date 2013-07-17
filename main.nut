@@ -157,7 +157,7 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 	
 	/* Balance below a certain minimum? Wait until we buy more planes. */
 	if (balance < MINIMUM_BALANCE_AIRCRAFT) {
-		AILog.Info("We are low on money. We are not gonna buy an aircraft right now.");
+		AILog.Warning("We are low on money. We are not gonna buy an aircraft right now.");
 		return -6;
 	}
 	
@@ -178,7 +178,7 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 	}
 	/* Price of cheapest engine can be more than our bank balance, check for that. */
 	if (AIEngine.GetPrice(engine) > balance) {
-		AILog.Info("Can't buy aircraft. The cheapest aircraft costs more than our available funds.");
+		AILog.Warning("Can't buy aircraft. The cheapest aircraft costs more than our available funds.");
 		return -6;
 	}
 	local vehicle = AIVehicle.BuildVehicle(hangar, engine);
@@ -440,3 +440,17 @@ function WormAI::Start()
 	}
 }
 
+ function WormAI::Save()
+ {
+   AILog.Info("Saving data to savegame not implemented yet!");
+   local table = {};	
+   //TODO: Add your save data to the table.
+   return table;
+ }
+ 
+ function WormAI::Load(version, data)
+ {
+   //TODO: Add your loading routines.
+   AILog.Info("Loading data from savegame not implemented yet!");
+ }
+ 
