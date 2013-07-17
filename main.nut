@@ -150,6 +150,7 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 
 	/* When bank balance < 300000, buy cheaper planes */
 	local balance = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
+	
 	engine_list.Valuate(AIEngine.GetPrice);
 	engine_list.KeepBelowValue(balance < 300000 ? 50000 : (balance < 1000000 ? 300000 : 1000000));
 
@@ -162,11 +163,12 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 	engine = engine_list.Begin();
 
 	if (!AIEngine.IsValidEngine(engine)) {
-		AILog.Error("Couldn't find a suitable engine");
+		AILog.Error("Couldn't find a suitable aircraft");
 		return -5;
 	}
 	local vehicle = AIVehicle.BuildVehicle(hangar, engine);
 	if (!AIVehicle.IsValidVehicle(vehicle)) {
+		AILog.Info("Bank Balance: " + balance + ", Engine cost: " + AIEngine.GetPrice(engine))
 		AILog.Error("Couldn't build the aircraft");
 		return -6;
 	}
@@ -178,7 +180,7 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 	this.route_1.AddItem(vehicle, tile_1);
 	this.route_2.AddItem(vehicle, tile_2);
 
-	AILog.Info("Done building an aircraft");
+	AILog.Info("Finished building aircraft " + AIVehicle.GetName(vehicle) + ", type: " + AIEngine.GetName(engine));
 
 	return 0;
 }
@@ -245,7 +247,7 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 			if (good_tile == 0) continue;
 		}
 
-		AILog.Info("Found a good spot for an airport in town " + town + " at tile " + tile);
+		AILog.Info("Found a good spot for an airport in " + AITown.GetName(town) + " (id: "+ town + ", tile " + tile + ").");
 
 		/* Make the town as used, so we don't use it again */
 		this.towns_used.AddItem(town, tile);
@@ -312,7 +314,7 @@ function WormAI::ManageAirRoutes()
 		/* Do not build a new vehicle if we bought a new one in the last DISTANCE days */
 		if (list2.Count() != 0) continue;
 
-		AILog.Info("Station " + i + " (" + AIStation.GetLocation(i) + ") has too many cargo, adding a new vehicle for the route.");
+		AILog.Info("Station " + AIStation.GetName(i) + "(id: " + i + ", location: " + AIStation.GetLocation(i) + ") has a lot of waiting passengers (cargo), adding a new vehicle for the route.");
 
 		/* Make sure we have enough money */
 		this.GetMoney(50000);
@@ -375,7 +377,9 @@ function WormAI::Start()
 	this.name = AICompany.GetName(AICompany.COMPANY_SELF);
 	/* Say hello to the user */
 	AILog.Info("Welcome to WormAI. I am currently in development.");
-	AILog.Info("  - Minimum Town Size: " + GetSetting("min_town_size"));
+	AILog.Info("These are our current AI settings:");
+	AILog.Info("- Minimum Town Size: " + GetSetting("min_town_size"));
+	AILog.Info("----------------------------------");
 
 	/* We start with almost no loan, and we take a loan when we want to build something */
 	AICompany.SetLoanAmount(AICompany.GetLoanInterval());
