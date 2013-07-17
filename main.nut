@@ -50,6 +50,8 @@ class WormAI extends AIController {
 		- UpperCase: should be considered a constant
 	*/
 	MINIMUM_BALANCE_AIRCRAFT = 25000;	/* Minimum bank balance to allow buying a new aircraft. */
+	aircraft_disabled_shown = 0;		/* Has the aircraft disabled in game settings message been shown (1) or not (0). */
+	aircraft_max0_shown = 0;			/* Has the max aircraft is 0 in game settings message been shown. */
 
 	function Start();
 
@@ -412,33 +414,49 @@ function WormAI::Start()
 
 	/* Let's go on for ever */
 	while (true) {
-		/* Once in a while, with enough money, try to build something */
-		if ((ticker % this.delay_build_airport_route == 0 || ticker == 0) && this.HasMoney(100000)) {
-			local ret = this.BuildAirportRoute();
-			if (ret == -1 && ticker != 0) {
-				/* No more route found, delay even more before trying to find an other */
-				this.delay_build_airport_route = 10000;
+		/* Need to check if we can build aircraft and how many. Since this can change we do it inside the loop. */
+		if (AIGameSettings.IsDisabledVehicleType(AIVehicle.VT_AIR)) {
+			if (aircraft_disabled_shown == 0) {
+				AILog.Warning("Using aircraft is disabled in your game settings. Since this AI currently only uses aircraft it will not build anything until you change this setting.")
+				aircraft_disabled_shown = 1;
 			}
-			else if (ret < 0 && ticker == 0) {
-				/* The AI failed to build a first airport and is deemed */
-				/* AICompany.SetName("Failed " + this.name); */
-				AILog.Error("Failed to build first airport route. Repaying loan.");
+		}
+		else if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) == 0) {
+			if (aircraft_max0_shown == 0) {
+				AILog.Warning("Amount of allowed aircraft for AI is set to 0 in your game settings. This means we can't build any aircraft which is currently our only option.")
+				aircraft_max0_shown = 1;
+			}
+		}
+		else {
+			/* Once in a while, with enough money, try to build something */
+			if ((ticker % this.delay_build_airport_route == 0 || ticker == 0) && this.HasMoney(100000)) {
+				local ret = this.BuildAirportRoute();
+				if (ret == -1 && ticker != 0) {
+					/* No more route found, delay even more before trying to find an other */
+					this.delay_build_airport_route = 10000;
+				}
+				else if (ret < 0 && ticker == 0) {
+					/* The AI failed to build a first airport and is deemed */
+					/* AICompany.SetName("Failed " + this.name); */
+					AILog.Error("Failed to build first airport route. Repaying loan.");
+					AICompany.SetLoanAmount(0);
+					/* return; - Wormnest: we don't wanna end with a crash even if we can't build anything! */
+				}
+			}
+			/* Manage the routes once in a while */
+			if (ticker % 2000 == 0) {
+				this.ManageAirRoutes();
+			}
+			/* Try to get rid of our loan once in a while */
+			if (ticker % 5000 == 0) {
 				AICompany.SetLoanAmount(0);
-				/* return; - Wormnest: we don't wanna end with a crash even if we can't build anything! */
+			}
+			/* Check for events once in a while */
+			if (ticker % 100 == 0) {
+				this.HandleEvents();
 			}
 		}
-		/* Manage the routes once in a while */
-		if (ticker % 2000 == 0) {
-			this.ManageAirRoutes();
-		}
-		/* Try to get rid of our loan once in a while */
-		if (ticker % 5000 == 0) {
-			AICompany.SetLoanAmount(0);
-		}
-		/* Check for events once in a while */
-		if (ticker % 100 == 0) {
-			this.HandleEvents();
-		}
+
 		/* Make sure we do not create infinite loops */
 		Sleep(sleepingtime);
 		ticker += sleepingtime;
