@@ -104,7 +104,8 @@ function WormAI::BuildAirportRoute()
 	/* Get enough money to work with */
 	this.GetMoney(150000);
 
-	AILog.Info("Trying to build an airport route");
+	/* Show some info about what we are doing */
+	AILog.Info(Helper.GetCurrentDateString() + " Trying to build an airport route");
 
 	local tile_1 = this.FindSuitableAirportSpot(airport_type, 0);
 	if (tile_1 < 0) return -1;
@@ -283,6 +284,10 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 function WormAI::ManageAirRoutes()
 {
 	local list = AIVehicleList();
+	
+	/* Show some info about what we are doing */
+	AILog.Info(Helper.GetCurrentDateString() + " Managing air routes.");
+	
 	list.Valuate(AIVehicle.GetAge);
 	/* Give the plane at least 2 years to make a difference */
 	list.KeepAboveValue(365 * 2);
