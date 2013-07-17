@@ -333,7 +333,7 @@ function WormAI::ManageAirRoutes()
 		/* Do not build a new vehicle if we bought a new one in the last DISTANCE days */
 		if (list2.Count() != 0) continue;
 
-		AILog.Info("Station " + AIStation.GetName(i) + "(id: " + i + ", location: " + AIStation.GetLocation(i) + ") has a lot of waiting passengers (cargo), adding a new vehicle for the route.");
+		AILog.Info("Station " + AIStation.GetName(i) + "(id: " + i + ", location: " + AIStation.GetLocation(i) + ") has a lot of waiting passengers (cargo), adding a new aircraft for the route.");
 
 		/* Make sure we have enough money */
 		this.GetMoney(50000);
@@ -367,7 +367,7 @@ function WormAI::HandleEvents()
 			case AIEvent.ET_VEHICLE_CRASHED: {
 				local ec = AIEventVehicleCrashed.Convert(e);
 				local v = ec.GetVehicleID();
-				AILog.Info("We have a crashed vehicle (" + v + "), buying a new one as replacement");
+				AILog.Info("We have a crashed aircraft (" + v + "), buying a new one as replacement");
 				this.BuildAircraft(this.route_1.GetValue(v), this.route_2.GetValue(v));
 				this.route_1.RemoveItem(v);
 				this.route_2.RemoveItem(v);
