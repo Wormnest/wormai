@@ -133,10 +133,13 @@ function WormAI::BuildAirportRoute()
 		AIAirport.RemoveAirport(tile_2);
 		this.towns_used.RemoveValue(tile_1);
 		this.towns_used.RemoveValue(tile_2);
-		return ret;
+	}
+	else {
+		AILog.Info("Done building a route");
 	}
 
-	AILog.Info("Done building a route");
+	AILog.Info("");
+	
 	return ret;
 }
 
@@ -149,6 +152,7 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 	/* Build an aircraft */
 	local hangar = AIAirport.GetHangarOfAirport(tile_1);
 	local engine = null;
+	local eng_price = 0;
 
 	local engine_list = AIEngineList(AIVehicle.VT_AIR);
 
@@ -157,7 +161,7 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 	
 	/* Balance below a certain minimum? Wait until we buy more planes. */
 	if (balance < MINIMUM_BALANCE_AIRCRAFT) {
-		AILog.Warning("We are low on money. We are not gonna buy an aircraft right now.");
+		AILog.Warning("We are low on money (" + balance + "). We are not gonna buy an aircraft right now.");
 		return -6;
 	}
 	
@@ -177,8 +181,9 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 		return -5;
 	}
 	/* Price of cheapest engine can be more than our bank balance, check for that. */
-	if (AIEngine.GetPrice(engine) > balance) {
-		AILog.Warning("Can't buy aircraft. The cheapest aircraft costs more than our available funds.");
+	eng_price = AIEngine.GetPrice(engine);
+	if (eng_price > balance) {
+		AILog.Warning("Can't buy aircraft. The cheapest selected aircraft (" + eng_price + ") costs more than our available funds (" + balance + ").");
 		return -6;
 	}
 	local vehicle = AIVehicle.BuildVehicle(hangar, engine);
@@ -442,7 +447,8 @@ function WormAI::Start()
 
  function WormAI::Save()
  {
-   AILog.Info("Saving data to savegame not implemented yet!");
+   AILog.Warning("Saving data to savegame not implemented yet!");
+   AILog.Info("");
    local table = {};	
    //TODO: Add your save data to the table.
    return table;
