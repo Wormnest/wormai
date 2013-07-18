@@ -37,7 +37,15 @@ Road <- SuperLib.Road;
 RoadBuilder <- SuperLib.RoadBuilder;
 
 /* Wormnest: define some constants for easier maintenance. */
-const MINIMUM_BALANCE_AIRCRAFT = 25000;	/* Minimum bank balance to allow buying a new aircraft. */
+const MINIMUM_BALANCE_BUILD_AIRPORT = 100000;	/* Minimum bank balance to start building airports. */
+const MINIMUM_BALANCE_AIRCRAFT = 25000;			/* Minimum bank balance to allow buying a new aircraft. */
+const AIRCRAFT_LOW_PRICE_CUT = 500000;			/* Bank balance below which we will try to buy a low price aircraft. */
+const AIRCRAFT_MEDIUM_PRICE_CUT = 2000000;		/* Bank balance below which we will try to buy a medium price aircraft. */
+const AIRCRAFT_LOW_PRICE = 50000;				/* Maximum price of a low price aircraft. */
+const AIRCRAFT_MEDIUM_PRICE = 250000;			/* Maximum price of a medium price aircraft. */
+const AIRCRAFT_HIGH_PRICE = 1500000;			/* Maximum price of a high price aircraft. */
+const DEFAULT_DELAY_BUILD_AIRPORT = 750; 		/* Default delay before building a new airport route. */
+const BAD_YEARLY_PROFIT = 10000;				/* Yearly profit limit below which profit is deemed bad. */
 
 
 class WormAI extends AIController {
@@ -47,7 +55,7 @@ class WormAI extends AIController {
 	route_2 = null;
 	distance_of_route = {};
 	vehicle_to_depot = {};
-	delay_build_airport_route = 1000;
+	delay_build_airport_route = DEFAULT_DELAY_BUILD_AIRPORT;
 	passenger_cargo_id = -1;
 	/* WormAI: New variables added:
 	*/
@@ -160,7 +168,7 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 
 	local engine_list = AIEngineList(AIVehicle.VT_AIR);
 
-	/* When bank balance < 300000, buy cheaper planes */
+	/* When bank balance < AIRCRAFT_LOW_PRICE_CUT, buy cheaper planes */
 	local balance = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
 	
 	/* Balance below a certain minimum? Wait until we buy more planes. */
@@ -170,7 +178,7 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 	}
 	
 	engine_list.Valuate(AIEngine.GetPrice);
-	engine_list.KeepBelowValue(balance < 300000 ? 50000 : (balance < 1000000 ? 300000 : 1000000));
+	engine_list.KeepBelowValue(balance < AIRCRAFT_LOW_PRICE_CUT ? AIRCRAFT_LOW_PRICE : (balance < AIRCRAFT_MEDIUM_PRICE_CUT ? AIRCRAFT_MEDIUM_PRICE : AIRCRAFT_HIGH_PRICE));
 
 	engine_list.Valuate(AIEngine.GetCargoType);
 	engine_list.KeepValue(this.passenger_cargo_id);
@@ -290,14 +298,14 @@ function WormAI::ManageAirRoutes()
 	AILog.Info(Helper.GetCurrentDateString() + " Managing air routes.");
 	
 	list.Valuate(AIVehicle.GetAge);
-	/* Give the plane at least 2 years to make a difference */
-	list.KeepAboveValue(365 * 2);
+	/* Give the plane at least 2 full years to make a difference, thus check for 3 years old. */
+	list.KeepAboveValue(365 * 3);
 	list.Valuate(AIVehicle.GetProfitLastYear);
 
 	for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
 		local profit = list.GetValue(i);
 		/* Profit last year and this year bad? Let's sell the vehicle */
-		if (profit < 10000 && AIVehicle.GetProfitThisYear(i) < 10000) {
+		if (profit < BAD_YEARLY_PROFIT && AIVehicle.GetProfitThisYear(i) < BAD_YEARLY_PROFIT) {
 			/* Send the vehicle to depot if we didn't do so yet */
 			if (!vehicle_to_depot.rawin(i) || vehicle_to_depot.rawget(i) != true) {
 				AILog.Info("Sending " + i + " to depot as profit is: " + profit + " / " + AIVehicle.GetProfitThisYear(i));
@@ -318,7 +326,7 @@ function WormAI::ManageAirRoutes()
 	}
 
 	/* Don't try to add planes when we are short on cash */
-	if (!this.HasMoney(50000)) return;
+	if (!this.HasMoney(AIRCRAFT_LOW_PRICE)) return;
 
 	list = AIStationList(AIStation.STATION_AIRPORT);
 	list.Valuate(AIStation.GetCargoWaiting, this.passenger_cargo_id);
@@ -344,7 +352,7 @@ function WormAI::ManageAirRoutes()
 		AILog.Info("Station " + AIStation.GetName(i) + "(id: " + i + ", location: " + AIStation.GetLocation(i) + ") has a lot of waiting passengers (cargo), adding a new aircraft for the route.");
 
 		/* Make sure we have enough money */
-		this.GetMoney(50000);
+		this.GetMoney(AIRCRAFT_LOW_PRICE);
 
 		return this.BuildAircraft(this.route_1.GetValue(v), this.route_2.GetValue(v));
 	}
@@ -435,11 +443,11 @@ function WormAI::Start()
 		}
 		else {
 			/* Once in a while, with enough money, try to build something */
-			if ((ticker % this.delay_build_airport_route == 0 || ticker == 0) && this.HasMoney(100000)) {
+			if ((ticker % this.delay_build_airport_route == 0 || ticker == 0) && this.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
 				local ret = this.BuildAirportRoute();
 				if (ret == -1 && ticker != 0) {
 					/* No more route found, delay even more before trying to find an other */
-					this.delay_build_airport_route = 10000;
+					this.delay_build_airport_route = 10 * DEFAULT_DELAY_BUILD_AIRPORT;
 				}
 				else if (ret < 0 && ticker == 0) {
 					/* The AI failed to build a first airport and is deemed */
