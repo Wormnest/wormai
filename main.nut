@@ -211,7 +211,9 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 	this.route_1.AddItem(vehicle, tile_1);
 	this.route_2.AddItem(vehicle, tile_2);
 
-	AILog.Info("Finished building aircraft " + AIVehicle.GetName(vehicle) + ", type: " + AIEngine.GetName(engine));
+	AILog.Info("Finished building aircraft " + AIVehicle.GetName(vehicle) + ", type: " + AIEngine.GetName(engine) +
+		", price: " + eng_price );
+	AILog.Info("Yearly running costs: " + AIEngine.GetRunningCost(engine) + ",  capacity: " + AIEngine.GetCapacity(engine) + ", Maximum speed: " + AIEngine.GetMaxSpeed(engine));
 
 	return 0;
 }
