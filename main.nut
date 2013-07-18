@@ -84,6 +84,114 @@ class WormAI extends AIController {
 	}
 };
 
+//////////////////////////////////////////////////////////////////////////
+//	Debugging functions
+
+function WormAI::DebugListTownsUsed()
+{
+	AILog.Info("---------- DEBUG towns_used ----------");
+	if (!this.towns_used) {
+		AILog.Warning("WARNING: towns_used is null!");
+	}
+	else {
+		AILog.Info("Number of towns used: " + this.towns_used.Count())
+		//foreach(t in towns_used) {
+		for (local t = towns_used.Begin(); !towns_used.IsEnd(); t = towns_used.Next()) {
+			AILog.Info("Town: " + AITown.GetName(t) + " (id: " + t + ", tile " + towns_used.GetValue(t) + ").")
+		}
+	}
+	AILog.Info("");
+}
+
+function WormAI::DebugListRoute1()
+{
+	//this.route_1.AddItem(vehicle, tile_1);
+	//this.route_2.AddItem(vehicle, tile_2);
+	AILog.Info("---------- DEBUG route_1 ----------");
+	if (!this.route_1) {
+		AILog.Warning("WARNING: route_1 is null!");
+	}
+	else {
+		AILog.Info("Number or routes used: " + this.route_1.Count());
+		for (local r = route_1.Begin(); !route_1.IsEnd(); r = route_1.Next()) {
+			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + route_1.GetValue(r) + ").");
+		}
+	}
+	AILog.Info("");
+}
+
+function WormAI::DebugListRouteInfo()
+{
+	//this.route_1.AddItem(vehicle, tile_1);
+	//this.route_2.AddItem(vehicle, tile_2);
+	local temp_route = AIList();
+	temp_route.AddList(this.route_1); // so that we don't sort the original list
+	AILog.Info("---------- DEBUG route info ----------");
+	if (!temp_route) {
+		AILog.Warning("WARNING: route list is null!");
+	}
+	else {
+		temp_route.Sort(AIList.SORT_BY_ITEM, true);
+		AILog.Info("Number of aircraft used: " + temp_route.Count());
+		for (local r = temp_route.Begin(); !temp_route.IsEnd(); r = temp_route.Next()) {
+			local tile1 = 0;
+			local tile2 = 0;
+			local t1 = 0;
+			local t2 = 0;
+			local route_start = AIList();
+			local route_end = AIList();
+			route_start.AddList(this.towns_used);
+			route_end.AddList(this.towns_used);
+			tile1 = temp_route.GetValue(r);
+			tile2 = route_2.GetValue(r);
+			route_start.KeepValue(tile1);
+			t1 = route_start.Begin();
+			route_end.KeepValue(tile2);
+			t2 = route_end.Begin();
+			local dist = this.distance_of_route.rawget(r);
+			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + "), from: " + 
+				AITown.GetName(t1) + ", to: " + AITown.GetName(t2) + ", distance: " + dist);
+		}
+	}
+	AILog.Info("");
+}
+
+function WormAI::DebugListRoute2()
+{
+	//this.route_1.AddItem(vehicle, tile_1);
+	//this.route_2.AddItem(vehicle, tile_2);
+	AILog.Info("---------- DEBUG route_2 ----------");
+	if (!this.route_1) {
+		AILog.Warning("WARNING: route_2 is null!");
+	}
+	else {
+		AILog.Info("Number routes used: " + this.route_2.Count());
+		for (local r = route_2.Begin(); !route_2.IsEnd(); r = route_2.Next()) {
+			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + route_2.GetValue(r) + ").");
+		}
+	}
+	AILog.Info("");
+}
+
+function WormAI::DebugListDistanceOfRoute()
+{
+	//this.distance_of_route.rawset(vehicle, AIMap.DistanceManhattan(tile_1, tile_2));
+	AILog.Info("---------- DEBUG distance_of_route ----------");
+	if (!this.route_1) {
+		AILog.Warning("WARNING: route_2 is null!");
+	}
+	else {
+		AILog.Info("Number routes used: " + this.route_2.Count());
+		for (local r = route_2.Begin(); !route_2.IsEnd(); r = route_2.Next()) {
+			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + route_2.GetValue(r) + ").");
+		}
+	}
+	AILog.Info("");
+}
+
+//	End debugging functions
+//////////////////////////////////////////////////////////////////////////
+
 /**
  * Check if we have enough money (via loan and on bank).
  */
@@ -486,17 +594,33 @@ function WormAI::Start()
 
  function WormAI::Save()
  {
-   AILog.Warning("Saving data to savegame not implemented yet!");
-   AILog.Info("");
-   local table = {};	
-   //TODO: Add your save data to the table.
-   return table;
+   /* Debugging info */
+	local MyOps1 = this.GetOpsTillSuspend();
+	local MyOps2 = 0;
+    AILog.Warning("Saving data to savegame not implemented yet!");
+    AILog.Info("Ops till suspend: " + this.GetOpsTillSuspend());
+    AILog.Info("");
+   
+    /* Save the data */
+    local table = {};	
+    //TODO: Add your save data to the table.
+
+    /* Debugging info */
+    DebugListTownsUsed();
+    DebugListRouteInfo();
+   
+    AILog.Info("Tick: " + this.GetTick() );
+    MyOps2 = this.GetOpsTillSuspend();
+    AILog.Info("Ops till suspend: " + MyOps2 + ", ops used in save: " + (MyOps1-MyOps2) );
+    AILog.Info("");
+   
+    return table;
  }
  
  function WormAI::Load(version, data)
  {
-   //TODO: Add your loading routines.
-   AILog.Info("Loading data from savegame not implemented yet!");
-   loaded_from_save = true;
+	//TODO: Add your loading routines.
+	AILog.Info("Loading data from savegame not implemented yet!");
+	loaded_from_save = true;
  }
  
