@@ -582,7 +582,7 @@ function WormAI::Start()
 					/* No more route found, delay even more before trying to find an other */
 					this.delay_build_airport_route = 10 * DEFAULT_DELAY_BUILD_AIRPORT;
 				}
-				else if (ret < 0 && ticker == 0) {
+				else if (ret < 0 && ticker == 0 && !loaded_from_save) {
 					/* The AI failed to build a first airport and is deemed */
 					/* AICompany.SetName("Failed " + this.name); */
 					AILog.Error("Failed to build first airport route. Repaying loan.");
