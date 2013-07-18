@@ -36,6 +36,9 @@ OrderList <- SuperLib.OrderList;
 Road <- SuperLib.Road;
 RoadBuilder <- SuperLib.RoadBuilder;
 
+/* Wormnest: define some constants for easier maintenance. */
+const MINIMUM_BALANCE_AIRCRAFT = 25000;	/* Minimum bank balance to allow buying a new aircraft. */
+
 
 class WormAI extends AIController {
 	name = null;
@@ -47,9 +50,7 @@ class WormAI extends AIController {
 	delay_build_airport_route = 1000;
 	passenger_cargo_id = -1;
 	/* WormAI: New variables added:
-		- UpperCase: should be considered a constant
 	*/
-	MINIMUM_BALANCE_AIRCRAFT = 25000;	/* Minimum bank balance to allow buying a new aircraft. */
 	aircraft_disabled_shown = 0;		/* Has the aircraft disabled in game settings message been shown (1) or not (0). */
 	aircraft_max0_shown = 0;			/* Has the max aircraft is 0 in game settings message been shown. */
 
