@@ -57,14 +57,19 @@ class WormAI extends AIController {
 	vehicle_to_depot = {};
 	delay_build_airport_route = DEFAULT_DELAY_BUILD_AIRPORT;
 	passenger_cargo_id = -1;
-	/* WormAI: New variables added:
-	*/
+
+	/* WormAI: New variables added. */
+	/* Variables that need to be saved into a savegame. */
+	
+	/* DO NOT SAVE variables below this line. These will not be saved. */ 
+	loaded_from_save = false;
 	aircraft_disabled_shown = 0;		/* Has the aircraft disabled in game settings message been shown (1) or not (0). */
 	aircraft_max0_shown = 0;			/* Has the max aircraft is 0 in game settings message been shown. */
 
 	function Start();
 
 	constructor() {
+		loaded_from_save = false;
 		this.towns_used = AIList();
 		this.route_1 = AIList();
 		this.route_2 = AIList();
@@ -492,5 +497,6 @@ function WormAI::Start()
  {
    //TODO: Add your loading routines.
    AILog.Info("Loading data from savegame not implemented yet!");
+   loaded_from_save = true;
  }
  
