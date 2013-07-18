@@ -36,6 +36,10 @@ OrderList <- SuperLib.OrderList;
 Road <- SuperLib.Road;
 RoadBuilder <- SuperLib.RoadBuilder;
 
+// Import List library
+import("AILib.List", "ExtendedList", 3);	// TODO: add version number in version.nut and use python to update that number */
+
+
 /* Wormnest: define some constants for easier maintenance. */
 const MINIMUM_BALANCE_BUILD_AIRPORT = 100000;	/* Minimum bank balance to start building airports. */
 const MINIMUM_BALANCE_AIRCRAFT = 25000;			/* Minimum bank balance to allow buying a new aircraft. */
@@ -531,6 +535,14 @@ function WormAI::Start()
 	AILog.Info("- Minimum Town Size: " + GetSetting("min_town_size"));
 	AILog.Info("----------------------------------");
 
+	if (loaded_from_save) {
+		// We need to redo distance_of_route table
+		foreach( veh, tile_1 in route_1) {
+			local tile_2 = route_2.GetValue(veh);
+			this.distance_of_route.rawset(veh, AIMap.DistanceManhattan(tile_1, tile_2));
+		}
+	}
+	
 	/* We start with almost no loan, and we take a loan when we want to build something */
 	AICompany.SetLoanAmount(AICompany.GetLoanInterval());
 
@@ -597,21 +609,38 @@ function WormAI::Start()
    /* Debugging info */
 	local MyOps1 = this.GetOpsTillSuspend();
 	local MyOps2 = 0;
+/* only use for debugging:
     AILog.Warning("Saving data to savegame not implemented yet!");
     AILog.Info("Ops till suspend: " + this.GetOpsTillSuspend());
     AILog.Info("");
-   
+*/
     /* Save the data */
-    local table = {};	
+    local table = {
+		townsused = null,
+		route1 = null,
+		route2 = null,
+	};
+	local t = ExtendedList();
+	local r1 = ExtendedList();
+	local r2 = ExtendedList();
+	t.AddList(this.towns_used);
+	table.townsused = t.toarray();
+	r1.AddList(this.route_1);
+	table.route1 = r1.toarray();
+	r2.AddList(this.route_2);
+	table.route2 = r2.toarray();
+	
     //TODO: Add your save data to the table.
 
     /* Debugging info */
     DebugListTownsUsed();
     DebugListRouteInfo();
    
+/* only use for debugging:
     AILog.Info("Tick: " + this.GetTick() );
+*/
     MyOps2 = this.GetOpsTillSuspend();
-    AILog.Info("Ops till suspend: " + MyOps2 + ", ops used in save: " + (MyOps1-MyOps2) );
+    AILog.Info("Saving: ops till suspend: " + MyOps2 + ", ops used in save: " + (MyOps1-MyOps2) );
     AILog.Info("");
    
     return table;
@@ -619,8 +648,32 @@ function WormAI::Start()
  
  function WormAI::Load(version, data)
  {
-	//TODO: Add your loading routines.
-	AILog.Info("Loading data from savegame not implemented yet!");
+   /* Debugging info */
+	local MyOps1 = this.GetOpsTillSuspend();
+	local MyOps2 = 0;
+	AILog.Info("Loading savegame saved by WormAI version " + version);
+	// TODO: load data in temp values then later unpack it because
+	// load has limited time available
+	if ("townsused" in data) {
+		local t = ExtendedList();
+		t.AddFromArray(data.townsused)
+		towns_used.AddList(t);
+	}
+	if ("route1" in data) {
+		local r = ExtendedList();
+		r.AddFromArray(data.route1)
+		route_1.AddList(r);
+	}
+	if ("route2" in data) {
+		local r = ExtendedList();
+		r.AddFromArray(data.route1)
+		route_2.AddList(r);
+	}
 	loaded_from_save = true;
+
+    /* Debugging info */
+    MyOps2 = this.GetOpsTillSuspend();
+    AILog.Info("Loading: ops till suspend: " + MyOps2 + ", ops used in load: " + (MyOps1-MyOps2) );
+    AILog.Info("");
  }
  
