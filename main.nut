@@ -298,7 +298,8 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 {
 	// Don't try to build aircraft if we already have the max (or more because amount can be changed in game)
 	if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) <= this.route_1.Count()) {
-		AILog.Info("We already have the maximum number of aircraft. No sense in building an airport.");
+		AILog.Warning("We already have the maximum number of aircraft. No sense in building an airport.");
+		AILog.Info("");
 		return ERROR_MAX_AIRCRAFT;
 	}
 
@@ -315,6 +316,7 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 	/* Balance below a certain minimum? Wait until we buy more planes. */
 	if (balance < MINIMUM_BALANCE_AIRCRAFT) {
 		AILog.Warning("We are low on money (" + balance + "). We are not gonna buy an aircraft right now.");
+		AILog.Info("");
 		return ERROR_NOT_ENOUGH_MONEY;
 	}
 	
@@ -455,7 +457,7 @@ function WormAI::ManageAirRoutes()
 		if (profit < BAD_YEARLY_PROFIT && AIVehicle.GetProfitThisYear(i) < BAD_YEARLY_PROFIT) {
 			/* Send the vehicle to depot if we didn't do so yet */
 			if (!vehicle_to_depot.rawin(i) || vehicle_to_depot.rawget(i) != true) {
-				AILog.Info("Sending " + i + " to depot as profit is: " + profit + " / " + AIVehicle.GetProfitThisYear(i));
+				AILog.Info("--> Sending " + i + " to depot as profit is: " + profit + " / " + AIVehicle.GetProfitThisYear(i));
 				AIVehicle.SendVehicleToDepot(i);
 				vehicle_to_depot.rawset(i, true);
 			}
@@ -463,7 +465,7 @@ function WormAI::ManageAirRoutes()
 		/* Try to sell it over and over till it really is in the depot */
 		if (vehicle_to_depot.rawin(i) && vehicle_to_depot.rawget(i) == true) {
 			if (AIVehicle.SellVehicle(i)) {
-				AILog.Info("Selling " + i + " as it finally is in a depot.");
+				AILog.Info("--> Selling " + i + " as it finally is in a depot.");
 				/* Check if we are the last one serving those airports; else sell the airports */
 				local list2 = AIVehicleList_Station(AIStation.GetStationID(this.route_1.GetValue(i)));
 				if (list2.Count() == 0) {
