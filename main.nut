@@ -328,9 +328,11 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 	this.route_1.AddItem(vehicle, tile_1);
 	this.route_2.AddItem(vehicle, tile_2);
 
-	AILog.Info("Finished building aircraft " + AIVehicle.GetName(vehicle) + ", type: " + AIEngine.GetName(engine) +
-		", price: " + eng_price );
-	AILog.Info("Yearly running costs: " + AIEngine.GetRunningCost(engine) + ",  capacity: " + AIEngine.GetCapacity(engine) + ", Maximum speed: " + AIEngine.GetMaxSpeed(engine));
+	AILog.Info("Finished building aircraft " + AIVehicle.GetName(vehicle) + ", type: " + 
+		AIEngine.GetName(engine) + ", price: " + eng_price );
+	AILog.Info("Yearly running costs: " + AIEngine.GetRunningCost(engine) + ",  capacity: " + 
+		AIEngine.GetCapacity(engine) + ", Maximum speed: " + AIEngine.GetMaxSpeed(engine) +
+		"Maximum distance: " + AIEngine.GetMaximumOrderDistance);
 
 	return 0;
 }
@@ -514,6 +516,55 @@ function WormAI::HandleEvents()
 	}
 }
 
+function WormAI::EvaluateAircraft() {
+	/* Show some info about what we are doing */
+	AILog.Info(Helper.GetCurrentDateString() + " Evaluating aircraft.");
+	
+	local engine_list = AIEngineList(AIVehicle.VT_AIR);
+	//engine_list.Valuate(AIEngine.GetPrice);
+	//engine_list.KeepBelowValue(balance < AIRCRAFT_LOW_PRICE_CUT ? AIRCRAFT_LOW_PRICE : (balance < AIRCRAFT_MEDIUM_PRICE_CUT ? AIRCRAFT_MEDIUM_PRICE : AIRCRAFT_HIGH_PRICE));
+
+	engine_list.Valuate(AIEngine.GetCargoType);
+	engine_list.KeepValue(this.passenger_cargo_id);
+
+	engine_list.Valuate(AIEngine.GetCapacity);
+	//engine_list.KeepTop(1);
+
+	//engine = engine_list.Begin();
+	
+	foreach(engine, value in engine_list) {
+		// From: http://thegrebs.com/irc/openttd/2012/04/20
+		// <frosch123>	both AIOrder::GetOrderDistance and AIEngine::GetMaximumOrderDistance() return 
+		// squared euclidian distance
+		// <frosch123>	so, you can compare them without any conversion
+		// <+michi_cc>	krinn: Always use AIOrder::GetOrderDistance to query the distance.You can pass 
+		// tiles that either are part of a station or are not, it will automatically calculate the right thing.
+		// <+michi_cc>	AIEngine::GetMaximumOrderDistance and AIOrder::GetOrderDistance complement each other, 
+		// and you can always use > or < on the returned values without knowing if it is square, manhatten or 
+		// whatever that is applicable for the vehicle type.
+		// <krinn>	vehlist.Valuate(AIEngine.GetMaximumOrderDistance); + vehlist.KeepValue(distance*distance)
+		local _ayear = 24*365;	// 24 hours * 365 days
+		local _eval_distance = 100000;	// assumed distance for passengers to travel
+		//_trips_per_year = 6;
+		if (AIEngine.IsValidEngine(engine)) {
+			local speed = AIEngine.GetMaxSpeed(engine);
+			local cap = AIEngine.GetCapacity(engine);
+			local ycost = AIEngine.GetRunningCost(engine);
+			//local costfactor = ycost / (speed * cap);
+			local distance_per_year = speed * _ayear;
+			local pass_per_year = cap * distance_per_year / _eval_distance;
+			// No real values thus to get a sensible int value multiply with 100
+			local cost_per_pass = (ycost * 100) / pass_per_year;
+			AILog.Info("Engine: " + AIEngine.GetName(engine) + ", price: " + AIEngine.GetPrice(engine) +
+				", yearly running costs: " + AIEngine.GetRunningCost(engine));
+			AILog.Info( "    Capacity: " + AIEngine.GetCapacity(engine) + ", Maximum speed: " + 
+				AIEngine.GetMaxSpeed(engine) + ", Maximum distance: " + AIEngine.GetMaximumOrderDistance(engine));
+			AILog.Warning("    Aircraft usefulness factors d: " + distance_per_year + ", p: " + pass_per_year +
+				", pass cost factor: " + cost_per_pass);
+		}
+	}
+}
+
 function WormAI::Start()
 {
 	if (this.passenger_cargo_id == -1) {
@@ -575,6 +626,10 @@ function WormAI::Start()
 			}
 		}
 		else {
+			/* Evaluate the available aircraft once in a while. */
+			if ((ticker % 20000 == 0 || ticker == 0)) {
+				this.EvaluateAircraft();
+			}
 			/* Once in a while, with enough money, try to build something */
 			if ((ticker % this.delay_build_airport_route == 0 || ticker == 0) && this.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
 				local ret = this.BuildAirportRoute();
