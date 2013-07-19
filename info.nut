@@ -1,10 +1,12 @@
+require("version.nut");
+
 class WormAI extends AIInfo {
 	function GetAuthor()      { return "Wormnest"; }
 	function GetName()        { return "WormAI"; }
 	function GetShortName()   { return "WOAI"; }
 	function GetDescription() { return "Wormnest AI testing AI writing"; }
 	function GetVersion()     { return SELF_VERSION; }
-	function GetDate()        { return "2013-07-15"; }
+	function GetDate()        { return "2013-07-20"; }
 	function CreateInstance() { return "WormAI"; }
 	function GetAPIVersion()  { return "1.2"; } 
 
