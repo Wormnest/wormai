@@ -700,6 +700,10 @@ function WormAI::Start()
 					/* No more route found or we have max allowed aircraft, delay even more before trying to find an other */
 					this.delay_build_airport_route = 10 * DEFAULT_DELAY_BUILD_AIRPORT;
 				}
+				else {
+					/* Set default delay back in case we had it increased, see above. */
+					this.delay_build_airport_route = DEFAULT_DELAY_BUILD_AIRPORT;
+				}
 			}
 			/* Manage the routes once in a while */
 			if (ticker % 2000 == 0) {
