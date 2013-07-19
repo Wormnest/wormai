@@ -67,6 +67,7 @@ class WormAI extends AIController {
 	
 	/* DO NOT SAVE variables below this line. These will not be saved. */ 
 	loaded_from_save = false;
+	engine_usefullness = null;
 	aircraft_disabled_shown = 0;		/* Has the aircraft disabled in game settings message been shown (1) or not (0). */
 	aircraft_max0_shown = 0;			/* Has the max aircraft is 0 in game settings message been shown. */
 
@@ -77,6 +78,7 @@ class WormAI extends AIController {
 		this.towns_used = AIList();
 		this.route_1 = AIList();
 		this.route_2 = AIList();
+		this.engine_usefullness = AIList();
 
 		local list = AICargoList();
 		for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
@@ -300,8 +302,10 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 	engine_list.Valuate(AIEngine.GetCargoType);
 	engine_list.KeepValue(this.passenger_cargo_id);
 
-	engine_list.Valuate(AIEngine.GetCapacity);
-	engine_list.KeepTop(1);
+	//engine_list.Valuate(AIEngine.GetCapacity);
+	//engine_list.KeepTop(1);
+	engine_list.Valuate(WormAI.GetCostFactor, this.engine_usefullness);
+	engine_list.KeepBottom(1);
 
 	engine = engine_list.Begin();
 
@@ -332,7 +336,7 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 		AIEngine.GetName(engine) + ", price: " + eng_price );
 	AILog.Info("Yearly running costs: " + AIEngine.GetRunningCost(engine) + ",  capacity: " + 
 		AIEngine.GetCapacity(engine) + ", Maximum speed: " + AIEngine.GetMaxSpeed(engine) +
-		"Maximum distance: " + AIEngine.GetMaximumOrderDistance);
+		", Maximum distance: " + AIEngine.GetMaximumOrderDistance(engine));
 
 	return 0;
 }
@@ -527,10 +531,11 @@ function WormAI::EvaluateAircraft() {
 	engine_list.Valuate(AIEngine.GetCargoType);
 	engine_list.KeepValue(this.passenger_cargo_id);
 
-	engine_list.Valuate(AIEngine.GetCapacity);
-	//engine_list.KeepTop(1);
-
-	//engine = engine_list.Begin();
+	// Only use this one when debugging:
+	//engine_list.Valuate(AIEngine.GetCapacity);
+	
+	// First fill temporary list with our usefullness factors
+	local factor_list = AIList();
 	
 	foreach(engine, value in engine_list) {
 		// From: http://thegrebs.com/irc/openttd/2012/04/20
@@ -545,7 +550,6 @@ function WormAI::EvaluateAircraft() {
 		// <krinn>	vehlist.Valuate(AIEngine.GetMaximumOrderDistance); + vehlist.KeepValue(distance*distance)
 		local _ayear = 24*365;	// 24 hours * 365 days
 		local _eval_distance = 100000;	// assumed distance for passengers to travel
-		//_trips_per_year = 6;
 		if (AIEngine.IsValidEngine(engine)) {
 			local speed = AIEngine.GetMaxSpeed(engine);
 			local cap = AIEngine.GetCapacity(engine);
@@ -561,7 +565,26 @@ function WormAI::EvaluateAircraft() {
 				AIEngine.GetMaxSpeed(engine) + ", Maximum distance: " + AIEngine.GetMaximumOrderDistance(engine));
 			AILog.Warning("    Aircraft usefulness factors d: " + distance_per_year + ", p: " + pass_per_year +
 				", pass cost factor: " + cost_per_pass);
+
+			// Add the cost factor to our temporary list
+			factor_list.AddItem(engine,cost_per_pass);
 		}
+	}
+	this.engine_usefullness.Clear();
+	this.engine_usefullness.AddList(factor_list);
+	AILog.Info("usefullness list count: " + this.engine_usefullness.Count());
+}
+
+function WormAI::GetCostFactor(engine, costfactor_list) {
+	// For some reason we can't access this.engine_usefullness from inside the Valuate function,
+	// thus we add that as a parameter
+	//AILog.Info("usefullness list count: " + costfactor_list.Count());
+	if (costfactor_list == null) {
+		return 0;
+	}
+	else {
+		return costfactor_list.GetValue(engine);
+		//return AIEngine.GetCapacity(engine);
 	}
 }
 
@@ -627,7 +650,7 @@ function WormAI::Start()
 		}
 		else {
 			/* Evaluate the available aircraft once in a while. */
-			if ((ticker % 20000 == 0 || ticker == 0)) {
+			if ((ticker % 25000 == 0 || ticker == 0)) {
 				this.EvaluateAircraft();
 			}
 			/* Once in a while, with enough money, try to build something */
