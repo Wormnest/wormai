@@ -466,7 +466,15 @@ function WormAI::ManageAirRoutes()
 				AILog.Info("Selling " + i + " as it finally is in a depot.");
 				/* Check if we are the last one serving those airports; else sell the airports */
 				local list2 = AIVehicleList_Station(AIStation.GetStationID(this.route_1.GetValue(i)));
-				if (list2.Count() == 0) this.SellAirports(i);
+				if (list2.Count() == 0) {
+					local t1 = this.route_1.GetValue(i);
+					local t2 = this.route_2.GetValue(i);
+					this.SellAirports(t1, t2);
+				}
+				/* Remove the aircraft from the routes. */
+				this.route_1.RemoveItem(i);
+				this.route_2.RemoveItem(i);
+				/* Remove aircraft from our to_depot list. */
 				vehicle_to_depot.rawdelete(i);
 			}
 		}
@@ -489,7 +497,9 @@ function WormAI::ManageAirRoutes()
 		local list2 = AIVehicleList_Station(i);
 		/* No vehicles going to this station, abort and sell */
 		if (list2.Count() == 0) {
-			this.SellAirports(i);
+			local t1 = this.route_1.GetValue(i);
+			local t2 = this.route_2.GetValue(i);
+			this.SellAirports(t1, t2);
 			continue;
 		};
 
@@ -512,20 +522,17 @@ function WormAI::ManageAirRoutes()
 }
 
 /**
-  * Sells the airports from route index i
+  * Sells the airports from tile_1 and tile_2
   * Removes towns from towns_used list too
   */
-function WormAI::SellAirports(i) {
+function WormAI::SellAirports(airport_1_tile, airport_2_tile) {
 	/* Remove the airports */
-	AILog.Info("Removing airports as nobody serves them anymore.");
-	AIAirport.RemoveAirport(this.route_1.GetValue(i));
-	AIAirport.RemoveAirport(this.route_2.GetValue(i));
+	AILog.Info("==> Removing airports as nobody serves them anymore.");
+	AIAirport.RemoveAirport(airport_1_tile);
+	AIAirport.RemoveAirport(airport_2_tile);
 	/* Free the towns_used entries */
-	this.towns_used.RemoveValue(this.route_1.GetValue(i));
-	this.towns_used.RemoveValue(this.route_2.GetValue(i));
-	/* Remove the route */
-	this.route_1.RemoveItem(i);
-	this.route_2.RemoveItem(i);
+	this.towns_used.RemoveValue(airport_1_tile);
+	this.towns_used.RemoveValue(airport_2_tile);
 }
 
 function WormAI::HandleEvents()
