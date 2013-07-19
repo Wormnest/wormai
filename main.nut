@@ -457,15 +457,15 @@ function WormAI::ManageAirRoutes()
 		if (profit < BAD_YEARLY_PROFIT && AIVehicle.GetProfitThisYear(i) < BAD_YEARLY_PROFIT) {
 			/* Send the vehicle to depot if we didn't do so yet */
 			if (!vehicle_to_depot.rawin(i) || vehicle_to_depot.rawget(i) != true) {
-				AILog.Info("--> Sending " + i + " to depot as profit is: " + profit + " / " + AIVehicle.GetProfitThisYear(i));
+				AILog.Info("--> Sending " + AIVehicle.GetName(i) + " (id: " + i + ") to depot as profit is: " + profit + " / " + AIVehicle.GetProfitThisYear(i));
 				AIVehicle.SendVehicleToDepot(i);
 				vehicle_to_depot.rawset(i, true);
 			}
 		}
 		/* Try to sell it over and over till it really is in the depot */
 		if (vehicle_to_depot.rawin(i) && vehicle_to_depot.rawget(i) == true) {
+			AILog.Info("--> Selling " + AIVehicle.GetName(i) + " (id: " + i + ") as it finally is in a depot.");
 			if (AIVehicle.SellVehicle(i)) {
-				AILog.Info("--> Selling " + i + " as it finally is in a depot.");
 				/* Check if we are the last one serving those airports; else sell the airports */
 				local list2 = AIVehicleList_Station(AIStation.GetStationID(this.route_1.GetValue(i)));
 				if (list2.Count() == 0) {
@@ -529,7 +529,8 @@ function WormAI::ManageAirRoutes()
   */
 function WormAI::SellAirports(airport_1_tile, airport_2_tile) {
 	/* Remove the airports */
-	AILog.Info("==> Removing airports as nobody serves them anymore.");
+	AILog.Info("==> Removing airports " + AITown.GetName(airport_1_tile) + " and " + 
+		AITown.GetName(airport_2_tile) + "since they are not used anymore");
 	AIAirport.RemoveAirport(airport_1_tile);
 	AIAirport.RemoveAirport(airport_2_tile);
 	/* Free the towns_used entries */
