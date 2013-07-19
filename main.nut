@@ -227,6 +227,12 @@ function WormAI::GetMoney(money)
  */
 function WormAI::BuildAirportRoute()
 {
+	// No sense building airports if we already have the max (or more because amount can be changed in game)
+	if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) >= this.route_1.Count()) {
+		AILog.Info("We already have the maximum number of aircraft. No sense in building an airport.");
+		return -10;
+	}
+	
 	local airport_type = (AIAirport.IsValidAirportType(AIAirport.AT_LARGE) ? AIAirport.AT_LARGE : AIAirport.AT_SMALL);
 
 	/* Get enough money to work with */
@@ -280,6 +286,12 @@ function WormAI::BuildAirportRoute()
  */
 function WormAI::BuildAircraft(tile_1, tile_2)
 {
+	// Don't try to build aircraft if we already have the max (or more because amount can be changed in game)
+	if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) >= this.route_1.Count()) {
+		AILog.Info("We already have the maximum number of aircraft. No sense in building an airport.");
+		return -10;
+	}
+
 	/* Build an aircraft */
 	local hangar = AIAirport.GetHangarOfAirport(tile_1);
 	local engine = null;
@@ -452,6 +464,12 @@ function WormAI::ManageAirRoutes()
 
 	/* Don't try to add planes when we are short on cash */
 	if (!this.HasMoney(AIRCRAFT_LOW_PRICE)) return;
+	else if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) >= this.route_1.Count()) {
+		// No sense building plane if we already have the max (or more because amount can be changed in game)
+		AILog.Info("We already have the maximum number of aircraft. No sens in checking if we need to add planes.");
+		return -10;
+	}
+
 
 	list = AIStationList(AIStation.STATION_AIRPORT);
 	list.Valuate(AIStation.GetCargoWaiting, this.passenger_cargo_id);
