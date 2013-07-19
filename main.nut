@@ -476,7 +476,7 @@ function WormAI::ManageAirRoutes()
 	if (!this.HasMoney(AIRCRAFT_LOW_PRICE)) return ERROR_NOT_ENOUGH_MONEY;
 	else if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) <= this.route_1.Count()) {
 		// No sense building plane if we already have the max (or more because amount can be changed in game)
-		AILog.Info("We already have the maximum number of aircraft. No sens in checking if we need to add planes.");
+		AILog.Info("We already have the maximum number of aircraft. No sense in checking if we need to add planes.");
 		return ERROR_MAX_AIRCRAFT;
 	}
 
@@ -680,6 +680,9 @@ function WormAI::Start()
 			/* Evaluate the available aircraft once in a while. */
 			if ((ticker % 25000 == 0 || ticker == 0)) {
 				this.EvaluateAircraft();
+				/* Debugging info */
+				DebugListTownsUsed();
+				DebugListRouteInfo();
 			}
 			/* Once in a while, with enough money, try to build something */
 			if ((ticker % this.delay_build_airport_route == 0 || ticker == 0) && this.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
@@ -735,12 +738,10 @@ function WormAI::Start()
 	r2.AddList(this.route_2);
 	table.route2 = r2.toarray();
 	
-    //TODO: Add your save data to the table.
-
-    /* Debugging info */
+    /* Debugging info 
     DebugListTownsUsed();
     DebugListRouteInfo();
-   
+*/   
 /* only use for debugging:
     AILog.Info("Tick: " + this.GetTick() );
 */
