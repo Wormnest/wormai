@@ -51,6 +51,16 @@ const AIRCRAFT_HIGH_PRICE = 1500000;			/* Maximum price of a high price aircraft
 const DEFAULT_DELAY_BUILD_AIRPORT = 750; 		/* Default delay before building a new airport route. */
 const BAD_YEARLY_PROFIT = 10000;				/* Yearly profit limit below which profit is deemed bad. */
 
+/* ERROR CODE constants */
+const ALL_OK = 0;
+const ERROR_FIND_AIRPORT1	= -1;				/* There was an error finding a spot for airport 1. */
+const ERROR_FIND_AIRPORT2	= -2;				/* There was an error finding a spot for airport 2. */
+const ERROR_BUILD_AIRPORT1	= -3;				/* There was an error building airport 1. */
+const ERROR_BUILD_AIRPORT2	= -4;				/* There was an error building airport 2. */
+const ERROR_MAX_AIRCRAFT = -10;					/* We have reached the maximum allowed number of aircraft. */
+const ERROR_NOT_ENOUGH_MONEY = -20;				/* We don't have enough money. */
+const ERROR_BUILD_AIRCRAFT = -30;				/* General error trying to build an aircraft. */
+const ERROR_BUILD_AIRCRAFT_INVALID = -31;		/* No suitable aircraft found when trying to build an aircraft. */
 
 class WormAI extends AIController {
 	name = null;
@@ -228,9 +238,9 @@ function WormAI::GetMoney(money)
 function WormAI::BuildAirportRoute()
 {
 	// No sense building airports if we already have the max (or more because amount can be changed in game)
-	if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) >= this.route_1.Count()) {
+	if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) <= this.route_1.Count()) {
 		AILog.Info("We already have the maximum number of aircraft. No sense in building an airport.");
-		return -10;
+		return ERROR_MAX_AIRCRAFT;
 	}
 	
 	local airport_type = (AIAirport.IsValidAirportType(AIAirport.AT_LARGE) ? AIAirport.AT_LARGE : AIAirport.AT_SMALL);
@@ -242,11 +252,11 @@ function WormAI::BuildAirportRoute()
 	AILog.Info(Helper.GetCurrentDateString() + " Trying to build an airport route");
 
 	local tile_1 = this.FindSuitableAirportSpot(airport_type, 0);
-	if (tile_1 < 0) return -1;
+	if (tile_1 < 0) return ERROR_FIND_AIRPORT1;
 	local tile_2 = this.FindSuitableAirportSpot(airport_type, tile_1);
 	if (tile_2 < 0) {
 		this.towns_used.RemoveValue(tile_1);
-		return -2;
+		return ERROR_FIND_AIRPORT2;
 	}
 
 	/* Build the airports for real */
@@ -254,14 +264,14 @@ function WormAI::BuildAirportRoute()
 		AILog.Error("Although the testing told us we could build 2 airports, it still failed on the first airport at tile " + tile_1 + ".");
 		this.towns_used.RemoveValue(tile_1);
 		this.towns_used.RemoveValue(tile_2);
-		return -3;
+		return ERROR_BUILD_AIRPORT1;
 	}
 	if (!AIAirport.BuildAirport(tile_2, airport_type, AIStation.STATION_NEW)) {
 		AILog.Error("Although the testing told us we could build 2 airports, it still failed on the second airport at tile " + tile_2 + ".");
 		AIAirport.RemoveAirport(tile_1);
 		this.towns_used.RemoveValue(tile_1);
 		this.towns_used.RemoveValue(tile_2);
-		return -4;
+		return ERROR_BUILD_AIRPORT1;
 	}
 
 	local ret = this.BuildAircraft(tile_1, tile_2);
@@ -287,9 +297,9 @@ function WormAI::BuildAirportRoute()
 function WormAI::BuildAircraft(tile_1, tile_2)
 {
 	// Don't try to build aircraft if we already have the max (or more because amount can be changed in game)
-	if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) >= this.route_1.Count()) {
+	if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) <= this.route_1.Count()) {
 		AILog.Info("We already have the maximum number of aircraft. No sense in building an airport.");
-		return -10;
+		return ERROR_MAX_AIRCRAFT;
 	}
 
 	/* Build an aircraft */
@@ -305,7 +315,7 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 	/* Balance below a certain minimum? Wait until we buy more planes. */
 	if (balance < MINIMUM_BALANCE_AIRCRAFT) {
 		AILog.Warning("We are low on money (" + balance + "). We are not gonna buy an aircraft right now.");
-		return -6;
+		return ERROR_NOT_ENOUGH_MONEY;
 	}
 	
 	engine_list.Valuate(AIEngine.GetPrice);
@@ -323,18 +333,18 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 
 	if (!AIEngine.IsValidEngine(engine)) {
 		AILog.Warning("Couldn't find a suitable aircraft. Most likely we don't have enough available funds,");
-		return -5;
+		return ERROR_BUILD_AIRCRAFT_INVALID;
 	}
 	/* Price of cheapest engine can be more than our bank balance, check for that. */
 	eng_price = AIEngine.GetPrice(engine);
 	if (eng_price > balance) {
 		AILog.Warning("Can't buy aircraft. The cheapest selected aircraft (" + eng_price + ") costs more than our available funds (" + balance + ").");
-		return -6;
+		return ERROR_NOT_ENOUGH_MONEY;
 	}
 	local vehicle = AIVehicle.BuildVehicle(hangar, engine);
 	if (!AIVehicle.IsValidVehicle(vehicle)) {
 		AILog.Error("Couldn't build the aircraft: " + AIEngine.GetName(engine));
-		return -6;
+		return ERROR_BUILD_AIRCRAFT;
 	}
 	/* Send him on his way */
 	AIOrder.AppendOrder(vehicle, tile_1, AIOrder.OF_NONE);
@@ -350,7 +360,7 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 		AIEngine.GetCapacity(engine) + ", Maximum speed: " + AIEngine.GetMaxSpeed(engine) +
 		", Maximum distance: " + AIEngine.GetMaximumOrderDistance(engine));
 
-	return 0;
+	return ALL_OK;
 }
 
 /**
@@ -463,11 +473,11 @@ function WormAI::ManageAirRoutes()
 	}
 
 	/* Don't try to add planes when we are short on cash */
-	if (!this.HasMoney(AIRCRAFT_LOW_PRICE)) return;
-	else if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) >= this.route_1.Count()) {
+	if (!this.HasMoney(AIRCRAFT_LOW_PRICE)) return ERROR_NOT_ENOUGH_MONEY;
+	else if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) <= this.route_1.Count()) {
 		// No sense building plane if we already have the max (or more because amount can be changed in game)
 		AILog.Info("We already have the maximum number of aircraft. No sens in checking if we need to add planes.");
-		return -10;
+		return ERROR_MAX_AIRCRAFT;
 	}
 
 
@@ -674,8 +684,8 @@ function WormAI::Start()
 			/* Once in a while, with enough money, try to build something */
 			if ((ticker % this.delay_build_airport_route == 0 || ticker == 0) && this.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
 				local ret = this.BuildAirportRoute();
-				if (ret == -1 && ticker != 0) {
-					/* No more route found, delay even more before trying to find an other */
+				if ((ret == ERROR_FIND_AIRPORT1) || (ret == ERROR_MAX_AIRCRAFT)&& ticker != 0) {
+					/* No more route found or we have max allowed aircraft, delay even more before trying to find an other */
 					this.delay_build_airport_route = 10 * DEFAULT_DELAY_BUILD_AIRPORT;
 				}
 			}
