@@ -398,8 +398,11 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 	}
 	else {
 		/* First vehicle with these orders. */
-		AIOrder.AppendOrder(vehicle, tile_1, AIOrder.OF_NONE);
-		AIOrder.AppendOrder(vehicle, tile_2, AIOrder.OF_NONE);
+		//AIOrder.AppendOrder(vehicle, tile_1, AIOrder.OF_NONE);
+		//AIOrder.AppendOrder(vehicle, tile_2, AIOrder.OF_NONE);
+		// Test using full load
+		AIOrder.AppendOrder(vehicle, tile_1, AIOrder.OF_FULL_LOAD_ANY);
+		AIOrder.AppendOrder(vehicle, tile_2, AIOrder.OF_FULL_LOAD_ANY);
 		AILog.Info("+ First vehicle: set orders.");
 	}
 	AIVehicle.StartStopVehicle(vehicle);
