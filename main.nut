@@ -371,7 +371,7 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 	engine = engine_list.Begin();
 
 	if (!AIEngine.IsValidEngine(engine)) {
-		AILog.Warning("Couldn't find a suitable aircraft. Most likely we don't have enough available funds,");
+		AILog.Warning("Couldn't find a suitable aircraft. Most likely we don't have enough available funds.");
 		return ERROR_BUILD_AIRCRAFT_INVALID;
 	}
 	/* Price of cheapest engine can be more than our bank balance, check for that. */
@@ -501,8 +501,9 @@ function WormAI::ManageAirRoutes()
 		}
 		/* Try to sell it over and over till it really is in the depot */
 		if (vehicle_to_depot.rawin(i) && vehicle_to_depot.rawget(i) == true) {
-			AILog.Info("--> Selling " + AIVehicle.GetName(i) + " (id: " + i + ") as it finally is in a depot.");
+			local veh_name = AIVehicle.GetName(i);
 			if (AIVehicle.SellVehicle(i)) {
+				AILog.Info("--> Sold " + veh_name + " (id: " + i + ").");
 				/* Check if we are the last one serving those airports; else sell the airports */
 				local list2 = AIVehicleList_Station(AIStation.GetStationID(this.route_1.GetValue(i)));
 				if (list2.Count() == 0) {
@@ -536,6 +537,7 @@ function WormAI::ManageAirRoutes()
 		local list2 = AIVehicleList_Station(i);
 		/* No vehicles going to this station, abort and sell */
 		if (list2.Count() == 0) {
+			AILog.Warning("***** Encountered station without vehicles, should not happen? *****");
 			local t1 = this.route_1.GetValue(i);
 			local t2 = this.route_2.GetValue(i);
 			this.SellAirports(t1, t2);
@@ -566,8 +568,8 @@ function WormAI::ManageAirRoutes()
   */
 function WormAI::SellAirports(airport_1_tile, airport_2_tile) {
 	/* Remove the airports */
-	AILog.Info("==> Removing airports " + AITown.GetName(airport_1_tile) + " and " + 
-		AITown.GetName(airport_2_tile) + "since they are not used anymore");
+	AILog.Info("==> Removing airports at tile " + airport_1_tile + " and " + 
+		airport_2_tile + " since they are not used anymore");
 	AIAirport.RemoveAirport(airport_1_tile);
 	AIAirport.RemoveAirport(airport_2_tile);
 	/* Free the towns_used entries */
