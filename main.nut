@@ -290,6 +290,19 @@ function WormAI::BuildAirportRoute()
 	return ret;
 }
 
+function WormAI::GetMaximumDistance(engine) {
+	local max_dist = AIEngine.GetMaximumOrderDistance(engine);
+	if (max_dist == 0) {
+		/* Unlimited distance. Since we need to be able to keep values above a squared distance
+		We set it to a predefined maximum value. Maps can be maximum 2048x2048. Diagonal will
+		be more than that. To be safe we compute 10000 * 10000. */
+		return 10000 * 10000;
+	}
+	else {
+		return max_dist;
+	}
+}
+
 /**
  * Build an aircraft with orders from tile_1 to tile_2.
  *  The best available aircraft of that time will be bought.
@@ -325,12 +338,36 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 
 	engine_list.Valuate(AIEngine.GetCargoType);
 	engine_list.KeepValue(this.passenger_cargo_id);
+	
+	// Newer versions of OpenTTD allow NewGRFs to set a maximum distance a plane can fly between orders
+	// That means we need to make sure planes can fly the distance necessary for our intended order.
+	// Since distance is returned squared we need to get the squared distance for our intended order.
+	engine_list.Valuate(this.GetMaximumDistance);
+	//foreach (eng,x in engine_list) {
+	//	AILog.Info("Engine: " + AIEngine.GetName(eng) + ", distance: " + AIEngine.GetMaximumOrderDistance(eng));
+	//}
+	//local distance_between_stations = AIOrder.GetOrderDistance(null, tile_1, tile_2);
+	local distance_between_stations = AIMap.DistanceSquare(tile_1, tile_2);
+	engine_list.KeepAboveValue(distance_between_stations);
+	// debugging:
+	//AILog.Info("squared distance: " + distance_between_stations);
+	//foreach (eng,x in engine_list) {
+	//	AILog.Info("Engine: " + AIEngine.GetName(eng) + ", distance: " + AIEngine.GetMaximumOrderDistance(eng));
+	//}
+	////////////
 
 	//engine_list.Valuate(AIEngine.GetCapacity);
 	//engine_list.KeepTop(1);
 	engine_list.Valuate(WormAI.GetCostFactor, this.engine_usefullness);
 	engine_list.KeepBottom(1);
 
+	/* Make sure that there was a suitable engine found. */
+	if (engine_list.Count() == 0) {
+		// Most likely no aircraft found for the range we wanted.
+		AILog.Warning("Couldn't find a suitable aircraft.");
+		return ERROR_BUILD_AIRCRAFT_INVALID;
+	}
+	
 	engine = engine_list.Begin();
 
 	if (!AIEngine.IsValidEngine(engine)) {
