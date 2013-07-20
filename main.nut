@@ -385,9 +385,23 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 		AILog.Error("Couldn't build the aircraft: " + AIEngine.GetName(engine));
 		return ERROR_BUILD_AIRCRAFT;
 	}
+
 	/* Send him on his way */
-	AIOrder.AppendOrder(vehicle, tile_1, AIOrder.OF_NONE);
-	AIOrder.AppendOrder(vehicle, tile_2, AIOrder.OF_NONE);
+	/* If this isn't the first vehicle with this order, then make a shared order. */
+	local veh_list = AIList();
+	veh_list.AddList(this.route_1);
+	veh_list.KeepValue(tile_1);
+	if (veh_list.Count() > 0) {
+		local share_veh = veh_list.Begin();
+		AIOrder.ShareOrders(vehicle, share_veh);
+		AILog.Info("++ Not the first vehicle: share orders.");
+	}
+	else {
+		/* First vehicle with these orders. */
+		AIOrder.AppendOrder(vehicle, tile_1, AIOrder.OF_NONE);
+		AIOrder.AppendOrder(vehicle, tile_2, AIOrder.OF_NONE);
+		AILog.Info("+ First vehicle: set orders.");
+	}
 	AIVehicle.StartStopVehicle(vehicle);
 	this.distance_of_route.rawset(vehicle, AIMap.DistanceManhattan(tile_1, tile_2));
 	this.route_1.AddItem(vehicle, tile_1);
