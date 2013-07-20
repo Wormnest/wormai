@@ -626,7 +626,7 @@ function WormAI::EvaluateAircraft() {
 		// whatever that is applicable for the vehicle type.
 		// <krinn>	vehlist.Valuate(AIEngine.GetMaximumOrderDistance); + vehlist.KeepValue(distance*distance)
 		local _ayear = 24*365;	// 24 hours * 365 days
-		local _eval_distance = 100000;	// assumed distance for passengers to travel
+		local _eval_distance = 50000;	// assumed distance for passengers to travel
 		if (AIEngine.IsValidEngine(engine)) {
 			local speed = AIEngine.GetMaxSpeed(engine);
 			local cap = AIEngine.GetCapacity(engine);
