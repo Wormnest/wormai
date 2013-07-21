@@ -519,7 +519,7 @@ function WormAI::ManageAirRoutes()
 		/* Profit last year and this year bad? Let's sell the vehicle */
 		/* If we are below maximum number of aircraft use a less strict value. */
 		local low_profit_limit = 0;
-		if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) < this.route_1.Count()) {
+		if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) > this.route_1.Count()) {
 			low_profit_limit = 0;
 		}
 		else {
