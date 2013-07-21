@@ -56,6 +56,7 @@ const DEFAULT_DELAY_HANDLE_LOAN = 2500;			/* Default delay for handling our loan
 const DEFAULT_DELAY_HANDLE_EVENTS = 100;		/* Default delay for handling events. */
 const STARTING_ACCEPTANCE_LIMIT = 150;			/* Starting limit in acceptance for finding suitable airport tile. */
 const BAD_YEARLY_PROFIT = 10000;				/* Yearly profit limit below which profit is deemed bad. */
+const AIRPORT_LIMIT_FACTOR = 3;					/* We limit airports to max aircraft / FACTOR * 2 (2 needed per route). */
 
 /* ERROR CODE constants */
 const ALL_OK = 0;
@@ -64,6 +65,7 @@ const ERROR_FIND_AIRPORT2	= -2;				/* There was an error finding a spot for airp
 const ERROR_BUILD_AIRPORT1	= -3;				/* There was an error building airport 1. */
 const ERROR_BUILD_AIRPORT2	= -4;				/* There was an error building airport 2. */
 const ERROR_MAX_AIRCRAFT = -10;					/* We have reached the maximum allowed number of aircraft. */
+const ERROR_MAX_AIRPORTS = -11;					/* We have reached the maximum number of airports. */
 const ERROR_NOT_ENOUGH_MONEY = -20;				/* We don't have enough money. */
 const ERROR_BUILD_AIRCRAFT = -30;				/* General error trying to build an aircraft. */
 const ERROR_BUILD_AIRCRAFT_INVALID = -31;		/* No suitable aircraft found when trying to build an aircraft. */
@@ -241,14 +243,23 @@ function WormAI::GetMoney(money)
 
 /**
  * Build an airport route. Find 2 cities that are big enough and try to build airport in both cities.
- *  Then we can build an aircraft and make some money.
+ * Then we can build an aircraft and make some money.
+ * We limit our amount of airports to max aircraft / 3 * 2 (2 airports for a route, and 3 planes per route)
  */
 function WormAI::BuildAirportRoute()
 {
 	// No sense building airports if we already have the max (or more because amount can be changed in game)
-	if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) <= this.route_1.Count()) {
+	local max_vehicles = Vehicle.GetVehicleLimit(AIVehicle.VT_AIR);
+	if (max_vehicles <= this.route_1.Count()) {
 		AILog.Info("We already have the maximum number of aircraft. No sense in building an airport.");
 		return ERROR_MAX_AIRCRAFT;
+	}
+	
+	// Check for our maximum allowed airports (max only set by our own script, not OpenTTD)
+	local airport_count = this.towns_used.Count();
+	if ((max_vehicles * 2 / AIRPORT_LIMIT_FACTOR) <= airport_count) {
+		AILog.Info("Not building more airports. We already have a reasonable amount for the current aircraft limit.");
+		return ERROR_MAX_AIRPORTS;
 	}
 	
 	local airport_type = (AIAirport.IsValidAirportType(AIAirport.AT_LARGE) ? AIAirport.AT_LARGE : AIAirport.AT_SMALL);
