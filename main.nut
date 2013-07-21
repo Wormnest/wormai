@@ -79,17 +79,19 @@ class WormAI extends AIController {
 	/* DO NOT SAVE variables below this line. These will not be saved. */ 
 	loaded_from_save = false;
 	engine_usefullness = null;
+	acceptance_limit = 100;				/* Starting limit for passenger acceptance for airport finding. */
 	aircraft_disabled_shown = 0;		/* Has the aircraft disabled in game settings message been shown (1) or not (0). */
 	aircraft_max0_shown = 0;			/* Has the max aircraft is 0 in game settings message been shown. */
 
 	function Start();
 
 	constructor() {
-		loaded_from_save = false;
+		this.loaded_from_save = false;
 		this.towns_used = AIList();
 		this.route_1 = AIList();
 		this.route_2 = AIList();
 		this.engine_usefullness = AIList();
+		this.acceptance_limit = 100;
 
 		local list = AICargoList();
 		for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
@@ -488,13 +490,13 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 		}
 		/* Sort on acceptance, remove places that don't have acceptance */
 		list.Valuate(AITile.GetCargoAcceptance, this.passenger_cargo_id, airport_x, airport_y, airport_rad);
-		list.RemoveBelowValue(25); // was 10
+		list.RemoveBelowValue(this.acceptance_limit);
 		
 		// For debugging: print candidates
-		//for (tile = list.Begin(); !list.IsEnd(); tile = list.Next()) {
-		//	AILog.Info("Town: " + AITown.GetName(town) + ", Tile: " + tile +
-		//		", Passenger Acceptance: " + list.GetValue(tile));
-		//}
+		for (tile = list.Begin(); !list.IsEnd(); tile = list.Next()) {
+			AILog.Info("Town: " + AITown.GetName(town) + ", Tile: " + tile +
+				", Passenger Acceptance: " + list.GetValue(tile));
+		}
 
 		/* Couldn't find a suitable place for this town, skip to the next */
 		if (list.Count() == 0) continue;
@@ -523,6 +525,13 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 		return tile;
 	}
 
+	if (this.acceptance_limit > 25) {
+		this.acceptance_limit -= 25;
+		AILog.Info("Lowering acceptance limit for suitable airports to " + this.acceptance_limit );
+	}
+	else {
+		this.acceptance_limit = 10;
+	}
 	AILog.Info("Couldn't find a suitable town to build an airport in");
 	return -1;
 }
