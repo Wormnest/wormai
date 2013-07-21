@@ -479,13 +479,13 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 				break;
 			}
 
-			/* Did we found a place to build the airport on? */
+			/* Did we find a place to build the airport on? */
 			if (good_tile == 0) continue;
 		}
 
 		AILog.Info("Found a good spot for an airport in " + AITown.GetName(town) + " (id: "+ town + ", tile " + tile + ").");
 
-		/* Make the town as used, so we don't use it again */
+		/* Mark the town as used, so we don't use it again */
 		this.towns_used.AddItem(town, tile);
 
 		return tile;
