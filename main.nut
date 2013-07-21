@@ -49,7 +49,11 @@ const AIRCRAFT_MEDIUM_PRICE_CUT = 2000000;		/* Bank balance below which we will 
 const AIRCRAFT_LOW_PRICE = 50000;				/* Maximum price of a low price aircraft. */
 const AIRCRAFT_MEDIUM_PRICE = 250000;			/* Maximum price of a medium price aircraft. */
 const AIRCRAFT_HIGH_PRICE = 1500000;			/* Maximum price of a high price aircraft. */
-const DEFAULT_DELAY_BUILD_AIRPORT = 750; 		/* Default delay before building a new airport route. */
+const DEFAULT_DELAY_EVALUATE_AIRCRAFT = 25000;	/* Default delay for evaluating aircraft usefullness. */
+const DEFAULT_DELAY_BUILD_AIRPORT = 500; 		/* Default delay before building a new airport route. */
+const DEFAULT_DELAY_MANAGE_ROUTES = 1000;		/* Default delay for managing air routes. */
+const DEFAULT_DELAY_HANDLE_LOAN = 2500;			/* Default delay for handling our loan. */
+const DEFAULT_DELAY_HANDLE_EVENTS = 100;		/* Default delay for handling events. */
 const BAD_YEARLY_PROFIT = 10000;				/* Yearly profit limit below which profit is deemed bad. */
 
 /* ERROR CODE constants */
@@ -799,7 +803,7 @@ function WormAI::Start()
 		}
 		else {
 			/* Evaluate the available aircraft once in a while. */
-			if ((ticker % 25000 == 0 || ticker == 0)) {
+			if ((ticker % DEFAULT_DELAY_EVALUATE_AIRCRAFT == 0 || ticker == 0)) {
 				this.EvaluateAircraft();
 				/* Debugging info */
 				DebugListTownsUsed();
@@ -818,15 +822,15 @@ function WormAI::Start()
 				}
 			}
 			/* Manage the routes once in a while */
-			if (ticker % 2000 == 0) {
+			if (ticker % DEFAULT_DELAY_MANAGE_ROUTES == 0) {
 				this.ManageAirRoutes();
 			}
 			/* Try to get rid of our loan once in a while */
-			if (ticker % 5000 == 0) {
+			if (ticker % DEFAULT_DELAY_HANDLE_LOAN == 0) {
 				AICompany.SetLoanAmount(0);
 			}
 			/* Check for events once in a while */
-			if (ticker % 100 == 0) {
+			if (ticker % DEFAULT_DELAY_HANDLE_EVENTS == 0) {
 				this.HandleEvents();
 			}
 		}
