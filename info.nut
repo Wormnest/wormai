@@ -28,9 +28,9 @@ class WormAI extends AIInfo {
 			description = "The minimum distance between airports",
 			min_value = 25,
 			max_value = 250,
-			easy_value = 100,
+			easy_value = 25,
 			medium_value = 50,
-			hard_value = 25,
+			hard_value = 100,
 			custom_value = 50,
 			step_size = 25,
 			flags = CONFIG_INGAME
