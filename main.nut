@@ -544,6 +544,7 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 function WormAI::ManageAirRoutes()
 {
 	local list = AIVehicleList();
+	local low_profit_limit = 0;
 	
 	/* Show some info about what we are doing */
 	AILog.Info(Helper.GetCurrentDateString() + " Managing air routes.");
@@ -553,19 +554,39 @@ function WormAI::ManageAirRoutes()
 	list.KeepAboveValue(365 * 3);
 	list.Valuate(AIVehicle.GetProfitLastYear);
 
+	/* Decide on the best low profit limit at this moment. */
+	if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) > this.route_1.Count()) {
+		/* Since we can still add more planes keep all planes that make at least some profit. */
+		low_profit_limit = 0;
+		list.KeepAboveValue(low_profit_limit);
+	}
+	else {
+		// TODO: More extensive computation for limit.
+		local list_count = 0;
+		// Maybe something like 10% of highest profit aircraft?
+		low_profit_limit = BAD_YEARLY_PROFIT;
+		list_count = list.Count();
+		list.KeepAboveValue(low_profit_limit);
+		if ((list_count == list.Count()) && (list_count > 0)) {
+			// All profits are above our current low_profit_limit
+			// Get vehicle with last years highest profit
+			local highest = AIList();
+			highest.AddList(list);
+			highest.KeepTop(1);
+			local v = highest.Begin();
+			high_profit = highest.GetValue(v);
+			// get profits below 20% of that
+			low_profit_limit = high_profit * 20 / 100;
+			list.KeepAboveValue(low_profit_limit);
+			AILog.Info("...Computed low_profit_limit: " + low_profit_limit);
+		}
+		
+	}
+
 	for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
 		local profit = list.GetValue(i);
 		/* Profit last year and this year bad? Let's sell the vehicle */
 		/* If we are below maximum number of aircraft use a less strict value. */
-		local low_profit_limit = 0;
-		if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) > this.route_1.Count()) {
-			low_profit_limit = 0;
-		}
-		else {
-			// TODO: More extensive computation for limit.
-			// Maybe something like 10% of highest profit aircraft?
-			low_profit_limit = BAD_YEARLY_PROFIT;
-		}
 		if (profit < low_profit_limit && AIVehicle.GetProfitThisYear(i) < low_profit_limit) {
 			/* Send the vehicle to depot if we didn't do so yet */
 			if (!vehicle_to_depot.rawin(i) || vehicle_to_depot.rawget(i) != true) {
