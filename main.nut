@@ -585,7 +585,7 @@ function WormAI::ManageAirRoutes()
 			highest.AddList(list);
 			highest.KeepTop(1);
 			local v = highest.Begin();
-			high_profit = highest.GetValue(v);
+			local high_profit = highest.GetValue(v);
 			// get profits below 20% of that
 			low_profit_limit = high_profit * 20 / 100;
 			list.KeepAboveValue(low_profit_limit);
