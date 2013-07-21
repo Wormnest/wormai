@@ -653,14 +653,15 @@ function WormAI::ManageAirRoutes()
 
 		/* Find the first vehicle that is going to this station */
 		local v = list2.Begin();
-		local dist = this.distance_of_route.rawget(v);
+		local dist = this.distance_of_route.rawget(v) / 2;
 
 		list2.Valuate(AIVehicle.GetAge);
 		list2.KeepBelowValue(dist);
-		/* Do not build a new vehicle if we bought a new one in the last DISTANCE days */
+		/* Do not build a new vehicle if we bought a new one in the last DISTANCE / 2 days */
 		if (list2.Count() != 0) continue;
 
-		AILog.Info("Station " + AIStation.GetName(i) + "(id: " + i + ", location: " + AIStation.GetLocation(i) + ") has a lot of waiting passengers (cargo), adding a new aircraft for the route.");
+		AILog.Info("Station " + AIStation.GetName(i) + "(id: " + i +
+			") has a lot of waiting passengers (cargo: " + list.GetValue(i) + "), adding a new aircraft for the route.");
 
 		/* Make sure we have enough money */
 		this.GetMoney(AIRCRAFT_LOW_PRICE);
