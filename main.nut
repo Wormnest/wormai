@@ -489,6 +489,12 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 		/* Sort on acceptance, remove places that don't have acceptance */
 		list.Valuate(AITile.GetCargoAcceptance, this.passenger_cargo_id, airport_x, airport_y, airport_rad);
 		list.RemoveBelowValue(10);
+		
+		// For debugging: print candidates
+		//for (tile = list.Begin(); !list.IsEnd(); tile = list.Next()) {
+		//	AILog.Info("Town: " + AITown.GetName(town) + ", Tile: " + tile +
+		//		", Passenger Acceptance: " + list.GetValue(tile));
+		//}
 
 		/* Couldn't find a suitable place for this town, skip to the next */
 		if (list.Count() == 0) continue;
@@ -508,7 +514,8 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 			if (good_tile == 0) continue;
 		}
 
-		AILog.Info("Found a good spot for an airport in " + AITown.GetName(town) + " (id: "+ town + ", tile " + tile + ").");
+		AILog.Info("Found a good spot for an airport in " + AITown.GetName(town) + " (id: "+ town + 
+			", tile " + tile + ", acceptance: " + list.GetValue(tile) + ").");
 
 		/* Mark the town as used, so we don't use it again */
 		this.towns_used.AddItem(town, tile);
