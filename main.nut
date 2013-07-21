@@ -515,7 +515,17 @@ function WormAI::ManageAirRoutes()
 	for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
 		local profit = list.GetValue(i);
 		/* Profit last year and this year bad? Let's sell the vehicle */
-		if (profit < BAD_YEARLY_PROFIT && AIVehicle.GetProfitThisYear(i) < BAD_YEARLY_PROFIT) {
+		/* If we are below maximum number of aircraft use a less strict value. */
+		local low_profit_limit = 0;
+		if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) < this.route_1.Count()) {
+			low_profit_limit = 0;
+		}
+		else {
+			// TODO: More extensive computation for limit.
+			// Maybe something like 10% of highest profit aircraft?
+			low_profit_limit = BAD_YEARLY_PROFIT;
+		}
+		if (profit < low_profit_limit && AIVehicle.GetProfitThisYear(i) < low_profit_limit) {
 			/* Send the vehicle to depot if we didn't do so yet */
 			if (!vehicle_to_depot.rawin(i) || vehicle_to_depot.rawget(i) != true) {
 				AILog.Info("--> Sending " + AIVehicle.GetName(i) + " (id: " + i + ") to depot as profit is: " + profit + " / " + AIVehicle.GetProfitThisYear(i));
