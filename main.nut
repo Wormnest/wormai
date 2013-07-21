@@ -845,7 +845,8 @@ function WormAI::Start()
 			/* Once in a while, with enough money, try to build something */
 			if ((ticker % this.delay_build_airport_route == 0 || ticker == 0) && this.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
 				local ret = this.BuildAirportRoute();
-				if ((ret == ERROR_FIND_AIRPORT1) || (ret == ERROR_MAX_AIRCRAFT)&& ticker != 0) {
+				if ((ret == ERROR_FIND_AIRPORT1) || (ret == ERROR_MAX_AIRPORTS) ||
+					(ret == ERROR_MAX_AIRCRAFT)&& ticker != 0) {
 					/* No more route found or we have max allowed aircraft, delay even more before trying to find an other */
 					this.delay_build_airport_route = 10 * DEFAULT_DELAY_BUILD_AIRPORT;
 				}
