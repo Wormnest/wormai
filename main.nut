@@ -437,8 +437,10 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 
 	town_list.Valuate(AITown.GetPopulation);
 	town_list.KeepAboveValue(GetSetting("min_town_size"));
-	/* Keep the best 10, if we can't find 2 stations in there, just leave it anyway */
-	town_list.KeepTop(10);
+	/* Keep the best 20, if we can't find 2 stations in there, just leave it anyway */
+	/* Original value was 10. We increase it to 20 to make it more likely we will find
+	   a town in case there are a lot of unsuitable locations. */
+	town_list.KeepTop(20);
 	town_list.Valuate(AIBase.RandItem);
 
 	/* Now find 2 suitable towns */
