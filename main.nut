@@ -837,7 +837,15 @@ function WormAI::Start()
     AILog.Info("Tick: " + this.GetTick() );
 */
     MyOps2 = this.GetOpsTillSuspend();
-    AILog.Info("Saving: ops till suspend: " + MyOps2 + ", ops used in save: " + (MyOps1-MyOps2) );
+	if (MyOps2 < 10000) {
+		AILog.Error("SAVE: Using almost all allowed ops: " + MyOps2 );
+	}
+	else if (MyOps2 < 20000) {
+		AILog.Warning("SAVE: Using a high amount of ops: " + MyOps2 );
+	}
+	else {
+		AILog.Info("Saving WormAI game data. Used ops: " + (MyOps1-MyOps2) );
+	}
     AILog.Info("");
    
     return table;
@@ -870,7 +878,16 @@ function WormAI::Start()
 
     /* Debugging info */
     MyOps2 = this.GetOpsTillSuspend();
-    AILog.Info("Loading: ops till suspend: " + MyOps2 + ", ops used in load: " + (MyOps1-MyOps2) );
+	if (MyOps2 < 10000) {
+		AILog.Error("LOAD: Using almost all allowed ops: " + MyOps2 );
+	}
+	else if (MyOps2 < 20000) {
+		AILog.Warning("LOAD: Using a high amount of ops: " + MyOps2 );
+	}
+	else {
+		AILog.Info("Loading WormAI game data. Used ops: " + (MyOps1-MyOps2) );
+		//AILog.Info("Loading: ops till suspend: " + MyOps2 + ", ops used in load: " + (MyOps1-MyOps2) );
+	}
     AILog.Info("");
  }
  
