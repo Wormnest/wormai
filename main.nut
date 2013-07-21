@@ -884,7 +884,6 @@ function WormAI::Start()
 	else {
 		AILog.Info("Saving WormAI game data. Used ops: " + (MyOps1-MyOps2) );
 	}
-    AILog.Info("");
    
     return table;
  }
@@ -926,6 +925,5 @@ function WormAI::Start()
 		AILog.Info("Loading WormAI game data. Used ops: " + (MyOps1-MyOps2) );
 		//AILog.Info("Loading: ops till suspend: " + MyOps2 + ", ops used in load: " + (MyOps1-MyOps2) );
 	}
-    AILog.Info("");
  }
  
