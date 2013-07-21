@@ -54,6 +54,7 @@ const DEFAULT_DELAY_BUILD_AIRPORT = 500; 		/* Default delay before building a ne
 const DEFAULT_DELAY_MANAGE_ROUTES = 1000;		/* Default delay for managing air routes. */
 const DEFAULT_DELAY_HANDLE_LOAN = 2500;			/* Default delay for handling our loan. */
 const DEFAULT_DELAY_HANDLE_EVENTS = 100;		/* Default delay for handling events. */
+const STARTING_ACCEPTANCE_LIMIT = 150;			/* Starting limit in acceptance for finding suitable airport tile. */
 const BAD_YEARLY_PROFIT = 10000;				/* Yearly profit limit below which profit is deemed bad. */
 
 /* ERROR CODE constants */
@@ -83,7 +84,7 @@ class WormAI extends AIController {
 	/* DO NOT SAVE variables below this line. These will not be saved. */ 
 	loaded_from_save = false;
 	engine_usefullness = null;
-	acceptance_limit = 100;				/* Starting limit for passenger acceptance for airport finding. */
+	acceptance_limit = STARTING_ACCEPTANCE_LIMIT;	/* Starting limit for passenger acceptance for airport finding. */
 	aircraft_disabled_shown = 0;		/* Has the aircraft disabled in game settings message been shown (1) or not (0). */
 	aircraft_max0_shown = 0;			/* Has the max aircraft is 0 in game settings message been shown. */
 
@@ -95,7 +96,7 @@ class WormAI extends AIController {
 		this.route_1 = AIList();
 		this.route_2 = AIList();
 		this.engine_usefullness = AIList();
-		this.acceptance_limit = 100;
+		this.acceptance_limit = STARTING_ACCEPTANCE_LIMIT;
 
 		local list = AICargoList();
 		for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
