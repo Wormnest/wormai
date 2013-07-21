@@ -708,6 +708,8 @@ function WormAI::Start()
 	AILog.Info("Welcome to WormAI. I am currently in development.");
 	AILog.Info("These are our current AI settings:");
 	AILog.Info("- Minimum Town Size: " + GetSetting("min_town_size"));
+	AILog.Info("- Minimum Airport Distance: " + GetSetting("min_airport_distance"));
+	AILog.Info("- Maximum Airport Distance: " + GetSetting("max_airport_distance"));
 	AILog.Info("----------------------------------");
 
 	if (loaded_from_save) {
