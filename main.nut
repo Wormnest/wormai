@@ -496,11 +496,11 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 		list.Valuate(AITile.GetCargoAcceptance, this.passenger_cargo_id, airport_x, airport_y, airport_rad);
 		list.RemoveBelowValue(this.acceptance_limit);
 		
-		// For debugging: print candidates
+		/** debug off
 		for (tile = list.Begin(); !list.IsEnd(); tile = list.Next()) {
 			AILog.Info("Town: " + AITown.GetName(town) + ", Tile: " + tile +
 				", Passenger Acceptance: " + list.GetValue(tile));
-		}
+		} **/
 
 		/* Couldn't find a suitable place for this town, skip to the next */
 		if (list.Count() == 0) continue;
@@ -805,9 +805,9 @@ function WormAI::Start()
 			/* Evaluate the available aircraft once in a while. */
 			if ((ticker % DEFAULT_DELAY_EVALUATE_AIRCRAFT == 0 || ticker == 0)) {
 				this.EvaluateAircraft();
-				/* Debugging info */
+				/* Debugging info 
 				DebugListTownsUsed();
-				DebugListRouteInfo();
+				DebugListRouteInfo(); */
 			}
 			/* Once in a while, with enough money, try to build something */
 			if ((ticker % this.delay_build_airport_route == 0 || ticker == 0) && this.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
