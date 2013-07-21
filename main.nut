@@ -10,7 +10,7 @@
 // 
 
 // Import SuperLib
-import("util.superlib", "SuperLib", 32);	// TODO: add version number in version.nut and use python to update that number */
+import("util.superlib", "SuperLib", 33);	// TODO: add version number in version.nut and use python to update that number */
 
 Result <- SuperLib.Result;
 Log <- SuperLib.Log;
