@@ -465,6 +465,8 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 			list.KeepAboveValue(min_distance * min_distance);
 			/* Keep below maximum distance. */
 			list.KeepBelowValue(max_distance * max_distance);
+			// TODO: In early games with low maximum speeds we may need to adjust maximum and
+			// maybe even minimum distance to get a round trip within a year.
 		}
 		/* Sort on acceptance, remove places that don't have acceptance */
 		list.Valuate(AITile.GetCargoAcceptance, this.passenger_cargo_id, airport_x, airport_y, airport_rad);
