@@ -457,9 +457,14 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 		list.Valuate(AITile.IsBuildableRectangle, airport_x, airport_y);
 		list.KeepValue(1);
 		if (center_tile != 0) {
-			/* If we have a tile defined, we don't want to be within 25 tiles of this tile */
+			/* If we have a tile defined, check to see if it's within the minimum and maximum allowed. */
 			list.Valuate(AITile.GetDistanceSquareToTile, center_tile);
-			list.KeepAboveValue(625);
+			local min_distance = GetSetting("min_airport_distance");
+			local max_distance = GetSetting("max_airport_distance");
+			/* Keep above minimum distance. */
+			list.KeepAboveValue(min_distance * min_distance);
+			/* Keep below maximum distance. */
+			list.KeepBelowValue(max_distance * max_distance);
 		}
 		/* Sort on acceptance, remove places that don't have acceptance */
 		list.Valuate(AITile.GetCargoAcceptance, this.passenger_cargo_id, airport_x, airport_y, airport_rad);
