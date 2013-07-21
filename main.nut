@@ -488,7 +488,7 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 		}
 		/* Sort on acceptance, remove places that don't have acceptance */
 		list.Valuate(AITile.GetCargoAcceptance, this.passenger_cargo_id, airport_x, airport_y, airport_rad);
-		list.RemoveBelowValue(10);
+		list.RemoveBelowValue(25); // was 10
 		
 		// For debugging: print candidates
 		//for (tile = list.Begin(); !list.IsEnd(); tile = list.Next()) {
