@@ -43,6 +43,7 @@ import("AILib.List", "ExtendedList", 3);	// TODO: add version number in version.
 /* Wormnest: define some constants for easier maintenance. */
 const MINIMUM_BALANCE_BUILD_AIRPORT = 100000;	/* Minimum bank balance to start building airports. */
 const MINIMUM_BALANCE_AIRCRAFT = 25000;			/* Minimum bank balance to allow buying a new aircraft. */
+const MINIMUM_BALANCE_TWO_AIRCRAFT = 5000000;	/* Minimum bank balance to allow buying 2 aircraft at once. */
 const AIRCRAFT_LOW_PRICE_CUT = 500000;			/* Bank balance below which we will try to buy a low price aircraft. */
 const AIRCRAFT_MEDIUM_PRICE_CUT = 2000000;		/* Bank balance below which we will try to buy a medium price aircraft. */
 const AIRCRAFT_LOW_PRICE = 50000;				/* Maximum price of a low price aircraft. */
@@ -274,7 +275,7 @@ function WormAI::BuildAirportRoute()
 		return ERROR_BUILD_AIRPORT1;
 	}
 
-	local ret = this.BuildAircraft(tile_1, tile_2);
+	local ret = this.BuildAircraft(tile_1, tile_2, tile_1);
 	if (ret < 0) {
 		AIAirport.RemoveAirport(tile_1);
 		AIAirport.RemoveAirport(tile_2);
@@ -282,6 +283,11 @@ function WormAI::BuildAirportRoute()
 		this.towns_used.RemoveValue(tile_2);
 	}
 	else {
+		local balance = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
+		if ((balance >= MINIMUM_BALANCE_TWO_AIRCRAFT) && (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) > this.route_1.Count())) {
+			/* Build a second aircraft and start it at the other airport. */
+			ret = this.BuildAircraft(tile_1, tile_2, tile_2);
+		}
 		AILog.Info("Done building a route");
 	}
 
@@ -305,9 +311,10 @@ function WormAI::GetMaximumDistance(engine) {
 
 /**
  * Build an aircraft with orders from tile_1 to tile_2.
- *  The best available aircraft of that time will be bought.
+ * The best available aircraft of that time will be bought.
+ * start_tile is the tile where the airplane should start, or 0 to start at the first tile.
  */
-function WormAI::BuildAircraft(tile_1, tile_2)
+function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 {
 	// Don't try to build aircraft if we already have the max (or more because amount can be changed in game)
 	if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) <= this.route_1.Count()) {
@@ -316,8 +323,13 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 		return ERROR_MAX_AIRCRAFT;
 	}
 
+	/* order_start_tile: where our order should start */
+	local order_start_tile = start_tile;
+	if (start_tile == 0) {
+		order_start_tile = tile_1;
+	}
 	/* Build an aircraft */
-	local hangar = AIAirport.GetHangarOfAirport(tile_1);
+	local hangar = AIAirport.GetHangarOfAirport(order_start_tile);
 	local engine = null;
 	local eng_price = 0;
 
@@ -404,6 +416,12 @@ function WormAI::BuildAircraft(tile_1, tile_2)
 		AIOrder.AppendOrder(vehicle, tile_1, AIOrder.OF_FULL_LOAD_ANY);
 		AIOrder.AppendOrder(vehicle, tile_2, AIOrder.OF_FULL_LOAD_ANY);
 		AILog.Info("+ First vehicle: set orders.");
+	}
+	/* If vehicle should be started at another tile than tile_1 then skip to that order. */
+	/* Currently always assumes it is tile_2 and that that is the second order, thus 1. */
+	if (order_start_tile != tile_1) {
+		AILog.Info("-- Order: skipping to other tile.");
+		AIOrder.SkipToOrder(vehicle, 1);
 	}
 	AIVehicle.StartStopVehicle(vehicle);
 	this.distance_of_route.rawset(vehicle, AIMap.DistanceManhattan(tile_1, tile_2));
@@ -594,7 +612,7 @@ function WormAI::ManageAirRoutes()
 		/* Make sure we have enough money */
 		this.GetMoney(AIRCRAFT_LOW_PRICE);
 
-		return this.BuildAircraft(this.route_1.GetValue(v), this.route_2.GetValue(v));
+		return this.BuildAircraft(this.route_1.GetValue(v), this.route_2.GetValue(v), 0);
 	}
 }
 
@@ -622,7 +640,7 @@ function WormAI::HandleEvents()
 				local ec = AIEventVehicleCrashed.Convert(e);
 				local v = ec.GetVehicleID();
 				AILog.Info("We have a crashed aircraft (" + v + "), buying a new one as replacement");
-				this.BuildAircraft(this.route_1.GetValue(v), this.route_2.GetValue(v));
+				this.BuildAircraft(this.route_1.GetValue(v), this.route_2.GetValue(v), 0);
 				this.route_1.RemoveItem(v);
 				this.route_2.RemoveItem(v);
 			} break;
