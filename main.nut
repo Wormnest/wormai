@@ -578,7 +578,7 @@ function WormAI::ManageAirRoutes()
 	else {
 		//  extensive computation for low profit limit.
 		local list_count = 0;
-		local list_copy = AIVehicleList();
+		local list_copy = AIList();
 		// Set default low yearly profit
 		low_profit_limit = BAD_YEARLY_PROFIT;
 		list_count = list.Count();
@@ -699,8 +699,8 @@ function WormAI::ManageAirRoutes()
   */
 function WormAI::SellAirports(airport_1_tile, airport_2_tile) {
 	/* Remove the airports */
-	AILog.Info("==> Removing airports " + AIStation.GetName(AISTation.GetStationID(airport_1_tile)) + " and " + 
-		AIStation.GetName(AISTation.GetStationID(airport_2_tile)) + " since they are not used anymore");
+	AILog.Info("==> Removing airports " + AIStation.GetName(AIStation.GetStationID(airport_1_tile)) + " and " + 
+		AIStation.GetName(AIStation.GetStationID(airport_2_tile)) + " since they are not used anymore");
 	AIAirport.RemoveAirport(airport_1_tile);
 	AIAirport.RemoveAirport(airport_2_tile);
 	/* Free the towns_used entries */
