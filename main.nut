@@ -595,6 +595,8 @@ function WormAI::ManageAirRoutes()
 			low_profit_limit = high_profit * 3 / 10; // TESTING: 30%
 			// Copy the list_copy back to list which at this point is (should be) empty.
 			list.AddList(list_copy);
+			// Apparently need to use Valuate again on profit for it to work
+			list.Valuate(AIVehicle.GetProfitLastYear);
 			list.KeepBelowValue(low_profit_limit);
 			// DEBUG:
 			//foreach (i,v in list) {
