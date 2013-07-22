@@ -11,10 +11,28 @@ class WormAI extends AIInfo {
 	function GetAPIVersion()  { return "1.2"; } 
 
 	function GetSettings() {
-			//AddSetting({name = "use_trains", description = "Enable trains", easy_value = 1, medium_value = 1, hard_value = 1, custom_value = 1, flags = AICONFIG_BOOLEAN | AICONFIG_INGAME});
-			//AddSetting({name = "use_rvs", description = "Enable road vehicles", easy_value = 1, medium_value = 1, hard_value = 1, custom_value = 1, flags = AICONFIG_BOOLEAN | AICONFIG_INGAME});
-			AddSetting({name = "use_planes", description = "Enable aircraft", easy_value = 1, medium_value = 1, hard_value = 1, custom_value = 1, flags = AICONFIG_BOOLEAN | AICONFIG_INGAME});
-			//AddSetting({name = "use_ships", description = "Enable ships", easy_value = 1, medium_value = 1, hard_value = 1, custom_value = 1, flags = AICONFIG_BOOLEAN | AICONFIG_INGAME}); 		AddSetting({
+		//AddSetting({name = "use_trains", description = "Enable trains", easy_value = 1, medium_value = 1, hard_value = 1, custom_value = 1, flags = AICONFIG_BOOLEAN | AICONFIG_INGAME});
+		//AddSetting({name = "use_rvs", description = "Enable road vehicles", easy_value = 1, medium_value = 1, hard_value = 1, custom_value = 1, flags = AICONFIG_BOOLEAN | AICONFIG_INGAME});
+		AddSetting({name = "use_planes", description = "Enable aircraft (TODO)", easy_value = 1, medium_value = 1, hard_value = 1, custom_value = 1, flags = AICONFIG_BOOLEAN | AICONFIG_INGAME});
+		//AddSetting({name = "use_ships", description = "Enable ships", easy_value = 1, medium_value = 1, hard_value = 1, custom_value = 1, flags = AICONFIG_BOOLEAN | AICONFIG_INGAME});
+
+		AddSetting({
+			name = "ai_speed",
+			description = "How fast this AI will think (TODO)",
+			min_value = 1,
+			max_value = 3,
+			easy_value = 1,
+			medium_value = 2,
+			hard_value = 3,
+			custom_value = 2,
+			flags = CONFIG_INGAME
+		});
+		AddLabels("ai_speed", {
+		  _1 = "Slow", 
+		  _2 = "Normal",
+		  _3 = "Fast"
+		  });
+		AddSetting({
 			name = "min_town_size",
 			description = "The minimum size of towns to be considered for getting an airport",
 			min_value = 100,
@@ -24,7 +42,7 @@ class WormAI extends AIInfo {
 			hard_value = 500,
 			custom_value = 500,
 			step_size = 100,
-			flags = CONFIG_INGAME 
+			flags = CONFIG_INGAME
 		});
 		AddSetting({
 			name = "min_airport_distance",
