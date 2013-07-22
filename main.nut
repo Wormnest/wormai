@@ -688,8 +688,8 @@ function WormAI::ManageAirRoutes()
   */
 function WormAI::SellAirports(airport_1_tile, airport_2_tile) {
 	/* Remove the airports */
-	AILog.Info("==> Removing airports at tile " + airport_1_tile + " and " + 
-		airport_2_tile + " since they are not used anymore");
+	AILog.Info("==> Removing airports " + AIStation.GetName(AISTation.GetStationID(airport_1_tile)) + " and " + 
+		AIStation.GetName(AISTation.GetStationID(airport_2_tile)) + " since they are not used anymore");
 	AIAirport.RemoveAirport(airport_1_tile);
 	AIAirport.RemoveAirport(airport_2_tile);
 	/* Free the towns_used entries */
