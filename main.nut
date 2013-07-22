@@ -598,7 +598,12 @@ function WormAI::ManageAirRoutes()
 			AILog.Info("...Computed low_profit_limit: " + low_profit_limit + " (highest profit: " +
 				high_profit + "), number below limit: " + list.Count());
 		}
-		// else if count == 0 then all vehicles younger than 3 years
+		else if (list_count == 0) {
+			AILog.Info("All aircraft younger than 3 years: recomputing low_profit_limit not needed.");
+		}
+		else {
+			AILog.Info("There are " + list.Count() + " aircraft below last years bad yearly profit limit.");
+		}
 	}
 
 	for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
