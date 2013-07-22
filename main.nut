@@ -367,6 +367,10 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 		return ERROR_NOT_ENOUGH_MONEY;
 	}
 	
+	/* We don't want helicopters so weed them out. */
+	engine_list.Valuate(AIEngline.GetPlaneType);
+	engine_list.RemoveValue(AIAirport.PT_HELICOPTER);
+	
 	engine_list.Valuate(AIEngine.GetPrice);
 	engine_list.KeepBelowValue(balance < AIRCRAFT_LOW_PRICE_CUT ? AIRCRAFT_LOW_PRICE : (balance < AIRCRAFT_MEDIUM_PRICE_CUT ? AIRCRAFT_MEDIUM_PRICE : AIRCRAFT_HIGH_PRICE));
 
