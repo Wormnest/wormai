@@ -572,24 +572,29 @@ function WormAI::ManageAirRoutes()
 		list.KeepAboveValue(low_profit_limit);
 	}
 	else {
-		// TODO: More extensive computation for limit.
+		//  extensive computation for low profit limit.
 		local list_count = 0;
-		// Maybe something like 10% of highest profit aircraft?
+		local list_copy = AIVehicleList();
+		// Set default low yearly profit
 		low_profit_limit = BAD_YEARLY_PROFIT;
 		list_count = list.Count();
-		list.KeepAboveValue(low_profit_limit);
-		if ((list_count == list.Count()) && (list_count > 0)) {
+		// We need a copy of list before cutting off low_profit
+		list_copy.AddList(list);
+		list.KeepBelowValue(low_profit_limit);
+		if (list.Count() == 0) {
 			// All profits are above our current low_profit_limit
 			// Get vehicle with last years highest profit
 			// We need to get the vehicle list again because our other list has removed
 			// vehicles younger than 3 years, we want the absolute high profit of all vehicles
-			local highest = AIVehicleList();;
+			local highest = AIVehicleList();
 			highest.Valuate(AIVehicle.GetProfitLastYear);
 			highest.KeepTop(1);
 			local v = highest.Begin();
 			local high_profit = highest.GetValue(v);
 			// get profits below 20% of that
 			low_profit_limit = high_profit * 3 / 10; // TESTING: 30%
+			// Copy the list_copy back to list which at this point is (should be) empty.
+			list.AddList(list_copy);
 			list.KeepBelowValue(low_profit_limit);
 			// DEBUG:
 			//foreach (i,v in list) {
