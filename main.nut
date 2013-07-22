@@ -583,13 +583,16 @@ function WormAI::ManageAirRoutes()
 			// Get vehicle with last years highest profit
 			local highest = AIList();
 			highest.AddList(list);
+			// Apparently the right sort order isn't kept while copying the list so we need to sort it:
+			highest.Sort(AIList.SORT_BY_VALUE,true); // true = ascending
 			highest.KeepTop(1);
 			local v = highest.Begin();
 			local high_profit = highest.GetValue(v);
 			// get profits below 20% of that
-			low_profit_limit = high_profit * 20 / 100;
+			low_profit_limit = high_profit * 2 / 10;
 			list.KeepAboveValue(low_profit_limit);
-			AILog.Info("...Computed low_profit_limit: " + low_profit_limit);
+			AILog.Info("...Computed low_profit_limit: " + low_profit_limit + " (highest profit: " +
+				high_profit + ")");
 		}
 		
 	}
