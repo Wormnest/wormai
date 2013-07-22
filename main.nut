@@ -695,6 +695,8 @@ function WormAI::SellAirports(airport_1_tile, airport_2_tile) {
 	/* Free the towns_used entries */
 	this.towns_used.RemoveValue(airport_1_tile);
 	this.towns_used.RemoveValue(airport_2_tile);
+	// TODO: Make a list of removed airports/tiles so that we don't build a new airport
+	// in the same spot soon after we have removed it!
 }
 
 function WormAI::HandleEvents()
