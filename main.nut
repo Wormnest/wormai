@@ -836,6 +836,12 @@ function WormAI::Start()
 				aircraft_disabled_shown = 1;
 			}
 		}
+		else if (Vehicl.IsVehicleTypeDisabledByAISettings(AIVehicle.VT_AIR)) {
+			if (aircraft_disabled_shown == 0) {
+				AILog.Warning("Using aircraft is disabled in this AI's settings. Since this AI currently only uses aircraft it will not build anything until you change this setting.")
+				aircraft_disabled_shown = 1;
+			}
+		}
 		else if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) == 0) {
 			if (aircraft_max0_shown == 0) {
 				AILog.Warning("Amount of allowed aircraft for AI is set to 0 in your game settings. This means we can't build any aircraft which is currently our only option.")
