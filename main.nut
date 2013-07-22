@@ -841,7 +841,7 @@ function WormAI::Start()
 				aircraft_disabled_shown = 1;
 			}
 		}
-		else if (Vehicl.IsVehicleTypeDisabledByAISettings(AIVehicle.VT_AIR)) {
+		else if (Vehicle.IsVehicleTypeDisabledByAISettings(AIVehicle.VT_AIR)) {
 			if (aircraft_disabled_shown == 0) {
 				AILog.Warning("Using aircraft is disabled in this AI's settings. Since this AI currently only uses aircraft it will not build anything until you change this setting.")
 				aircraft_disabled_shown = 1;
