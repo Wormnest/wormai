@@ -589,8 +589,8 @@ function WormAI::ManageAirRoutes()
 			local v = highest.Begin();
 			local high_profit = highest.GetValue(v);
 			// get profits below 20% of that
-			low_profit_limit = high_profit * 2 / 10;
-			list.KeepAboveValue(low_profit_limit);
+			low_profit_limit = high_profit * 3 / 10; // TESTING: 30%
+			list.KeepBelowValue(low_profit_limit);
 			// DEBUG:
 			//foreach (i,v in list) {
 			//	AILog.Info("Vehicle " + i + " has profit: " + v);
