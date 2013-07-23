@@ -2,6 +2,7 @@
 
 import os
 import re
+import datetime
 
 # ----------------------------------
 # Definitions:
@@ -14,14 +15,37 @@ ai_pack_name = ai_name.replace(" ", "-")
 # ----------------------------------
 version_file = "version.nut";
 
-# Script:
+# We want the date to be updated before releasing the tar
+# and the version number to be update after updating
+# Thus we can't do it at the same time.
 version = -1
 found_line = 0
-for line in open(version_file):
-    found_line += 1;
+date_line = 0
+cur_line = 0
+
+# Open version file for reading and writing (r+)
+ver_file = open(version_file, "r+");
+lines = ver_file.readlines();
+ver_file.seek(0);
+#ver_file.truncate();
+for i, line in enumerate(lines):
+    cur_line += 1;
     r = re.search('SELF_VERSION\s+<-\s+([0-9]+)', line)
     if (r != None):
         version = r.group(1)
+        found_line = cur_line
+        ver_file.write(line);
+    else:
+        r = re.search('SELF_DATE\s+<-\s+\"([0-9\-]+)\"', line)
+        if (r != None):
+            date_line = cur_line
+            now = datetime.date.today();
+            ver_file.write('SELF_DATE <- "{0}-{1:02}-{2:02}";'.format(now.year, now.month, now.day));
+        else:
+            ver_file.write(line);
+# Write empty line at the end
+ver_file.write("\n");
+ver_file.close();
 
 if(version == -1):
     print("Couldn't find " + ai_name + " version in info.nut!")
