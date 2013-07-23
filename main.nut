@@ -621,6 +621,7 @@ function WormAI::ManageAirRoutes()
 		}
 	}
 
+	// TODO: Don't sell all aircraft from the same route all at once, try selling 1 per year?
 	for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
 		local profit = list.GetValue(i);
 		/* Profit last year and this year bad? Let's sell the vehicle */
