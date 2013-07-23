@@ -3,13 +3,14 @@ require("version.nut");
 class WormAI extends AIInfo {
 	function GetAuthor()        { return "Wormnest"; }
 	function GetName()          { return "WormAI"; }
-	function GetShortName()     { return "WOAI"; }
-	function GetDescription()   { return "Wormnest AI testing AI writing"; }
+	function GetShortName()     { return "WORM"; }
+	function GetDescription()   { return "Worm AI: A new Transport Tycoon arises. Version " + GetVersion() + " released on " + GetDate() + "."; }
 	function GetVersion()       { return SELF_VERSION; }
 	function GetDate()          { return SELF_DATE; }
-	function MinVersionToLoad() { return 1; } 
+	function MinVersionToLoad() { return 1; }
 	function CreateInstance()   { return "WormAI"; }
-	function GetAPIVersion()    { return "1.2"; } 
+	function GetAPIVersion()    { return "1.2"; }
+	function GetURL()           { return "TODO"; }
 
 	function GetSettings() {
 		//AddSetting({name = "use_trains", description = "Enable trains", easy_value = 1, medium_value = 1, hard_value = 1, custom_value = 1, flags = AICONFIG_BOOLEAN | AICONFIG_INGAME});
