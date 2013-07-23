@@ -368,7 +368,7 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 	}
 	
 	/* We don't want helicopters so weed them out. */
-	engine_list.Valuate(AIEngline.GetPlaneType);
+	engine_list.Valuate(AIEngine.GetPlaneType);
 	engine_list.RemoveValue(AIAirport.PT_HELICOPTER);
 	
 	engine_list.Valuate(AIEngine.GetPrice);
