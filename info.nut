@@ -20,14 +20,14 @@ class WormAI extends AIInfo {
 
 		AddSetting({
 			name = "ai_speed",
-			description = "How fast this AI will think (TODO)",
+			description = "How fast this AI will think (can't be changed in the game)",
 			min_value = 1,
 			max_value = 3,
 			easy_value = 1,
 			medium_value = 2,
 			hard_value = 3,
 			custom_value = 2,
-			flags = CONFIG_INGAME
+			flags = CONFIG_NONE
 		});
 		AddLabels("ai_speed", {
 		  _1 = "Slow", 
