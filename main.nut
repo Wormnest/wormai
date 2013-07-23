@@ -562,6 +562,14 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 
 function WormAI::ManageAirRoutes()
 {
+	// TODO:
+	// 1. Make groups for each route
+	// 2. When we have max aircraft/airports:
+	//  - Evaluate total profit per group, remove bad groups/airports or reduce # planes
+	//  - Favor bigger/faster aircraft over cost more when high amount waiting passengers
+	// 3. Upgrade aircraft when they are old or when newer ones would be more profitable
+	// 4. Upgrade airports when possible
+	// 5. Check reliability when breakdowns are on
 	local list = AIVehicleList();
 	local low_profit_limit = 0;
 	
