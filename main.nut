@@ -48,16 +48,22 @@ import("AILib.List", "ExtendedList", AILIBLIST_VERSION);
 const MINIMUM_BALANCE_BUILD_AIRPORT = 100000;	/* Minimum bank balance to start building airports. */
 const MINIMUM_BALANCE_AIRCRAFT = 25000;			/* Minimum bank balance to allow buying a new aircraft. */
 const MINIMUM_BALANCE_TWO_AIRCRAFT = 5000000;	/* Minimum bank balance to allow buying 2 aircraft at once. */
+
 const AIRCRAFT_LOW_PRICE_CUT = 500000;			/* Bank balance below which we will try to buy a low price aircraft. */
 const AIRCRAFT_MEDIUM_PRICE_CUT = 2000000;		/* Bank balance below which we will try to buy a medium price aircraft. */
 const AIRCRAFT_LOW_PRICE = 50000;				/* Maximum price of a low price aircraft. */
 const AIRCRAFT_MEDIUM_PRICE = 250000;			/* Maximum price of a medium price aircraft. */
 const AIRCRAFT_HIGH_PRICE = 1500000;			/* Maximum price of a high price aircraft. */
+
+/* Default delays */
+const SLEEPING_TIME = 100;						/* Default time to sleep between loops of our AI (NB: should be a multiple of 100). */
+/* Warning: delays should always be a multiple of 100 since Modulo is used! */
 const DEFAULT_DELAY_EVALUATE_AIRCRAFT = 25000;	/* Default delay for evaluating aircraft usefullness. */
 const DEFAULT_DELAY_BUILD_AIRPORT = 500; 		/* Default delay before building a new airport route. */
 const DEFAULT_DELAY_MANAGE_ROUTES = 1000;		/* Default delay for managing air routes. */
 const DEFAULT_DELAY_HANDLE_LOAN = 2500;			/* Default delay for handling our loan. */
 const DEFAULT_DELAY_HANDLE_EVENTS = 100;		/* Default delay for handling events. */
+
 const STARTING_ACCEPTANCE_LIMIT = 150;			/* Starting limit in acceptance for finding suitable airport tile. */
 const BAD_YEARLY_PROFIT = 10000;				/* Yearly profit limit below which profit is deemed bad. */
 const AIRPORT_LIMIT_FACTOR = 3;					/* We limit airports to max aircraft / FACTOR * 2 (2 needed per route). */
@@ -82,6 +88,10 @@ class WormAI extends AIController {
 	distance_of_route = {};
 	vehicle_to_depot = {};
 	delay_build_airport_route = DEFAULT_DELAY_BUILD_AIRPORT;
+	delay_evaluate_aircraft = DEFAULT_DELAY_EVALUATE_AIRCRAFT;
+	delay_manage_routes = DEFAULT_DELAY_MANAGE_ROUTES;
+	delay_handle_loan = DEFAULT_DELAY_HANDLE_LOAN;
+	delay_handle_events = DEFAULT_DELAY_HANDLE_EVENTS;
 	passenger_cargo_id = -1;
 
 	/* WormAI: New variables added. */
@@ -102,7 +112,8 @@ class WormAI extends AIController {
 		this.route_1 = AIList();
 		this.route_2 = AIList();
 		this.engine_usefullness = AIList();
-		this.acceptance_limit = STARTING_ACCEPTANCE_LIMIT;
+		// Delays: we don't set them here but in start because we need to check the selected
+		// speed set in gamesettings
 
 		local list = AICargoList();
 		for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
@@ -811,6 +822,44 @@ function WormAI::GetCostFactor(engine, costfactor_list) {
 	}
 }
 
+/*
+ * InitSettings initializes a number of required variables based on the gamesettings of our AI.
+*/
+function WormAI::InitSettings()
+{
+	ai_speed = GetSetting("ai_speed");
+	if (ai_speed == 1) {
+		ai_speed = 3;
+	}
+	else if (ai_speed == 3) {
+		ai_speed = 1;
+	}
+	this.delay_evaluate_aircraft = DEFAULT_DELAY_EVALUATE_AIRCRAFT * ai_speed;
+	this.delay_build_airport_route = DEFAULT_DELAY_BUILD_AIRPORT * ai_speed;
+	this.delay_manage_routes = DEFAULT_DELAY_MANAGE_ROUTES * ai_speed;
+	this.delay_handle_loan = DEFAULT_DELAY_HANDLE_LOAN * ai_speed;
+	this.delay_handle_events = DEFAULT_DELAY_HANDLE_EVENTS * ai_speed;
+	
+	// N.B.: WARNING: Since the ticker MODulo is used to start after delays, all delays
+	// above are assumed to be multiples of 100.
+}
+
+/*
+ * Welcome says hello to the user and prints out it's current AI gamesettings.
+*/
+function WormAI::Welcome()
+{
+	/* Say hello to the user */
+	AILog.Info("Welcome to WormAI. I am currently in development.");
+	AILog.Info("These are our current AI settings:");
+	AILog.Info("- Use planes: " + GetSetting("use_planes"));
+	AILog.Info("- AI speed: " + GetSetting("ai_speed"));
+	AILog.Info("- Minimum Town Size: " + GetSetting("min_town_size"));
+	AILog.Info("- Minimum Airport Distance: " + GetSetting("min_airport_distance"));
+	AILog.Info("- Maximum Airport Distance: " + GetSetting("max_airport_distance"));
+	AILog.Info("----------------------------------");
+}
+
 function WormAI::Start()
 {
 	if (this.passenger_cargo_id == -1) {
@@ -826,14 +875,10 @@ function WormAI::Start()
 		}
 	}
 	this.name = AICompany.GetName(AICompany.COMPANY_SELF);
-	/* Say hello to the user */
-	AILog.Info("Welcome to WormAI. I am currently in development.");
-	AILog.Info("These are our current AI settings:");
-	AILog.Info("- Minimum Town Size: " + GetSetting("min_town_size"));
-	AILog.Info("- Minimum Airport Distance: " + GetSetting("min_airport_distance"));
-	AILog.Info("- Maximum Airport Distance: " + GetSetting("max_airport_distance"));
-	AILog.Info("----------------------------------");
-
+	
+	InitSettings();	// Initialize some AI game settings.
+	Welcome();		// Write welcome and AI settings in log.
+	
 	if (loaded_from_save) {
 		/* Debugging info */
 		DebugListTownsUsed();
@@ -853,10 +898,12 @@ function WormAI::Start()
 
 	/* We need our local ticker, as GetTick() will skip ticks */
 	local ticker = 0;
-	/* Determine time we may sleep */
-	local sleepingtime = 100;
-	if (this.delay_build_airport_route < sleepingtime)
-		sleepingtime = this.delay_build_airport_route;
+	/* The amount of time we may sleep between loops.
+	   Warning: don't change this value unless your understand the implications for all the delays! 
+	*/
+	local sleepingtime = SLEEPING_TIME;
+	/* Factor to multiply the build delay with. */
+	local build_delay_factor = 1;
 
 	/* Let's go on for ever */
 	while (true) {
@@ -881,35 +928,35 @@ function WormAI::Start()
 		}
 		else {
 			/* Evaluate the available aircraft once in a while. */
-			if ((ticker % DEFAULT_DELAY_EVALUATE_AIRCRAFT == 0 || ticker == 0)) {
+			if ((ticker % this.delay_evaluate_aircraft == 0 || ticker == 0)) {
 				this.EvaluateAircraft();
 				/* Debugging info 
 				DebugListTownsUsed();
 				DebugListRouteInfo(); */
 			}
 			/* Once in a while, with enough money, try to build something */
-			if ((ticker % this.delay_build_airport_route == 0 || ticker == 0) && this.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
+			if ((ticker % (build_delay_factor * this.delay_build_airport_route) == 0 || ticker == 0) && this.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
 				local ret = this.BuildAirportRoute();
 				if ((ret == ERROR_FIND_AIRPORT1) || (ret == ERROR_MAX_AIRPORTS) ||
 					(ret == ERROR_MAX_AIRCRAFT)&& ticker != 0) {
 					/* No more route found or we have max allowed aircraft, delay even more before trying to find an other */
-					this.delay_build_airport_route = 10 * DEFAULT_DELAY_BUILD_AIRPORT;
+					build_delay_factor = 10;
 				}
 				else {
 					/* Set default delay back in case we had it increased, see above. */
-					this.delay_build_airport_route = DEFAULT_DELAY_BUILD_AIRPORT;
+					build_delay_factor = 1;
 				}
 			}
 			/* Manage the routes once in a while */
-			if (ticker % DEFAULT_DELAY_MANAGE_ROUTES == 0) {
+			if (ticker % this.delay_manage_routes == 0) {
 				this.ManageAirRoutes();
 			}
 			/* Try to get rid of our loan once in a while */
-			if (ticker % DEFAULT_DELAY_HANDLE_LOAN == 0) {
+			if (ticker % this.delay_handle_loan == 0) {
 				AICompany.SetLoanAmount(0);
 			}
 			/* Check for events once in a while */
-			if (ticker % DEFAULT_DELAY_HANDLE_EVENTS == 0) {
+			if (ticker % this.delay_handle_events == 0) {
 				this.HandleEvents();
 			}
 		}
@@ -917,7 +964,7 @@ function WormAI::Start()
 		/* Make sure we do not create infinite loops */
 		Sleep(sleepingtime);
 		ticker += sleepingtime;
-	}
+	} // END OF OUR MAIN LOOP
 }
 
  function WormAI::Save()
