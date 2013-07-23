@@ -7,7 +7,7 @@ class WormAI extends AIInfo {
 	function GetDescription()   { return "Wormnest AI testing AI writing"; }
 	function GetVersion()       { return SELF_VERSION; }
 	function GetDate()          { return SELF_DATE; }
-	function MinVersionToLoad() { return "1"; } 
+	function MinVersionToLoad() { return 1; } 
 	function CreateInstance()   { return "WormAI"; }
 	function GetAPIVersion()    { return "1.2"; } 
 
