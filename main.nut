@@ -827,7 +827,7 @@ function WormAI::GetCostFactor(engine, costfactor_list) {
 */
 function WormAI::InitSettings()
 {
-	ai_speed = GetSetting("ai_speed");
+	local ai_speed = GetSetting("ai_speed");
 	if (ai_speed == 1) {
 		ai_speed = 3;
 	}
