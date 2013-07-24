@@ -818,6 +818,9 @@ function WormAI::ManageAirRoutes()
 		/* Do not build new vehicle if there isn't at least some waiting cargo at the other station too. */
 		if  (s2_waiting <= AIRPORT_CARGO_WAITING_LOW_LIMIT-AIRPORT2_WAITING_DIFF) continue;
 
+		// TODO: Maybe also check for aircraft waiting in depot because that could be a sign of
+		// too many aircraft too!
+
 		AILog.Info("Station " + AIStation.GetName(i) + "(id: " + i +
 			") has a lot of waiting passengers (cargo: " + list.GetValue(i) + "), adding a new aircraft for the route.");
 		AILog.Info("Other station: " + AIStation.GetName(s2_id) + " waiting passengers: " + s2_waiting);
