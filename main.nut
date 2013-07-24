@@ -323,7 +323,9 @@ function WormAI::BuildAirportRoute()
 		AILog.Info("Not building more airports. We already have a reasonable amount for the current aircraft limit.");
 		return ERROR_MAX_AIRPORTS;
 	}
-	
+
+	// See for capacity of different airport types:
+	// Airport capacity test: http://www.tt-forums.net/viewtopic.php?f=2&t=47279
 	local airport_type = (AIAirport.IsValidAirportType(AIAirport.AT_LARGE) ? AIAirport.AT_LARGE : AIAirport.AT_SMALL);
 
 	/* Get enough money to work with */
@@ -557,7 +559,8 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 		/* Create a 30x30 grid around the core of the town and see if we can find a spot for a small airport */
 		local list = AITileList();
 		/* XXX -- We assume we are more than 15 tiles away from the border! */
-		// TODO: THIS NEEDS TO BE CHECKED!!! 
+		// TODO: THIS NEEDS TO BE CHECKED!!!
+		// Maybe use from AIAI\util\util.nut: function SafeAddRectangle(list, tile, radius) //from Rondje
 		list.AddRectangle(tile - AIMap.GetTileIndex(15, 15), tile + AIMap.GetTileIndex(15, 15));
 		list.Valuate(AITile.IsBuildableRectangle, airport_x, airport_y);
 		list.KeepValue(1);
