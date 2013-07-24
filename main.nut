@@ -67,6 +67,8 @@ const DEFAULT_DELAY_HANDLE_EVENTS = 100;		/* Default delay for handling events. 
 const STARTING_ACCEPTANCE_LIMIT = 150;			/* Starting limit in acceptance for finding suitable airport tile. */
 const BAD_YEARLY_PROFIT = 10000;				/* Yearly profit limit below which profit is deemed bad. */
 const AIRPORT_LIMIT_FACTOR = 3;					/* We limit airports to max aircraft / FACTOR * 2 (2 needed per route). */
+const AIRPORT_CARGO_WAITING_LOW_LIMIT = 250;	/* Limit of waiting cargo (passengers) on airport above which we add an aircraft. */
+const AIRPORT_CARGO_WAITING_HIGH_LIMIT = 1250;	/* Limit of waiting cargo (passengers) on airport above which we add 2 aircraft. */
 
 /* ERROR CODE constants */
 const ALL_OK = 0;
@@ -738,7 +740,7 @@ function WormAI::ManageAirRoutes()
 
 	list = AIStationList(AIStation.STATION_AIRPORT);
 	list.Valuate(AIStation.GetCargoWaiting, this.passenger_cargo_id);
-	list.KeepAboveValue(250);
+	list.KeepAboveValue(AIRPORT_CARGO_WAITING_LOW_LIMIT);
 
 	for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
 		local list2 = AIVehicleList_Station(i);
@@ -779,7 +781,20 @@ function WormAI::ManageAirRoutes()
 		/* Make sure we have enough money */
 		this.GetMoney(AIRCRAFT_LOW_PRICE);
 
-		return this.BuildAircraft(this.route_1.GetValue(v), this.route_2.GetValue(v), 0);
+		/* Build the aircraft. */
+		local ret = this.BuildAircraft(this.route_1.GetValue(v), this.route_2.GetValue(v), 0);
+		
+		/* If we have a real high amount of waiting cargo/passengers then add 2 planes at once. */
+		/* Provided buying the first plane went ok. */
+		
+		if ((ret == ALL_OK) && (AIStation.GetCargoWaiting(i) > AIRPORT_CARGO_WAITING_HIGH_LIMIT)) {
+			AILog.Info(" Building a second aircraft since waiting passengers is very high.");
+			/* Make sure we have enough money */
+			this.GetMoney(AIRCRAFT_LOW_PRICE);
+			/* Build the aircraft. */
+			ret = this.BuildAircraft(this.route_1.GetValue(v), this.route_2.GetValue(v), 0);
+		}
+		return ret;
 	}
 	AILog.Info(Helper.GetCurrentDateString() + " Finished managing air routes.");
 }
