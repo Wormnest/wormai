@@ -69,6 +69,7 @@ const BAD_YEARLY_PROFIT = 10000;				/* Yearly profit limit below which profit is
 const AIRPORT_LIMIT_FACTOR = 3;					/* We limit airports to max aircraft / FACTOR * 2 (2 needed per route). */
 const AIRPORT_CARGO_WAITING_LOW_LIMIT = 250;	/* Limit of waiting cargo (passengers) on airport above which we add an aircraft. */
 const AIRPORT_CARGO_WAITING_HIGH_LIMIT = 1250;	/* Limit of waiting cargo (passengers) on airport above which we add 2 aircraft. */
+const AIRPORT2_WAITING_DIFF = 150;				/* Cargo waiting diff (less) value at the other station to allow extra aircraft. */
 
 /* ERROR CODE constants */
 const ALL_OK = 0;
@@ -799,11 +800,23 @@ function WormAI::ManageAirRoutes()
 		/* Find the first vehicle that is going to this station */
 		local v = list2.Begin();
 		local dist = this.distance_of_route.rawget(v) / 2;
+		
+		/* Find the id of the other station and then request that stations waiting cargo. */
+		local st = this.route_1.GetValue(v);
+		if (st == AIStation.GetLocation(i)) {
+			// Need route_2 for the station tile of the other one
+			st = this.route_2.GetValue(v);
+		}
+		local s2_waiting = AIStation.GetCargoWaiting(AIStation.GetStationID(st), this.passenger_cargo_id);
+		
 
 		list2.Valuate(AIVehicle.GetAge);
 		list2.KeepBelowValue(dist);
 		/* Do not build a new vehicle if we bought a new one in the last DISTANCE / 2 days */
 		if (list2.Count() != 0) continue;
+
+		/* Do not build new vehicle if there isn't at least some waiting cargo at the other station too. */
+		if  (s2_waiting <= AIRPORT_CARGO_WAITING_LOW_LIMIT-AIRPORT2_WAITING_DIFF) continue;
 
 		AILog.Info("Station " + AIStation.GetName(i) + "(id: " + i +
 			") has a lot of waiting passengers (cargo: " + list.GetValue(i) + "), adding a new aircraft for the route.");
@@ -816,8 +829,9 @@ function WormAI::ManageAirRoutes()
 		
 		/* If we have a real high amount of waiting cargo/passengers then add 2 planes at once. */
 		/* Provided buying the first plane went ok. */
-		
-		if ((ret == ALL_OK) && (AIStation.GetCargoWaiting(i, this.passenger_cargo_id) > AIRPORT_CARGO_WAITING_HIGH_LIMIT)) {
+		/* Do not build new vehicle if there isn't at least some waiting cargo at the other station too. */
+		if ((ret == ALL_OK) && (AIStation.GetCargoWaiting(i, this.passenger_cargo_id) > AIRPORT_CARGO_WAITING_HIGH_LIMIT) &&
+			(s2_waiting > AIRPORT_CARGO_WAITING_HIGH_LIMIT-AIRPORT2_WAITING_DIFF)) {
 			AILog.Info(" Building a second aircraft since waiting passengers is very high.");
 			/* Make sure we have enough money */
 			this.GetMoney(AIRCRAFT_LOW_PRICE);
