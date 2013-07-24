@@ -681,6 +681,8 @@ function WormAI::ManageAirRoutes()
 	/* Decide on the best low profit limit at this moment. */
 	if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) > this.route_1.Count()) {
 		/* Since we can still add more planes keep all planes that make at least some profit. */
+		// TODO: When maintenance costs are on we should set low profit limit too at least
+		// the yearly costs.
 		low_profit_limit = 0;
 		list.KeepBelowValue(low_profit_limit);
 	}
