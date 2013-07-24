@@ -807,8 +807,8 @@ function WormAI::ManageAirRoutes()
 			// Need route_2 for the station tile of the other one
 			st = this.route_2.GetValue(v);
 		}
-		local s2_waiting = AIStation.GetCargoWaiting(AIStation.GetStationID(st), this.passenger_cargo_id);
-		
+		local s2_id = AIStation.GetStationID(st);
+		local s2_waiting = AIStation.GetCargoWaiting(s2_id, this.passenger_cargo_id);
 
 		list2.Valuate(AIVehicle.GetAge);
 		list2.KeepBelowValue(dist);
@@ -820,6 +820,7 @@ function WormAI::ManageAirRoutes()
 
 		AILog.Info("Station " + AIStation.GetName(i) + "(id: " + i +
 			") has a lot of waiting passengers (cargo: " + list.GetValue(i) + "), adding a new aircraft for the route.");
+		AILog.Info("Other station: " + AIStation.GetName(s2_id) + " waiting passengers: " + s2_waiting);
 
 		/* Make sure we have enough money */
 		this.GetMoney(AIRCRAFT_LOW_PRICE);
