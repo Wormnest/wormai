@@ -358,7 +358,6 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 	// Don't try to build aircraft if we already have the max (or more because amount can be changed in game)
 	if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) <= this.route_1.Count()) {
 		AILog.Warning("We already have the maximum number of aircraft. No sense in building an airport.");
-		AILog.Info("");
 		return ERROR_MAX_AIRCRAFT;
 	}
 
@@ -380,7 +379,6 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 	/* Balance below a certain minimum? Wait until we buy more planes. */
 	if (balance < MINIMUM_BALANCE_AIRCRAFT) {
 		AILog.Warning("We are low on money (" + balance + "). We are not gonna buy an aircraft right now.");
-		AILog.Info("");
 		return ERROR_NOT_ENOUGH_MONEY;
 	}
 	
