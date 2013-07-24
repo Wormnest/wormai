@@ -130,6 +130,35 @@ class WormAI extends AIController {
 	}
 };
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Functions that should be moved to a utility/library unit
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Since it seems that Squirrel string library (with format and regexp) is not enabled in OpenTTD
+// I used the following function to get a hexadecimal string.
+// Source: http://forum.iv-multiplayer.com/index.php?topic=914.60
+function WormAI::decToHex(number)
+{
+	local hexChars = "0123456789ABCDEF";
+	local ret = "";
+	local quotient = number;
+	do
+	{
+		local remainder = quotient % 16;
+		quotient /= 16;
+		ret = hexChars[(remainder < 0) ? -remainder : remainder].tochar()+ret;
+	}
+	while(quotient != 0);
+	if(number < 0) return "-"+ret;
+	return ret;
+}
+
+// Writes a tile as a hexadecimal number
+function WormAI::WriteTile(tile)
+{
+	return "0x" + decToHex(tile);
+}
+
 //////////////////////////////////////////////////////////////////////////
 //	Debugging functions
 
