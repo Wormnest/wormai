@@ -681,7 +681,7 @@ function WormAI::ManageAirRoutes()
 	if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) > this.route_1.Count()) {
 		/* Since we can still add more planes keep all planes that make at least some profit. */
 		low_profit_limit = 0;
-		list.KeepAboveValue(low_profit_limit);
+		list.KeepBelowValue(low_profit_limit);
 	}
 	else {
 		//  extensive computation for low profit limit.
@@ -817,7 +817,7 @@ function WormAI::ManageAirRoutes()
 		/* If we have a real high amount of waiting cargo/passengers then add 2 planes at once. */
 		/* Provided buying the first plane went ok. */
 		
-		if ((ret == ALL_OK) && (AIStation.GetCargoWaiting(i) > AIRPORT_CARGO_WAITING_HIGH_LIMIT)) {
+		if ((ret == ALL_OK) && (AIStation.GetCargoWaiting(i, this.passenger_cargo_id) > AIRPORT_CARGO_WAITING_HIGH_LIMIT)) {
 			AILog.Info(" Building a second aircraft since waiting passengers is very high.");
 			/* Make sure we have enough money */
 			this.GetMoney(AIRCRAFT_LOW_PRICE);
