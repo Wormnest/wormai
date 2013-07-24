@@ -291,6 +291,19 @@ function WormAI::GetMoney(money)
 }
 
 /**
+ * RemoveAirport. Remove airport at specified tile.
+ * If removing fails then give a warning.
+ * Note that using Sleep(x) here and trying again doesn't work for some reason (removing still fails)
+**/
+function WormAI::RemoveAirport(tile)
+{
+	if (!AIAirport.RemoveAirport(tile)) {
+		AILog.Warning("Failed to remove airport " + AIStation.GetName(AIStation.GetStationID(tile)) +
+			" at tile " + WriteTile(tile) );
+	}
+}
+
+/**
  * Build an airport route. Find 2 cities that are big enough and try to build airport in both cities.
  * Then we can build an aircraft and make some money.
  * We limit our amount of airports to max aircraft / 3 * 2 (2 airports for a route, and 3 planes per route)
