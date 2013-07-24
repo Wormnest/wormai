@@ -339,11 +339,35 @@ function WormAI::BuildAirportRoute()
 	AILog.Info(Helper.GetCurrentDateString() + " Trying to build an airport route");
 
 	local tile_1 = this.FindSuitableAirportSpot(airport_type, 0);
-	if (tile_1 < 0) return ERROR_FIND_AIRPORT1;
+	if (tile_1 < 0) {
+		if ((this.towns_used.Count() == 0) && (tile_1 = ERROR_FIND_AIRPORT_ACCEPTANCE)) {
+			// We don't have any airports yet so try again at a lower acceptance limit
+			while(tile_1 == ERROR_FIND_AIRPORT_ACCEPTANCE) {
+				tile_1 = this.FindSuitableAirportSpot(airport_type, 0);
+			}
+			if (tile_1 < 0) return ERROR_FIND_AIRPORT1;
+		}
+		else {
+			return ERROR_FIND_AIRPORT1;
+		}
+	}
 	local tile_2 = this.FindSuitableAirportSpot(airport_type, tile_1);
 	if (tile_2 < 0) {
-		this.towns_used.RemoveValue(tile_1);
-		return ERROR_FIND_AIRPORT2;
+		// Check for 1, not 0, here since if we get here we have at least 1 airport.
+		if ((this.towns_used.Count() == 1) && (tile_2 = ERROR_FIND_AIRPORT_ACCEPTANCE)) {
+			// We don't have any airports yet so try again at a lower acceptance limit
+			while(tile_2 == ERROR_FIND_AIRPORT_ACCEPTANCE) {
+				tile_2 = this.FindSuitableAirportSpot(airport_type, 0);
+			}
+			if (tile_2 < 0) {
+				this.towns_used.RemoveValue(tile_1);
+				return ERROR_FIND_AIRPORT2;
+			}
+		}
+		else {
+			this.towns_used.RemoveValue(tile_1);
+			return ERROR_FIND_AIRPORT2;
+		}
 	}
 
 	/* Build the airports for real */
