@@ -348,8 +348,8 @@ function WormAI::BuildAirportRoute()
 		return ERROR_BUILD_AIRPORT1;
 	}
 	if (!AIAirport.BuildAirport(tile_2, airport_type, AIStation.STATION_NEW)) {
-		AILog.Error("Although the testing told us we could build 2 airports, it still failed on the second airport at tile " + tile_2 + ".");
-		AIAirport.RemoveAirport(tile_1);
+		AILog.Error("Although the testing told us we could build an airport, it still failed at tile " + WriteTile(tile_2) + ".");
+		this.RemoveAirport(tile_1);
 		this.towns_used.RemoveValue(tile_1);
 		this.towns_used.RemoveValue(tile_2);
 		return ERROR_BUILD_AIRPORT1;
@@ -357,8 +357,11 @@ function WormAI::BuildAirportRoute()
 
 	local ret = this.BuildAircraft(tile_1, tile_2, tile_1);
 	if (ret < 0) {
-		AIAirport.RemoveAirport(tile_1);
-		AIAirport.RemoveAirport(tile_2);
+		// For some reason removing an airport in here sometimes fails, sleeping a little
+		// helps for the cases we have seen.
+		Sleep(1);
+		this.RemoveAirport(tile_1);
+		this.RemoveAirport(tile_2);
 		this.towns_used.RemoveValue(tile_1);
 		this.towns_used.RemoveValue(tile_2);
 		AILog.Info("Cancelled route because we couldn't build an aircraft.");
@@ -738,11 +741,22 @@ function WormAI::ManageAirRoutes()
 		/* No vehicles going to this station, abort and sell */
 		if (list2.Count() == 0) {
 			// This can happen when after building 2 airports it fails to build an aircraft
-			// due to lack of money or whatever.
-			AILog.Warning("***** Encountered station without vehicles, should not happen? *****");
+			// due to lack of money or whatever and then removing one of the airports fails
+			// due to unknown reasons. A fix that seems to help so far is doing a Sleep(1)
+			// before removing the airports but just to be sure we check here anyway.
+			// In that case tile_1 and 2 will be 0 although there still is a station.
 			local t1 = this.route_1.GetValue(i);
 			local t2 = this.route_2.GetValue(i);
-			this.SellAirports(t1, t2);
+			if ((t1 == 0) && (t2 == 0)) {
+				AILog.Warning("Airport " + AIStation.GetName(i) + " still exists. Trying to remove it now.");
+				this.RemoveAirport(AIStation.GetLocation(i));
+			}
+			else {
+				AILog.Warning("***** Encountered station without vehicles, should not happen here! *****");
+				AILog.Info("Station " + i + " = " + AIStation.GetName(i) );
+				AILog.Info("Stations at tiles " + WriteTile(t1) + " and " + WriteTile(t2) );
+				this.SellAirports(t1, t2);
+			}
 			continue;
 		};
 
@@ -774,8 +788,8 @@ function WormAI::SellAirports(airport_1_tile, airport_2_tile) {
 	/* Remove the airports */
 	AILog.Info("==> Removing airports " + AIStation.GetName(AIStation.GetStationID(airport_1_tile)) + " and " + 
 		AIStation.GetName(AIStation.GetStationID(airport_2_tile)) + " since they are not used anymore");
-	AIAirport.RemoveAirport(airport_1_tile);
-	AIAirport.RemoveAirport(airport_2_tile);
+	this.RemoveAirport(airport_1_tile);
+	this.RemoveAirport(airport_2_tile);
 	/* Free the towns_used entries */
 	this.towns_used.RemoveValue(airport_1_tile);
 	this.towns_used.RemoveValue(airport_2_tile);
