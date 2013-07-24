@@ -81,17 +81,18 @@ const ERROR_BUILD_AIRCRAFT = -30;				/* General error trying to build an aircraf
 const ERROR_BUILD_AIRCRAFT_INVALID = -31;		/* No suitable aircraft found when trying to build an aircraft. */
 
 class WormAI extends AIController {
+	/* Declare the variables here. */
 	name = null;
 	towns_used = null;
 	route_1 = null;
 	route_2 = null;
 	distance_of_route = {};
 	vehicle_to_depot = {};
-	delay_build_airport_route = DEFAULT_DELAY_BUILD_AIRPORT;
-	delay_evaluate_aircraft = DEFAULT_DELAY_EVALUATE_AIRCRAFT;
-	delay_manage_routes = DEFAULT_DELAY_MANAGE_ROUTES;
-	delay_handle_loan = DEFAULT_DELAY_HANDLE_LOAN;
-	delay_handle_events = DEFAULT_DELAY_HANDLE_EVENTS;
+	delay_build_airport_route = 0;
+	delay_evaluate_aircraft = 0;
+	delay_manage_routes = 0;
+	delay_handle_loan = 0;
+	delay_handle_events = 0;
 	passenger_cargo_id = -1;
 
 	/* WormAI: New variables added. */
@@ -100,18 +101,22 @@ class WormAI extends AIController {
 	/* DO NOT SAVE variables below this line. These will not be saved. */ 
 	loaded_from_save = false;
 	engine_usefullness = null;
-	acceptance_limit = STARTING_ACCEPTANCE_LIMIT;	/* Starting limit for passenger acceptance for airport finding. */
+	acceptance_limit = 0;				/* Starting limit for passenger acceptance for airport finding. */
 	aircraft_disabled_shown = 0;		/* Has the aircraft disabled in game settings message been shown (1) or not (0). */
 	aircraft_max0_shown = 0;			/* Has the max aircraft is 0 in game settings message been shown. */
 
 	function Start();
 
 	constructor() {
+		/* Initialize the class variables here (or later when possible). */
 		this.loaded_from_save = false;
 		this.towns_used = AIList();
 		this.route_1 = AIList();
 		this.route_2 = AIList();
 		this.engine_usefullness = AIList();
+		acceptance_limit = STARTING_ACCEPTANCE_LIMIT;
+		this.aircraft_disabled_shown = 0;
+		this.aircraft_max0_shown = 0;
 		// Delays: we don't set them here but in start because we need to check the selected
 		// speed set in gamesettings
 
