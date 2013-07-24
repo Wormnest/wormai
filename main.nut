@@ -172,7 +172,7 @@ function WormAI::DebugListTownsUsed()
 		AILog.Info("Number of towns used: " + this.towns_used.Count())
 		//foreach(t in towns_used) {
 		for (local t = towns_used.Begin(); !towns_used.IsEnd(); t = towns_used.Next()) {
-			AILog.Info("Town: " + AITown.GetName(t) + " (id: " + t + ", tile " + towns_used.GetValue(t) + ").")
+			AILog.Info("Town: " + AITown.GetName(t) + " (id: " + t + ", tile " + WriteTile(towns_used.GetValue(t)) + ").")
 		}
 	}
 	AILog.Info("");
@@ -189,7 +189,7 @@ function WormAI::DebugListRoute1()
 	else {
 		AILog.Info("Number or routes used: " + this.route_1.Count());
 		for (local r = route_1.Begin(); !route_1.IsEnd(); r = route_1.Next()) {
-			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + route_1.GetValue(r) + ").");
+			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + WriteTile(route_1.GetValue(r)) + ").");
 		}
 	}
 	AILog.Info("");
@@ -242,7 +242,7 @@ function WormAI::DebugListRoute2()
 	else {
 		AILog.Info("Number routes used: " + this.route_2.Count());
 		for (local r = route_2.Begin(); !route_2.IsEnd(); r = route_2.Next()) {
-			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + route_2.GetValue(r) + ").");
+			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + WriteTile(route_2.GetValue(r)) + ").");
 		}
 	}
 	AILog.Info("");
@@ -258,7 +258,7 @@ function WormAI::DebugListDistanceOfRoute()
 	else {
 		AILog.Info("Number routes used: " + this.route_2.Count());
 		for (local r = route_2.Begin(); !route_2.IsEnd(); r = route_2.Next()) {
-			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + route_2.GetValue(r) + ").");
+			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + WriteTile(route_2.GetValue(r)) + ").");
 		}
 	}
 	AILog.Info("");
@@ -342,7 +342,7 @@ function WormAI::BuildAirportRoute()
 
 	/* Build the airports for real */
 	if (!AIAirport.BuildAirport(tile_1, airport_type, AIStation.STATION_NEW)) {
-		AILog.Error("Although the testing told us we could build 2 airports, it still failed on the first airport at tile " + tile_1 + ".");
+		AILog.Error("Although the testing told us we could build an airport, it still failed at tile " + WriteTile(tile_1) + ".");
 		this.towns_used.RemoveValue(tile_1);
 		this.towns_used.RemoveValue(tile_2);
 		return ERROR_BUILD_AIRPORT1;
@@ -557,6 +557,7 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 		/* Create a 30x30 grid around the core of the town and see if we can find a spot for a small airport */
 		local list = AITileList();
 		/* XXX -- We assume we are more than 15 tiles away from the border! */
+		// TODO: THIS NEEDS TO BE CHECKED!!! 
 		list.AddRectangle(tile - AIMap.GetTileIndex(15, 15), tile + AIMap.GetTileIndex(15, 15));
 		list.Valuate(AITile.IsBuildableRectangle, airport_x, airport_y);
 		list.KeepValue(1);
@@ -578,7 +579,7 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 		
 		/** debug off
 		for (tile = list.Begin(); !list.IsEnd(); tile = list.Next()) {
-			AILog.Info("Town: " + AITown.GetName(town) + ", Tile: " + tile +
+			AILog.Info("Town: " + AITown.GetName(town) + ", Tile: " + WriteTile(tile) +
 				", Passenger Acceptance: " + list.GetValue(tile));
 		} **/
 
@@ -601,7 +602,7 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 		}
 
 		AILog.Info("Found a good spot for an airport in " + AITown.GetName(town) + " (id: "+ town + 
-			", tile " + tile + ", acceptance: " + list.GetValue(tile) + ").");
+			", tile " + WriteTile(tile) + ", acceptance: " + list.GetValue(tile) + ").");
 
 		/* Mark the town as used, so we don't use it again */
 		this.towns_used.AddItem(town, tile);
@@ -948,7 +949,7 @@ function WormAI::Start()
 		// We need to redo distance_of_route table
 		foreach( veh, tile_1 in route_1) {
 			local tile_2 = route_2.GetValue(veh);
-			AILog.Info("Vehicle: " + veh + " tile1: " + tile_1 + " tile2: " + tile_2);
+			AILog.Info("Vehicle: " + veh + " tile1: " + WriteTile(tile_1) + " tile2: " + WriteTile(tile_2));
 			AILog.Info("Distance: " + AIMap.DistanceManhattan(tile_1, tile_2));
 			this.distance_of_route.rawset(veh, AIMap.DistanceManhattan(tile_1, tile_2));
 		}
