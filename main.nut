@@ -76,6 +76,8 @@ const ERROR_FIND_AIRPORT1	= -1;				/* There was an error finding a spot for airp
 const ERROR_FIND_AIRPORT2	= -2;				/* There was an error finding a spot for airport 2. */
 const ERROR_BUILD_AIRPORT1	= -3;				/* There was an error building airport 1. */
 const ERROR_BUILD_AIRPORT2	= -4;				/* There was an error building airport 2. */
+const ERROR_FIND_AIRPORT_ACCEPTANCE = -5;		/* We couldn't find a suitable airport but we lowered our acceptance rate limit so we can try again. */
+const ERROR_FIND_AIRPORT_FINAL = -6;			/* We couldn't find a suitable airport and we are at the minimum acceptable acceptance limit. */
 const ERROR_MAX_AIRCRAFT = -10;					/* We have reached the maximum allowed number of aircraft. */
 const ERROR_MAX_AIRPORTS = -11;					/* We have reached the maximum number of airports. */
 const ERROR_NOT_ENOUGH_MONEY = -20;				/* We don't have enough money. */
@@ -615,15 +617,19 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 		return tile;
 	}
 
+	local ret = 0;
 	if (this.acceptance_limit > 25) {
 		this.acceptance_limit -= 25;
+		ret = ERROR_FIND_AIRPORT_ACCEPTANCE;
 		AILog.Info("Lowering acceptance limit for suitable airports to " + this.acceptance_limit );
 	}
 	else {
-		this.acceptance_limit = 10;
+		// Maybe remove this? Minimum of 25 seems low enough.
+		//this.acceptance_limit = 10;
+		ret = ERROR_FIND_AIRPORT_FINAL;
 	}
 	AILog.Info("Couldn't find a suitable town to build an airport in");
-	return -1;
+	return ret;
 }
 
 function WormAI::ManageAirRoutes()
