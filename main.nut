@@ -319,6 +319,7 @@ function WormAI::BuildAirportRoute()
 		AIAirport.RemoveAirport(tile_2);
 		this.towns_used.RemoveValue(tile_1);
 		this.towns_used.RemoveValue(tile_2);
+		AILog.Info("Cancelled route because we couldn't build an aircraft.");
 	}
 	else {
 		local balance = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
@@ -696,6 +697,8 @@ function WormAI::ManageAirRoutes()
 		local list2 = AIVehicleList_Station(i);
 		/* No vehicles going to this station, abort and sell */
 		if (list2.Count() == 0) {
+			// This can happen when after building 2 airports it fails to build an aircraft
+			// due to lack of money or whatever.
 			AILog.Warning("***** Encountered station without vehicles, should not happen? *****");
 			local t1 = this.route_1.GetValue(i);
 			local t2 = this.route_2.GetValue(i);
@@ -720,6 +723,7 @@ function WormAI::ManageAirRoutes()
 
 		return this.BuildAircraft(this.route_1.GetValue(v), this.route_2.GetValue(v), 0);
 	}
+	AILog.Info(Helper.GetCurrentDateString() + " Finished managing air routes.");
 }
 
 /**
