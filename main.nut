@@ -184,7 +184,7 @@ function WormAI::DebugListTownsUsed()
 				", grows every " + AITown.GetGrowthRate(t) + " days" +
 				", location: " + WriteTile(AITown.GetLocation(t)) +
 				", station tile " + WriteTile(tile) + ").")
-			local sid = AIStation.GetStationID(tile));
+			local sid = AIStation.GetStationID(tile);
 			local st_veh = AIVehicleList_Station(sid);
 			AILog.Info("Station: " + AIStation.GetName(sid) + " (id: " + sid + "), waiting cargo: " + 
 				AIStation.GetCargoWaiting(sid) + ", cargo rating: " + 
@@ -944,7 +944,7 @@ function WormAI::EvaluateAircraft() {
 				best_factor = cost_per_pass;
 				best_engine = engine;
 			}
-			if GetSetting("debug_show_lists") {
+			if (GetSetting("debug_show_lists") == 1) {
 				// Show info about evaluated engines
 				AILog.Info("Engine: " + AIEngine.GetName(engine) + ", price: " + AIEngine.GetPrice(engine) +
 					", yearly running costs: " + AIEngine.GetRunningCost(engine));
@@ -1086,7 +1086,7 @@ function WormAI::Start()
 				this.EvaluateAircraft();
 				/* This seems like a good place to show some debuggin info in case we turned
 				   that setting on. */
-				if GetSetting("debug_show_lists") {
+				if (GetSetting("debug_show_lists") == 1) {
 					/* Debugging info */
 					DebugListTownsUsed();
 					DebugListRouteInfo();
