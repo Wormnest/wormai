@@ -218,7 +218,7 @@ function WormAI::DebugListRoutes()
 			}
 			local first = true;
 			local total_profit = 0;
-			for (local veh = st_veh.Begin(); !st_veh.IsEnd(); t = st_veh.Next()) {
+			for (local veh = st_veh.Begin(); !st_veh.IsEnd(); veh = st_veh.Next()) {
 				if (first) {
 					// Get list of stations this vehicle has in its orders (should be always 2 stations)
 					local veh_stations = AIStationList_Vehicle(veh);
