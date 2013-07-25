@@ -181,14 +181,14 @@ function WormAI::DebugListTownsUsed()
 			local is_city = (AITown.IsCity(t) ? "city" : "town");
 			AILog.Info("Town: " + AITown.GetName(t) + " (id: " + t + "), " + is_city +
 				", population: " + AITown.GetPopulation(t) + ", houses: " + AITown.GetHouseCount(t) +
-				", grows every " + AITown.GetGrowthRate(t) + " days" +
-				", location: " + WriteTile(AITown.GetLocation(t)) +
+				", grows every " + AITown.GetGrowthRate(t) + " days");
+			AILog.Info("    Location: " + WriteTile(AITown.GetLocation(t)) +
 				", station tile " + WriteTile(tile) + ").")
 			local sid = AIStation.GetStationID(tile);
 			local st_veh = AIVehicleList_Station(sid);
 			AILog.Info("Station: " + AIStation.GetName(sid) + " (id: " + sid + "), waiting cargo: " + 
 				AIStation.GetCargoWaiting(sid, passenger_cargo_id) + ", cargo rating: " + 
-				AIStation.GetCargoRating(sid, passenger_cargo_id) + ", number of aircraft: " +
+				AIStation.GetCargoRating(sid, passenger_cargo_id) + ", aircraft: " +
 				st_veh.Count());
 		}
 	}
