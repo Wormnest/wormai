@@ -169,7 +169,7 @@ function WormAI::WriteTile(tile)
 
 function WormAI::DebugListTownsUsed()
 {
-	AILog.Info("---------- DEBUG towns_used ----------");
+	AILog.Info("---------- DEBUG towns_used and related stations ----------");
 	if (!this.towns_used) {
 		AILog.Warning("WARNING: towns_used is null!");
 	}
@@ -177,7 +177,19 @@ function WormAI::DebugListTownsUsed()
 		AILog.Info("Number of towns used: " + this.towns_used.Count())
 		//foreach(t in towns_used) {
 		for (local t = towns_used.Begin(); !towns_used.IsEnd(); t = towns_used.Next()) {
-			AILog.Info("Town: " + AITown.GetName(t) + " (id: " + t + ", tile " + WriteTile(towns_used.GetValue(t)) + ").")
+			local tile = towns_used.GetValue(t);
+			local is_city = (AITown.IsCity(t) ? "city" : "town");
+			AILog.Info("Town: " + AITown.GetName(t) + " (id: " + t + "), " + is_city +
+				", population: " + AITown.GetPopulation(t) + ", houses: " + AITown.GetHouseCount(t) +
+				", grows every " + AITown.GetGrowthRate(t) + " days" +
+				", location: " + WriteTile(AITown.GetLocation(t)) +
+				", station tile " + WriteTile(tile) + ").")
+			local sid = AIStation.GetStationID(tile));
+			local st_veh = AIVehicleList_Station(sid);
+			AILog.Info("Station: " + AIStation.GetName(sid) + " (id: " + sid + "), waiting cargo: " + 
+				AIStation.GetCargoWaiting(sid) + ", cargo rating: " + 
+				AIStation.GetCargoRating(sid, passenger_cargo_id) + ", number of aircraft: " +
+				st_veh.Count());
 		}
 	}
 	AILog.Info("");
@@ -902,6 +914,9 @@ function WormAI::EvaluateAircraft() {
 	
 	// First fill temporary list with our usefullness factors
 	local factor_list = AIList();
+	// Remember best engine for logging purposes
+	local best_engine = null;
+	local best_factor = 10000000; // Very high factor so any engine will be below it
 	
 	foreach(engine, value in engine_list) {
 		// From: http://thegrebs.com/irc/openttd/2012/04/20
@@ -925,20 +940,27 @@ function WormAI::EvaluateAircraft() {
 			local pass_per_year = cap * distance_per_year / _eval_distance;
 			// No real values thus to get a sensible int value multiply with 100
 			local cost_per_pass = (ycost * 100) / pass_per_year;
-			AILog.Info("Engine: " + AIEngine.GetName(engine) + ", price: " + AIEngine.GetPrice(engine) +
-				", yearly running costs: " + AIEngine.GetRunningCost(engine));
-			AILog.Info( "    Capacity: " + AIEngine.GetCapacity(engine) + ", Maximum speed: " + 
-				AIEngine.GetMaxSpeed(engine) + ", Maximum distance: " + AIEngine.GetMaximumOrderDistance(engine));
-			AILog.Warning("    Aircraft usefulness factors d: " + distance_per_year + ", p: " + pass_per_year +
-				", pass cost factor: " + cost_per_pass);
-
+			if (cost_per_pass < best_factor) {
+				best_factor = cost_per_pass;
+				best_engine = engine;
+			}
+			if GetSetting("debug_show_lists") {
+				// Show info about evaluated engines
+				AILog.Info("Engine: " + AIEngine.GetName(engine) + ", price: " + AIEngine.GetPrice(engine) +
+					", yearly running costs: " + AIEngine.GetRunningCost(engine));
+				AILog.Info( "    Capacity: " + AIEngine.GetCapacity(engine) + ", Maximum speed: " + 
+					AIEngine.GetMaxSpeed(engine) + ", Maximum distance: " + AIEngine.GetMaximumOrderDistance(engine));
+				AILog.Warning("    Aircraft usefulness factors d: " + distance_per_year + ", p: " + pass_per_year +
+					", pass cost factor: " + cost_per_pass);
+			}
 			// Add the cost factor to our temporary list
 			factor_list.AddItem(engine,cost_per_pass);
 		}
 	}
 	this.engine_usefullness.Clear();
 	this.engine_usefullness.AddList(factor_list);
-	AILog.Info("usefullness list count: " + this.engine_usefullness.Count());
+	AILog.Info("Evaluated engines count: " + this.engine_usefullness.Count());
+	AILog.Info("Best overall engine: " + AIEngine.GetName(best_engine) + ", cost factor: " + best_factor);
 }
 
 function WormAI::GetCostFactor(engine, costfactor_list) {
@@ -1062,9 +1084,13 @@ function WormAI::Start()
 			/* Evaluate the available aircraft once in a while. */
 			if ((ticker % this.delay_evaluate_aircraft == 0 || ticker == 0)) {
 				this.EvaluateAircraft();
-				/* Debugging info 
-				DebugListTownsUsed();
-				DebugListRouteInfo(); */
+				/* This seems like a good place to show some debuggin info in case we turned
+				   that setting on. */
+				if GetSetting("debug_show_lists") {
+					/* Debugging info */
+					DebugListTownsUsed();
+					DebugListRouteInfo();
+				}
 			}
 			/* Once in a while, with enough money, try to build something */
 			if ((ticker % (build_delay_factor * this.delay_build_airport_route) == 0 || ticker == 0) && this.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
