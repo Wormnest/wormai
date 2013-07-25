@@ -70,6 +70,17 @@ class WormAI extends AIInfo {
 			step_size = 100,
 			flags = CONFIG_INGAME
 		});
+
+		///////////////////////////// DEBUG SETTINGS BELOW ////////////////////////////////////////
+		AddSetting({
+			name = "debug_show_lists",
+			description = "Show the lists with internal info.",
+			easy_value = 0,
+			medium_value = 0,
+			hard_value = 0,
+			custom_value = 0,
+			flags = CONFIG_DEVELOPER + CONFIG_INGAME + CONFIG_BOOLEAN
+		});
 	}
 }
 
