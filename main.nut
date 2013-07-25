@@ -535,7 +535,7 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 	if (veh_list.Count() > 0) {
 		local share_veh = veh_list.Begin();
 		AIOrder.ShareOrders(vehicle, share_veh);
-		AILog.Info("++ Not the first vehicle: share orders.");
+		AILog.Info("Not the first vehicle: share orders.");
 	}
 	else {
 		/* First vehicle with these orders. */
@@ -544,12 +544,12 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 		// Test using full load
 		AIOrder.AppendOrder(vehicle, tile_1, AIOrder.OF_FULL_LOAD_ANY);
 		AIOrder.AppendOrder(vehicle, tile_2, AIOrder.OF_FULL_LOAD_ANY);
-		AILog.Info("+ First vehicle: set orders.");
+		AILog.Info("First vehicle: set orders.");
 	}
 	/* If vehicle should be started at another tile than tile_1 then skip to that order. */
 	/* Currently always assumes it is tile_2 and that that is the second order, thus 1. */
 	if (order_start_tile != tile_1) {
-		AILog.Info("-- Order: skipping to other tile.");
+		AILog.Info("Order: skipping to other tile.");
 		AIOrder.SkipToOrder(vehicle, 1);
 	}
 	AIVehicle.StartStopVehicle(vehicle);
@@ -729,14 +729,14 @@ function WormAI::ManageAirRoutes()
 			//foreach (i,v in list) {
 			//	AILog.Info("Vehicle " + i + " has profit: " + v);
 			//}
-			AILog.Info("...Computed low_profit_limit: " + low_profit_limit + " (highest profit: " +
+			AILog.Warning("Computed low_profit_limit: " + low_profit_limit + " (highest profit: " +
 				high_profit + "), number below limit: " + list.Count());
 		}
 		else if (list_count == 0) {
 			AILog.Info("All aircraft younger than 3 years: recomputing low_profit_limit not needed.");
 		}
 		else {
-			AILog.Info("There are " + list.Count() + " aircraft below last years bad yearly profit limit.");
+			AILog.Warning("There are " + list.Count() + " aircraft below last years bad yearly profit limit.");
 		}
 	}
 
