@@ -960,7 +960,7 @@ function WormAI::EvaluateAircraft() {
 	this.engine_usefullness.Clear();
 	this.engine_usefullness.AddList(factor_list);
 	AILog.Info("Evaluated engines count: " + this.engine_usefullness.Count());
-	AILog.Info("Best overall engine: " + AIEngine.GetName(best_engine) + ", cost factor: " + best_factor);
+	AILog.Warning("Best overall engine: " + AIEngine.GetName(best_engine) + ", cost factor: " + best_factor);
 }
 
 function WormAI::GetCostFactor(engine, costfactor_list) {
