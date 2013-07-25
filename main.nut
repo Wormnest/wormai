@@ -187,7 +187,7 @@ function WormAI::DebugListTownsUsed()
 			local sid = AIStation.GetStationID(tile);
 			local st_veh = AIVehicleList_Station(sid);
 			AILog.Info("Station: " + AIStation.GetName(sid) + " (id: " + sid + "), waiting cargo: " + 
-				AIStation.GetCargoWaiting(sid) + ", cargo rating: " + 
+				AIStation.GetCargoWaiting(sid, passenger_cargo_id) + ", cargo rating: " + 
 				AIStation.GetCargoRating(sid, passenger_cargo_id) + ", number of aircraft: " +
 				st_veh.Count());
 		}
