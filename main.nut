@@ -195,6 +195,57 @@ function WormAI::DebugListTownsUsed()
 	AILog.Info("");
 }
 
+// List all routes: per route all stations and all vehicles on that route with relevant info
+function WormAI::DebugListRoutes()
+{
+	AILog.Info("---------- DEBUG route info ----------");
+		AILog.Info("Number or routes: " + (this.towns_used.Count() / 2) );
+		for (local t = towns_used.Begin(); !towns_used.IsEnd(); t = towns_used.Next()) {
+			local st_tile = towns_used.GetValue(t);
+			// Find out whether this station is the first or last order
+			local route1 = AIList();
+			route1.AddList(route_1);
+			// Keep only those with our station tile
+			route1.KeepValue(st_tile);
+			if (route1.Count() == 0) continue;
+			// List from and to station names, and distance between them, and total profit of
+			// all planes on route in the last year
+			local st_id = AIStation.GetStationID(st_tile);
+			local st_veh = AIVehicleList_Station(st_id);
+			if (st_veh.Count() == 0) {
+				AILog.Warning("Station " + AIStation.GetName(st_id) + " has 0 aircraft!");
+				continue;
+			}
+			local first = true;
+			local total_profit = 0;
+			for (local veh = st_veh.Begin(); !st_veh.IsEnd(); t = st_veh.Next()) {
+				if (first) {
+					// Get list of stations this vehicle has in its orders (should be always 2 stations)
+					local veh_stations = AIStationList_Vehicle(veh);
+					// Remove station that we already know (the starting order)
+					veh_stations.RemoveValue(st_id);
+					// Only value left should be the other station
+					local st_end_id = veh_stations.Begin();
+					local st_end_tile = route_2.GetValue(veh);
+					local sq_dist = AITile.GetDistanceSquareToTile(st_tile, st_end_tile)
+					AILog.Info( "Route from station " + AIStation.GetName(st_id) + " to " +
+						AIStation.GetName(st_end_id) + ", distance squared: " + sq_dist);
+					first = false;
+				}
+				// Show info about aircraft
+				AILog.Info("  Aircraft: " + AIVehicle.GetName(veh) + " (id: " + veh + "), age: " +
+					AIVehicle.GetAge(veh) + ", capacity: " + AIVehicle.GetCapacity(veh, passenger_cargo_id));
+				local last_profit = AIVehicle.GetProfitLastYear(veh);
+				// Increment total profit for this route
+				total_profit += last_profit;
+				AILog.Info("      Profit last year: " + last_profit + ", this year: " + 
+					AIVehicle.GetProfitThisYear(veh));
+			}
+			AILog.Warning("  Total profit last year: " + total_profit + ", average: " + (total_profit / st_veh.Count()));
+		}
+	AILog.Info("");
+}
+
 function WormAI::DebugListRoute1()
 {
 	//this.route_1.AddItem(vehicle, tile_1);
@@ -1089,7 +1140,8 @@ function WormAI::Start()
 				if (GetSetting("debug_show_lists") == 1) {
 					/* Debugging info */
 					DebugListTownsUsed();
-					DebugListRouteInfo();
+					//DebugListRouteInfo();
+					DebugListRoutes();
 				}
 			}
 			/* Once in a while, with enough money, try to build something */
