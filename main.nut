@@ -387,6 +387,7 @@ function WormAI::GetMoney(money)
 function WormAI::RemoveAirport(tile)
 {
 	if (!AIAirport.RemoveAirport(tile)) {
+		AILog.Warning(AIError.GetLastErrorString());
 		AILog.Warning("Failed to remove airport " + AIStation.GetName(AIStation.GetStationID(tile)) +
 			" at tile " + WriteTile(tile) );
 	}
@@ -458,12 +459,14 @@ function WormAI::BuildAirportRoute()
 	/* In certain cases building an airport still fails for unknown reason. */
 	/* Build the airports for real */
 	if (!AIAirport.BuildAirport(tile_1, airport_type, AIStation.STATION_NEW)) {
+		AILog.Warning(AIError.GetLastErrorString());
 		AILog.Error("Although the testing told us we could build an airport, it still failed at tile " + WriteTile(tile_1) + ".");
 		this.towns_used.RemoveValue(tile_1);
 		this.towns_used.RemoveValue(tile_2);
 		return ERROR_BUILD_AIRPORT1;
 	}
 	if (!AIAirport.BuildAirport(tile_2, airport_type, AIStation.STATION_NEW)) {
+		AILog.Warning(AIError.GetLastErrorString());
 		AILog.Error("Although the testing told us we could build an airport, it still failed at tile " + WriteTile(tile_2) + ".");
 		this.RemoveAirport(tile_1);
 		this.towns_used.RemoveValue(tile_1);
@@ -596,6 +599,7 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 	}
 	local vehicle = AIVehicle.BuildVehicle(hangar, engine);
 	if (!AIVehicle.IsValidVehicle(vehicle)) {
+		AILog.Warning(AIError.GetLastErrorString());
 		AILog.Error("Couldn't build the aircraft: " + AIEngine.GetName(engine));
 		return ERROR_BUILD_AIRCRAFT;
 	}
