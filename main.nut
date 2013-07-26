@@ -419,7 +419,7 @@ function WormAI::BuildAirportRoute()
 	local airport_type = (AIAirport.IsValidAirportType(AIAirport.AT_LARGE) ? AIAirport.AT_LARGE : AIAirport.AT_SMALL);
 
 	/* Get enough money to work with */
-	this.GetMoney(150000);
+	this.GetMoney(AIAirport.GetPrice(airport_type)*2 + AIRCRAFT_LOW_PRICE_CUT);
 
 	/* Show some info about what we are doing */
 	AILog.Info(Helper.GetCurrentDateString() + " Trying to build an airport route");
