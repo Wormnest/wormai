@@ -358,7 +358,7 @@ function WormAI::DebugListDistanceOfRoute()
  */
 function WormAI::HasMoney(money)
 {
-	if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) + (AICompany.GetMaxLoanAmount() - AICompany.GetLoanAmount()) > money) return true;
+	if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) + (AICompany.GetMaxLoanAmount() - AICompany.GetLoanAmount()) >= money) return true;
 	return false;
 }
 
@@ -452,6 +452,7 @@ function WormAI::BuildAirportRoute()
 		}
 	}
 
+	/* In certain cases building an airport still fails for unknown reason. */
 	/* Build the airports for real */
 	if (!AIAirport.BuildAirport(tile_1, airport_type, AIStation.STATION_NEW)) {
 		AILog.Error("Although the testing told us we could build an airport, it still failed at tile " + WriteTile(tile_1) + ".");
