@@ -364,6 +364,7 @@ function WormAI::HasMoney(money)
 
 /**
  * Get the amount of money requested, loan if needed.
+ * Return false if it failed, else true.
  */
 function WormAI::GetMoney(money)
 {
@@ -372,14 +373,14 @@ function WormAI::GetMoney(money)
 		AILog.Info("Bank balance: " + AICompany.GetBankBalance(AICompany.COMPANY_SELF) + 
 			", max loan: " + AICompany.GetMaxLoanAmount() +
 			", current loan: " + AICompany.GetLoanAmount());
-		return;
+		return false;
 	}
-	if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) > money) return;
+	if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) > money) return true;
 
 	local loan = money - AICompany.GetBankBalance(AICompany.COMPANY_SELF) + AICompany.GetLoanInterval() + AICompany.GetLoanAmount();
 	loan = loan - loan % AICompany.GetLoanInterval();
 	AILog.Info("Need a loan to get " + money + ": " + loan);
-	AICompany.SetLoanAmount(loan);
+	return AICompany.SetLoanAmount(loan);
 }
 
 /**
