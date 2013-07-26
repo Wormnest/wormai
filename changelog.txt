@@ -1,0 +1,8 @@
+WormAI Changelog
+================
+
+Version 1, released 2013-07-26
+------------------------------
+- First release, based on WrightAI.
+- Pax aircraft only.
+- Save and load support.
