@@ -368,7 +368,10 @@ function WormAI::HasMoney(money)
 function WormAI::GetMoney(money)
 {
 	if (!this.HasMoney(money)) {
-		AILog.Info("We don't have enough money and we also can't loan enough for our needs.");
+		AILog.Info("We don't have enough money and we also can't loan enough for our needs (" + money + ").");
+		AILog.Info("Bank balance: " + AICompany.GetBankBalance(AICompany.COMPANY_SELF) + 
+			", max loan: " + AICompany.GetMaxLoanAmount() +
+			", current loan: " + AICompany.GetLoanAmount());
 		return;
 	}
 	if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) > money) return;
