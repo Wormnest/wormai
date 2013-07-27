@@ -18,6 +18,15 @@ Bug tracker: TODO
 Source repository: TODO
 
 
+Requirements
+------------
+OpenTTD 1.2 or later.
+SuperLib and AILibList. I won't list the versions here since then I would
+have to update this text everytime the versions change. However I have a
+script that updates the library versions before a release of my AI so I
+should always be using the latest versions at the time of release.
+
+
 Features
 --------
 Building airports and managing airport routes connecting two airports.
