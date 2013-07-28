@@ -13,7 +13,7 @@ breakdowns. However, since low profit airplanes get sold it shouldn't
 do totally bad in that situation.
 
 License: see license.txt
-Discussion topic: TODO
+Discussion topic: http://www.tt-forums.net/viewtopic.php?f=65&t=67167
 Bug tracker: TODO
 Source repository: (for now until I get my project admitted on openttdcoop)
 https://bitbucket.org/jacobb/wormai/overview
