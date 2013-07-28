@@ -15,7 +15,8 @@ do totally bad in that situation.
 License: see license.txt
 Discussion topic: TODO
 Bug tracker: TODO
-Source repository: TODO
+Source repository: (for now until I get my project admitted on openttdcoop)
+https://bitbucket.org/jacobb/wormai/overview
 
 
 Requirements
