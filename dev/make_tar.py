@@ -62,13 +62,27 @@ tar_name = base_dir_name + ".tar"
 #os.system("tar -cf " + tar_name + " " + dir_name);
 #os.system("rm -r " + dir_name);
 
+
+# ----------------------------------------------------------------
+# Experimental TODO: try to make the tar from inside python
+# See: http://stackoverflow.com/questions/2032403/how-to-create-full-compressed-tar-file-using-python
+# See: http://docs.python.org/2/library/tarfile.html#tarfile.TarFile.add
+import tarfile
+
+#To build a .tar.gz for an entire directory tree:
+def make_tarfile(output_filename, source_dir):
+    # Mode w = uncompressed writing
+    with tarfile.open(output_filename, "w") as tar:
+        tar.add(source_dir, arcname=os.path.basename(source_dir))
+
+# ----------------------------------------------------------------
 # Windows
 # Copies all files and non empty folders except the files/folders excluded in exclude.exc
-os.system("xcopy *.* " + dir_name + "\\ /S /EXCLUDE:exclude.exc");
+os.system("xcopy *.* " + dir_name + "\\ /S /EXCLUDE:dev\\exclude.exc");
 
 # Now tar the folder we just made
 # Since cd doesn't seem to work here we will do it in a batch file
-os.system("run_tar.bat " + tar_name + " " + base_dir_name)
+os.system("dev\\run_tar.bat " + tar_name + " " + base_dir_name)
 
 # Now copy it to our WormAI\releases folder...
 os.system("xcopy " + temp_dir_name + "\\" + tar_name + " releases\\");
