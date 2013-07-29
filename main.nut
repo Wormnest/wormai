@@ -662,6 +662,21 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 }
 
 /**
+ * This function taken from Rondje.
+ * Add a rectangular area to an AITileList containing tiles that are within /radius/
+ * tiles from the center tile, taking the edges of the map into account.
+ */  
+function SafeAddRectangle(list, tile, radius) {
+	local x1 = max(0, AIMap.GetTileX(tile) - radius);
+	local y1 = max(0, AIMap.GetTileY(tile) - radius);
+	
+	local x2 = min(AIMap.GetMapSizeX() - 2, AIMap.GetTileX(tile) + radius);
+	local y2 = min(AIMap.GetMapSizeY() - 2, AIMap.GetTileY(tile) + radius);
+	
+	list.AddRectangle(AIMap.GetTileIndex(x1, y1),AIMap.GetTileIndex(x2, y2)); 
+}
+
+/**
  * Find a suitable spot for an airport, walking all towns hoping to find one.
  *  When a town is used, it is marked as such and not re-used.
  */
@@ -694,10 +709,9 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 
 		/* Create a 30x30 grid around the core of the town and see if we can find a spot for a small airport */
 		local list = AITileList();
-		/* XXX -- We assume we are more than 15 tiles away from the border! */
-		// TODO: THIS NEEDS TO BE CHECKED!!!
-		// Maybe use from AIAI\util\util.nut: function SafeAddRectangle(list, tile, radius) //from Rondje
-		list.AddRectangle(tile - AIMap.GetTileIndex(15, 15), tile + AIMap.GetTileIndex(15, 15));
+		/* Safely add a rectangle taking care of border tiles. */
+		SafeAddRectangle(list, tile, 15);
+		//list.AddRectangle(tile - AIMap.GetTileIndex(15, 15), tile + AIMap.GetTileIndex(15, 15));
 		list.Valuate(AITile.IsBuildableRectangle, airport_x, airport_y);
 		list.KeepValue(1);
 		if (center_tile != 0) {
