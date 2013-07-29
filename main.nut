@@ -1087,6 +1087,10 @@ function WormAI::InitSettings()
 	
 	// N.B.: WARNING: Since the ticker MODulo is used to start after delays, all delays
 	// above are assumed to be multiples of 100.
+	
+	/* Since autorenew can change the vehicle id it may cause trouble to have it turned on,
+	 * therefore we turn it off and will renew manually in the future. */
+	AICompany.SetAutoRenewStatus(false); 
 }
 
 /*
