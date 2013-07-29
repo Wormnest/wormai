@@ -623,9 +623,6 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 	}
 	else {
 		/* First vehicle with these orders. */
-		//AIOrder.AppendOrder(vehicle, tile_1, AIOrder.OF_NONE);
-		//AIOrder.AppendOrder(vehicle, tile_2, AIOrder.OF_NONE);
-		// Test using full load
 		AIOrder.AppendOrder(vehicle, tile_1, AIOrder.OF_FULL_LOAD_ANY);
 		AIOrder.AppendOrder(vehicle, tile_2, AIOrder.OF_FULL_LOAD_ANY);
 		AILog.Info("First vehicle: set orders.");
@@ -636,6 +633,20 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 		AILog.Info("Order: skipping to other tile.");
 		AIOrder.SkipToOrder(vehicle, 1);
 	}
+	
+	/* When breakdowns are on add go to depot orders on every airport.
+	   Ignore this when we added aircraft to shared orders. */
+	if ((veh_list.Count() == 0) && (AIGameSettings.GetValue("difficulty.vehicle_breakdowns") > 0)) {
+		/* Get the hangar tiles of both airports. */
+		local Depot_Airport_1 = AIAirport.GetHangarOfAirport(tile_1);
+		local Depot_Airport_2 = AIAirport.GetHangarOfAirport(tile_2);
+		/* Add the depot orders: only go there if service is needed. */
+		if (!AIOrder.InsertOrder(vehicle, 1, Depot_Airport_2, AIOrder.OF_SERVICE_IF_NEEDED ))
+			{ AILog.Warning("Failed to insert go to depot order!"); }
+		if (!AIOrder.InsertOrder(vehicle, 3, Depot_Airport_1, AIOrder.OF_SERVICE_IF_NEEDED ))
+			{ AILog.Warning("Failed to insert go to depot order!"); }
+	}
+	
 	AIVehicle.StartStopVehicle(vehicle);
 	this.distance_of_route.rawset(vehicle, AIMap.DistanceManhattan(tile_1, tile_2));
 	this.route_1.AddItem(vehicle, tile_1);
