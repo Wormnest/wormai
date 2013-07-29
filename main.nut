@@ -858,10 +858,10 @@ function WormAI::ManageAirRoutes()
 				/* Remove aircraft from our to_depot list. */
 				vehicle_to_depot.rawdelete(i);
 			}
-		}
-		else {
-			AILog.Warning(AIError.GetLastErrorString());
-			AILog.Warning("Failed to sell vehicle " + AIVehicle.GetName(i));
+			else {
+				AILog.Warning(AIError.GetLastErrorString());
+				AILog.Warning("Failed to sell vehicle " + AIVehicle.GetName(i));
+			}
 		}
 	}
 
