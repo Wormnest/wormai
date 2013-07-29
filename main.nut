@@ -838,6 +838,8 @@ function WormAI::ManageAirRoutes()
 			}
 		}
 		/* Try to sell it over and over till it really is in the depot */
+		// BUG: Seems like not all vehicles sent to depot are getting sold
+		// Some seem to stay waiting in depot, possibly because of autorenew changing vehicle id
 		if (vehicle_to_depot.rawin(i) && vehicle_to_depot.rawget(i) == true) {
 			local veh_name = AIVehicle.GetName(i);
 			if (AIVehicle.SellVehicle(i)) {
