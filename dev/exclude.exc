@@ -1,6 +1,6 @@
-exclude.exc
 .hg\
 .hgignore
-.py
+.hgtags
 .bat
 releases\
+dev\
