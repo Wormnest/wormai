@@ -858,6 +858,10 @@ function WormAI::ManageAirRoutes()
 				vehicle_to_depot.rawdelete(i);
 			}
 		}
+		else {
+			AILog.Warning(AIError.GetLastErrorString());
+			AILog.Warning("Failed to sell vehicle " + AIVehicle.GetName(i));
+		}
 	}
 
 	/* Don't try to add planes when we are short on cash */
