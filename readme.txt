@@ -14,9 +14,8 @@ do totally bad in that situation.
 
 License: see license.txt
 Discussion topic: http://www.tt-forums.net/viewtopic.php?f=65&t=67167
-Bug tracker: TODO
-Source repository: (for now until I get my project admitted on openttdcoop)
-https://bitbucket.org/jacobb/wormai/overview
+Bug/Issue tracker: http://dev.openttdcoop.org/projects/ai-worm/issues
+Source repository: http://dev.openttdcoop.org/projects/ai-worm/repository
 
 
 Requirements
