@@ -70,6 +70,7 @@ const AIRPORT_LIMIT_FACTOR = 3;					/* We limit airports to max aircraft / FACTO
 const AIRPORT_CARGO_WAITING_LOW_LIMIT = 250;	/* Limit of waiting cargo (passengers) on airport above which we add an aircraft. */
 const AIRPORT_CARGO_WAITING_HIGH_LIMIT = 1250;	/* Limit of waiting cargo (passengers) on airport above which we add 2 aircraft. */
 const AIRPORT2_WAITING_DIFF = 150;				/* Cargo waiting diff (less) value at the other station to allow extra aircraft. */
+const VEHICLE_AGE_LEFT_LIMIT = 150;				/* Number of days limit before maximum age for vehicle to get sent to depot for selling. */
 
 /* ERROR CODE constants */
 const ALL_OK = 0;
@@ -115,6 +116,8 @@ class WormAI extends AIController {
 	constructor() {
 		/* Initialize the class variables here (or later when possible). */
 		this.loaded_from_save = false;
+		distance_of_route = {};
+		vehicle_to_depot = {};
 		this.towns_used = AIList();
 		this.route_1 = AIList();
 		this.route_2 = AIList();
@@ -778,6 +781,104 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 	return ret;
 }
 
+/*
+ * Send the vehicle to depot to be sold when it arrives.
+ * Vehicle - the vehicle id of the vehicle to be sold
+ * is_low_profit - boolean, if true sold because of low profit, false because of old age
+*/
+function WormAI::SendToDepotForSelling(vehicle,is_low_profit)
+{
+	/* Send the vehicle to depot if we didn't do so yet */
+	if (!vehicle_to_depot.rawin(vehicle) || vehicle_to_depot.rawget(vehicle) != true) {
+		local info_text = "--> Sending " + AIVehicle.GetName(vehicle) + " (id: " + vehicle + 
+			") to depot because of ";
+		if (is_low_profit) {
+			info_text += "low profits: " + AIVehicle.GetProfitLastYear(vehicle) + " / " + 
+				AIVehicle.GetProfitThisYear(vehicle);
+		}
+		else {
+			info_text += "old age: " +  GetAgeString(AIVehicle.GetAge(vehicle)) + " / " + 
+				GetAgeString(AIVehicle.GetMaxAge(vehicle));
+		}
+		AILog.Info(info_text);
+		/* Send it to depot. */
+		if (!AIVehicle.SendVehicleToDepot(vehicle))
+		{
+			AILog.Warning(AIError.GetLastErrorString());
+			AILog.Warning("Failed to send vehicle " + AIVehicle.GetName(vehicle) + "to depot!");
+		}
+		/* Add it to our list of vehicles that were sent to depot. */
+		vehicle_to_depot.rawset(vehicle, true);
+	}
+}
+
+/*
+ * Sell the vehicle provided it's in depot. If it's not yet in depot it will fail silently.
+*/
+function WormAI::SellVehicleInDepot(vehicle)
+{
+	// Make sure vehicle occurs in vehicle_to_depot
+	if ((vehicle_to_depot.rawin(vehicle) && vehicle_to_depot.rawget(vehicle) == true)) {
+		local veh_name = AIVehicle.GetName(vehicle);
+		// Try to sell the vehicle
+		if (AIVehicle.SellVehicle(vehicle)) {
+			AILog.Info("--> Sold " + veh_name + " (id: " + vehicle + ").");
+			/* Check if we are the last one serving those airports; else sell the airports */
+			local list2 = AIVehicleList_Station(AIStation.GetStationID(this.route_1.GetValue(vehicle)));
+			if (list2.Count() == 0) {
+				local t1 = route_1.GetValue(vehicle);
+				local t2 = route_2.GetValue(vehicle);
+				this.SellAirports(t1, t2);
+			}
+			/* Remove the aircraft from the routes. */
+			route_1.RemoveItem(vehicle);
+			route_2.RemoveItem(vehicle);
+			/* Remove aircraft from our to_depot list. */
+			vehicle_to_depot.rawdelete(vehicle);
+		}
+		else {
+			/* Since vehicle not yet being in depot is an expected error we
+			   won't show a log message for that. */
+			if (AIError.GetLastError() != AIVehicle.ERR_VEHICLE_NOT_IN_DEPOT) {
+				AILog.Warning(AIError.GetLastErrorString());
+				AILog.Warning("Failed to sell vehicle " + AIVehicle.GetName(vehicle));
+			}
+		}
+	}
+}
+
+/*
+ * Sell all vehicles in depot that are marked to be sold.
+*/
+function WormAI::SellVehiclesInDepot()
+{
+	AILog.Info("- Check for vehicles waiting in depot to be sold.")
+	// i = vehicle id, v = boolean, always true currently
+	foreach( i,v in vehicle_to_depot) {
+		SellVehicleInDepot(i);
+	}
+}
+
+/*
+ * ManageVehicleRenewal will check all vehicles for being old or needing upgrading
+ * to a newer type. It will send all vehicles that are non optimal to depot for
+ * selling.
+ * Parameters:
+ * age_limit - the age in days left limit below which we send to depot for selling
+*/
+function WormAI::ManageVehicleRenewal(age_limit)
+{
+	AILog.Info("- Check for vehicles that are old.")
+	local list = AIVehicleList();
+	list.Valuate(AIVehicle.GetAgeLeft);
+	/* Keep vehicles whose age is below the limit we set. */
+	list.KeepBelowValue(age_limit);
+	/* Send them all to depot to be sold. */
+	for (local veh = list.Begin(); !list.IsEnd(); veh = list.Next()) {
+		SendToDepotForSelling(veh, false); // false = old age
+	}
+}
+
 function WormAI::ManageAirRoutes()
 {
 	// TODO:
@@ -851,46 +952,12 @@ function WormAI::ManageAirRoutes()
 
 	// TODO: Don't sell all aircraft from the same route all at once, try selling 1 per year?
 	for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
-		local profit = list.GetValue(i);
 		/* Profit last year and this year bad? Let's sell the vehicle */
-		/* If we are below maximum number of aircraft use a less strict value. */
-		if (profit < low_profit_limit && AIVehicle.GetProfitThisYear(i) < low_profit_limit) {
-			/* Send the vehicle to depot if we didn't do so yet */
-			if (!vehicle_to_depot.rawin(i) || vehicle_to_depot.rawget(i) != true) {
-				AILog.Info("--> Sending " + AIVehicle.GetName(i) + " (id: " + i + ") to depot as profit is: " + profit + " / " + AIVehicle.GetProfitThisYear(i));
-				AIVehicle.SendVehicleToDepot(i);
-				vehicle_to_depot.rawset(i, true);
-			}
-		}
-		/* Try to sell it over and over till it really is in the depot */
-		// BUG: Seems like not all vehicles sent to depot are getting sold
-		// Some seem to stay waiting in depot, possibly because of autorenew changing vehicle id
-		// Hmm seems they are getting sold just take a long time, needs investigating anyways.
-		if (vehicle_to_depot.rawin(i) && vehicle_to_depot.rawget(i) == true) {
-			local veh_name = AIVehicle.GetName(i);
-			if (AIVehicle.SellVehicle(i)) {
-				AILog.Info("--> Sold " + veh_name + " (id: " + i + ").");
-				/* Check if we are the last one serving those airports; else sell the airports */
-				local list2 = AIVehicleList_Station(AIStation.GetStationID(this.route_1.GetValue(i)));
-				if (list2.Count() == 0) {
-					local t1 = this.route_1.GetValue(i);
-					local t2 = this.route_2.GetValue(i);
-					this.SellAirports(t1, t2);
-				}
-				/* Remove the aircraft from the routes. */
-				this.route_1.RemoveItem(i);
-				this.route_2.RemoveItem(i);
-				/* Remove aircraft from our to_depot list. */
-				vehicle_to_depot.rawdelete(i);
-			}
-			else {
-				/* Since vehicle not yet being in depot is an expected error we
-				   won't show a log message for that. */
-				if (AIError.GetLastError() != AIVehicle.ERR_VEHICLE_NOT_IN_DEPOT) {
-					AILog.Warning(AIError.GetLastErrorString());
-					AILog.Warning("Failed to sell vehicle " + AIVehicle.GetName(i));
-				}
-			}
+		SendToDepotForSelling(i, true); // true = low profit
+		/* Sell vehicle provided it's in depot. If not we will get it a next time.
+		   This line can also be removed probably since we handle selling once a 
+		   month anyway. */
+		SellVehicleInDepot(i);
 		}
 	}
 
@@ -901,7 +968,6 @@ function WormAI::ManageAirRoutes()
 		AILog.Info("We already have the maximum number of aircraft. No sense in checking if we need to add planes.");
 		return ERROR_MAX_AIRCRAFT;
 	}
-
 
 	list = AIStationList(AIStation.STATION_AIRPORT);
 	list.Valuate(AIStation.GetCargoWaiting, this.passenger_cargo_id);
@@ -1182,6 +1248,11 @@ function WormAI::Start()
 	local sleepingtime = SLEEPING_TIME;
 	/* Factor to multiply the build delay with. */
 	local build_delay_factor = 1;
+	
+	local cur_year = 0;
+	local new_year = 0;
+	local cur_month = 0;
+	local new_month = 0;
 
 	/* Let's go on for ever */
 	while (true) {
@@ -1241,6 +1312,23 @@ function WormAI::Start()
 			/* Check for events once in a while */
 			if (ticker % this.delay_handle_events == 0) {
 				this.HandleEvents();
+			}
+			
+			/* Task scheduling. */
+			new_year = AIDate.GetYear(AIDate.GetCurrentDate());
+			if (cur_year < new_year) {
+				// Handle once a year tasks here.
+				cur_year = new_year;
+			}
+			new_month = AIDate.GetMonth(AIDate.GetCurrentDate());
+			if (cur_month != new_month) { // Don't use < here since we need to handle December -> January
+				// Handle once a month tasks here.
+				AILog.Info(Helper.GetCurrentDateString() + " --- Monthly Tasks ---");
+				cur_month = new_month;
+				ManageVehicleRenewal(VEHICLE_AGE_LEFT_LIMIT);
+				/* TEST ONCE A MONTH? SELL VEHICLES IN DEPOT */
+				SellVehiclesInDepot();
+				AILog.Info(Helper.GetCurrentDateString() + " --- Monthly Tasks Done ---");
 			}
 		}
 
