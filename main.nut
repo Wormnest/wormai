@@ -958,7 +958,6 @@ function WormAI::ManageAirRoutes()
 		   This line can also be removed probably since we handle selling once a 
 		   month anyway. */
 		SellVehicleInDepot(i);
-		}
 	}
 
 	/* Don't try to add planes when we are short on cash */
