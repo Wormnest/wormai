@@ -1,8 +1,14 @@
 WormAI Changelog
 ================
 
+Version 2, 2013-08-02
+---------------------
++ Add support for vehicle breakdowns by adding depot maintenance orders.
++ Add vehicle management: send old vehicles to depot and sell once a month.
++ Fix: Incorrect tile rectangle near map borders.
+
 Version 1, released 2013-07-26
 ------------------------------
-- First release, based on WrightAI.
-- Pax aircraft only.
-- Save and load support.
++ First release, based on WrightAI.
++ Pax aircraft only.
++ Save and load support.

@@ -7,10 +7,7 @@ WormAI started as a fork of WrightAI and currently also supports only pax
 air transport. Other types of transport are planned for a future release.
 Several improvements to the original code have been made to make it
 stand out enough to release it.
-It doesn't do very well when infrastructure maintenance is on and also
-doesn't have any specific code yet to handle renewing airplanes or
-breakdowns. However, since low profit airplanes get sold it shouldn't
-do totally bad in that situation.
+It doesn't do very well when infrastructure maintenance is on.
 
 License: see license.txt
 Discussion topic: http://www.tt-forums.net/viewtopic.php?f=65&t=67167
@@ -33,6 +30,7 @@ Building airports and managing airport routes connecting two airports.
 Saving and loading are supported.
 Aircraft maximum distance supported.
 Handling of reaching maximum allowed aircraft.
+Handling of breakdown setting and selling of old aircraft.
 
 
 Settings
@@ -70,15 +68,14 @@ changed during the game.
 Current limits and shortcomings
 -------------------------------
 Only aircraft and only pax.
-Not checking for breakdowns, reliability and autorenew settings and
-orders don't include going to depot for servicing.
 Airports do not get upgraded to newer types.
 Every route consists of 2 airports, unconnected to other airports.
 Only tested in temperate climate, not sure if it matters for pax
 air transport.
+Not checking for reliability.
 Doesn't start building as fast as a lot of other AI's meaning that
 in situations with a limited amount of suitable spots for airports
 it might have a difficult time starting.
 
 
-Wormnest (Jacob Boerema), July 2013
+Wormnest (Jacob Boerema), July-August 2013
