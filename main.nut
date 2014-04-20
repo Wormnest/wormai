@@ -552,7 +552,7 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 	
 	/* Balance below a certain minimum? Wait until we buy more planes. */
 	if (balance < MINIMUM_BALANCE_AIRCRAFT) {
-		AILog.Warning("We are low on money (" + balance + "). We are not gonna buy an aircraft right now.");
+		AILog.Warning("We are low on money (" + balance + "). We are not going to buy an aircraft right now.");
 		return ERROR_NOT_ENOUGH_MONEY;
 	}
 	
