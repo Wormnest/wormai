@@ -1160,7 +1160,8 @@ function WormAI::EvaluateAircraft() {
 				AILog.Info("Engine: " + AIEngine.GetName(engine) + ", price: " + AIEngine.GetPrice(engine) +
 					", yearly running costs: " + AIEngine.GetRunningCost(engine));
 				AILog.Info( "    Capacity: " + AIEngine.GetCapacity(engine) + ", Maximum speed: " + 
-					AIEngine.GetMaxSpeed(engine) + ", Maximum distance: " + AIEngine.GetMaximumOrderDistance(engine));
+					AIEngine.GetMaxSpeed(engine) + ", Maximum distance: " + AIEngine.GetMaximumOrderDistance(engine) +
+					", type: " + GetAircraftTypeAsText(engine);
 				AILog.Warning("    Aircraft usefulness factors d: " + distance_per_year + ", p: " + pass_per_year +
 					", pass cost factor: " + cost_per_pass);
 			}
