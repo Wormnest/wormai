@@ -58,7 +58,7 @@ const AIRCRAFT_HIGH_PRICE = 1500000;			/* Maximum price of a high price aircraft
 /* Default delays */
 const SLEEPING_TIME = 100;						/* Default time to sleep between loops of our AI (NB: should be a multiple of 100). */
 /* Warning: delays should always be a multiple of 100 since Modulo is used! */
-const DEFAULT_DELAY_EVALUATE_AIRCRAFT = 25000;	/* Default delay for evaluating aircraft usefullness. */
+const DEFAULT_DELAY_EVALUATE_AIRCRAFT = 25000;	/* Default delay for evaluating aircraft usefulness. */
 const DEFAULT_DELAY_BUILD_AIRPORT = 500; 		/* Default delay before building a new airport route. */
 const DEFAULT_DELAY_MANAGE_ROUTES = 1000;		/* Default delay for managing air routes. */
 const DEFAULT_DELAY_HANDLE_LOAN = 2500;			/* Default delay for handling our loan. */
@@ -106,7 +106,7 @@ class WormAI extends AIController {
 	
 	/* DO NOT SAVE variables below this line. These will not be saved. */ 
 	loaded_from_save = false;
-	engine_usefullness = null;
+	engine_usefulness = null;
 	acceptance_limit = 0;				/* Starting limit for passenger acceptance for airport finding. */
 	aircraft_disabled_shown = 0;		/* Has the aircraft disabled in game settings message been shown (1) or not (0). */
 	aircraft_max0_shown = 0;			/* Has the max aircraft is 0 in game settings message been shown. */
@@ -121,7 +121,7 @@ class WormAI extends AIController {
 		this.towns_used = AIList();
 		this.route_1 = AIList();
 		this.route_2 = AIList();
-		this.engine_usefullness = AIList();
+		this.engine_usefulness = AIList();
 		acceptance_limit = STARTING_ACCEPTANCE_LIMIT;
 		this.aircraft_disabled_shown = 0;
 		this.aircraft_max0_shown = 0;
@@ -605,7 +605,7 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 
 	//engine_list.Valuate(AIEngine.GetCapacity);
 	//engine_list.KeepTop(1);
-	engine_list.Valuate(WormAI.GetCostFactor, this.engine_usefullness);
+	engine_list.Valuate(WormAI.GetCostFactor, this.engine_usefulness);
 	engine_list.KeepBottom(1);
 
 	/* Make sure that there was a suitable engine found. */
@@ -1117,7 +1117,7 @@ function WormAI::EvaluateAircraft() {
 	// Only use this one when debugging:
 	//engine_list.Valuate(AIEngine.GetCapacity);
 	
-	// First fill temporary list with our usefullness factors
+	// First fill temporary list with our usefulness factors
 	local factor_list = AIList();
 	// Remember best engine for logging purposes
 	local best_engine = null;
@@ -1162,16 +1162,16 @@ function WormAI::EvaluateAircraft() {
 			factor_list.AddItem(engine,cost_per_pass);
 		}
 	}
-	this.engine_usefullness.Clear();
-	this.engine_usefullness.AddList(factor_list);
-	AILog.Info("Evaluated engines count: " + this.engine_usefullness.Count());
+	this.engine_usefulness.Clear();
+	this.engine_usefulness.AddList(factor_list);
+	AILog.Info("Evaluated engines count: " + this.engine_usefulness.Count());
 	AILog.Warning("Best overall engine: " + AIEngine.GetName(best_engine) + ", cost factor: " + best_factor);
 }
 
 function WormAI::GetCostFactor(engine, costfactor_list) {
-	// For some reason we can't access this.engine_usefullness from inside the Valuate function,
+	// For some reason we can't access this.engine_usefulness from inside the Valuate function,
 	// thus we add that as a parameter
-	//AILog.Info("usefullness list count: " + costfactor_list.Count());
+	//AILog.Info("usefulness list count: " + costfactor_list.Count());
 	if (costfactor_list == null) {
 		return 0;
 	}
