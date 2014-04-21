@@ -173,10 +173,10 @@ function WormAI::GetAircraftTypeAsText(airplane_id)
 	// Get the aircraft type (mainly large/small)
 	local planetype = "";
 	switch(AIEngine.GetPlaneType(airplane_id)) {
-		case AIAirport.PT_BIG_PLANE: {planetype = 'Large airplane';} break;
-		case AIAirport.PT_SMALL_PLANE: {planetype = 'Small airplane';} break;
-		case AIAirport.PT_HELICOPTER: {planetype = 'Helicopter';} break;
-		default: {planetype = '<invalid aircraft type>';} break;
+		case AIAirport.PT_BIG_PLANE: {planetype = "Large airplane";} break;
+		case AIAirport.PT_SMALL_PLANE: {planetype = "Small airplane";} break;
+		case AIAirport.PT_HELICOPTER: {planetype = "Helicopter";} break;
+		default: {planetype = "<invalid aircraft type>";} break;
 	}
 	return planetype;
 }
