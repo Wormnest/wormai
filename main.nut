@@ -167,6 +167,20 @@ function WormAI::WriteTile(tile)
 	return "0x" + decToHex(tile);
 }
 
+// Returns aircraft type as text
+function WormAI::GetAircraftTypeAsText(airplane_id_)
+{
+	// Get the aircraft type (mainly large/small)
+	local planetype;
+	switch(AIEngine.GetPlaneType(veh)) {
+		case AIAirport.PT_BIG_PLANE: {planetype = 'Large airplane';} break;
+		case AIAirport.PT_SMALL_PLANE: {planetype = 'Small airplane';} break;
+		case AIAirport.PT_HELICOPTER: {planetype = 'Helicopter';} break;
+		default: {planetype = '<invalid aircraft type>';} break;
+	}
+	return planetype;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //	Debugging functions
 
