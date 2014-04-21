@@ -267,17 +267,9 @@ function WormAI::DebugListRoutes()
 					first = false;
 				}
 				// Show info about aircraft
-				// First get the aircraft type (mainly large/small)
-				local planetype;
-				switch(AIEngine.GetPlaneType(veh)) {
-					case AIAirport.PT_BIG_PLANE: {planetype = 'Large airplane';} break;
-					case AIAirport.PT_SMALL_PLANE: {planetype = 'Small airplane';} break;
-					case AIAirport.PT_HELICOPTER: {planetype = 'Helicopter';} break;
-					default: {planetype = '<invalid planetype>';} break;
-				}
 				AILog.Info("     " + AIVehicle.GetName(veh) + " (id: " + veh + "), age: " +
 					GetAgeString(AIVehicle.GetAge(veh)) + ", capacity: " + 
-					AIVehicle.GetCapacity(veh, passenger_cargo_id) + ", size: " + planetype );
+					AIVehicle.GetCapacity(veh, passenger_cargo_id) + ", size: " + GetAircraftTypeAsText(veh) );
 				local last_profit = AIVehicle.GetProfitLastYear(veh);
 				// Increment total profit for this route
 				total_profit += last_profit;
