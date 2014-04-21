@@ -557,8 +557,20 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 	}
 	
 	/* We don't want helicopters so weed them out. */
+	/* Might not be necessary since they are most likely never the most profitable. */
 	engine_list.Valuate(AIEngine.GetPlaneType);
 	engine_list.RemoveValue(AIAirport.PT_HELICOPTER);
+	
+	/*  We can't use large planes on small airports. Filter them out if needed.
+		In fact if there is at least 1 small airport part of this order, then all large planes
+		should be removed. However, since we currently make airports in pairs
+		we can safely assume for now that both airports will be of the same type.
+	*/
+	local airport_type = AIAirport.GetAirportType(order_start_tile);
+	if (airport_type == AIAirport.AT_SMALL || airport_type == AIAirport.AT_COMMUTER ) {
+		AILog.Info("Removing big planes from selection since we are building for a small airport.");
+		engine_list.RemoveValue(AIAirport.PT_BIG_PLANE);
+	}
 	
 	engine_list.Valuate(AIEngine.GetPrice);
 	engine_list.KeepBelowValue(balance < AIRCRAFT_LOW_PRICE_CUT ? AIRCRAFT_LOW_PRICE : (balance < AIRCRAFT_MEDIUM_PRICE_CUT ? AIRCRAFT_MEDIUM_PRICE : AIRCRAFT_HIGH_PRICE));
