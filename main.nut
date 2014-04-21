@@ -1083,7 +1083,7 @@ function WormAI::HandleEvents()
 			case AIEvent.ET_VEHICLE_CRASHED: {
 				local ec = AIEventVehicleCrashed.Convert(e);
 				local v = ec.GetVehicleID();
-				AILog.Info("We have a crashed aircraft (" + v + "), buying a new one as replacement");
+				AILog.Warning("We have a crashed aircraft (" + v + "), buying a new one as replacement");
 				this.BuildAircraft(this.route_1.GetValue(v), this.route_2.GetValue(v), 0);
 				this.route_1.RemoveItem(v);
 				this.route_2.RemoveItem(v);
