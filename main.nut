@@ -171,7 +171,7 @@ function WormAI::WriteTile(tile)
 function WormAI::GetAircraftTypeAsText(airplane_id)
 {
 	// Get the aircraft type (mainly large/small)
-	local planetype;
+	local planetype = "";
 	switch(AIEngine.GetPlaneType(airplane_id)) {
 		case AIAirport.PT_BIG_PLANE: {planetype = 'Large airplane';} break;
 		case AIAirport.PT_SMALL_PLANE: {planetype = 'Small airplane';} break;
