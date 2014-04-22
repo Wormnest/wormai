@@ -425,7 +425,7 @@ function WormAI::BuildAirportRoute()
 	// No sense building airports if we already have the max (or more because amount can be changed in game)
 	local max_vehicles = Vehicle.GetVehicleLimit(AIVehicle.VT_AIR);
 	if (max_vehicles <= this.route_1.Count()) {
-		AILog.Info("We already have the maximum number of aircraft. No sense in building an airport.");
+		AILog.Info("We are not going to look for a new airport route. We already have the maximum number of aircraft.");
 		return ERROR_MAX_AIRCRAFT;
 	}
 	
