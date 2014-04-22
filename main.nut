@@ -1044,6 +1044,10 @@ function WormAI::ManageAirRoutes()
 		/* Do not build new vehicle if there isn't at least some waiting cargo at the other station too. */
 		if  (s2_waiting <= AIRPORT_CARGO_WAITING_LOW_LIMIT-AIRPORT2_WAITING_DIFF) continue;
 
+		/* Do not build more aircraft if there are too many planes waiting to land at both
+		   the airports part of this order. */
+		if (Airport.GetNumAircraftInAirportQueue(i, false) > 2) continue;
+		
 		// TODO: Maybe also check for aircraft waiting in depot because that could be a sign of
 		// too many aircraft too!
 
