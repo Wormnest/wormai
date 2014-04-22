@@ -991,7 +991,7 @@ function WormAI::ManageAirRoutes()
 	if (!this.HasMoney(AIRCRAFT_LOW_PRICE)) return ERROR_NOT_ENOUGH_MONEY;
 	else if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) <= this.route_1.Count()) {
 		// No sense building plane if we already have the max (or more because amount can be changed in game)
-		AILog.Info("We already have the maximum number of aircraft. No sense in checking if we need to add planes.");
+		AILog.Info("We already have the maximum number of aircraft. No need to check if we should add more planes.");
 		return ERROR_MAX_AIRCRAFT;
 	}
 
