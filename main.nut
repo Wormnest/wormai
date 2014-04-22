@@ -834,8 +834,10 @@ function WormAI::SendToDepotForSelling(vehicle,is_low_profit)
 			AILog.Warning(AIError.GetLastErrorString());
 			AILog.Warning("Failed to send vehicle " + AIVehicle.GetName(vehicle) + "to depot!");
 		}
-		/* Add it to our list of vehicles that were sent to depot. */
-		vehicle_to_depot.rawset(vehicle, true);
+		else {
+			/* Add it to our list of vehicles that were sent to depot. */
+			vehicle_to_depot.rawset(vehicle, true);
+		}
 	}
 }
 
