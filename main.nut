@@ -1048,8 +1048,9 @@ function WormAI::ManageAirRoutes()
 		// too many aircraft too!
 
 		AILog.Info("Station " + AIStation.GetName(i) + "(id: " + i +
-			") has a lot of waiting passengers (cargo: " + list.GetValue(i) + "), adding a new aircraft for the route.");
+			") has a lot of waiting passengers (cargo: " + list.GetValue(i) + ")");
 		AILog.Info("Other station: " + AIStation.GetName(s2_id) + " waiting passengers: " + s2_waiting);
+		AILog.Info("Going to add a new aircraft for this route.");
 
 		/* Make sure we have enough money */
 		this.GetMoney(AIRCRAFT_LOW_PRICE);
