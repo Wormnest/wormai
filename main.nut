@@ -546,7 +546,7 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 {
 	// Don't try to build aircraft if we already have the max (or more because amount can be changed in game)
 	if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) <= this.route_1.Count()) {
-		AILog.Warning("We already have the maximum number of aircraft. No sense in building an airport.");
+		AILog.Warning("Can't buy aircraft. We already have the maximum number allowed.");
 		return ERROR_MAX_AIRCRAFT;
 	}
 
