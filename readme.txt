@@ -7,7 +7,6 @@ WormAI started as a fork of WrightAI and currently also supports only pax
 air transport. Other types of transport are planned for a future release.
 Several improvements to the original code have been made to make it
 stand out enough to release it.
-It doesn't do very well when infrastructure maintenance is on.
 
 License: see license.txt
 Discussion topic: http://www.tt-forums.net/viewtopic.php?f=65&t=67167
@@ -19,7 +18,7 @@ Requirements
 ------------
 OpenTTD 1.2 or later.
 SuperLib and AILibList. I won't list the versions here since then I would
-have to update this text everytime the versions change. However I have a
+have to update this text every time the versions change. However I have a
 script that updates the library versions before a release of my AI so I
 should always be using the latest versions at the time of release.
 
@@ -61,14 +60,15 @@ changed during the game.
 
 5. The maximum distance between airports.
    [default depends on AI competitor speed setting]
-   This setting tells WormAI the maxnimum allowed distance between airports
+   This setting tells WormAI the maximum allowed distance between airports
    to build a route.
 
 
-Current limits and shortcomings
--------------------------------
-Only aircraft and only pax.
+Limitations and shortcomings
+----------------------------
+Currently only supports aircraft and only transports pax.
 Airports do not get upgraded to newer types.
+It doesn't do very well when infrastructure maintenance is on.
 Every route consists of 2 airports, unconnected to other airports.
 Only tested in temperate climate, not sure if it matters for pax
 air transport.
@@ -78,4 +78,4 @@ in situations with a limited amount of suitable spots for airports
 it might have a difficult time starting.
 
 
-Wormnest (Jacob Boerema), July-August 2013
+Wormnest (Jacob Boerema), 2013-2014
