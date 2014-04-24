@@ -1,6 +1,12 @@
 WormAI Changelog
 ================
 
+Version 3, 2014-
+----------------
++ Don't use large aircraft on small airports.
++ Don't add more airplanes to a route when there are too many planes 
+  waiting in the landing queue.
+
 Version 2, 2013-08-02
 ---------------------
 + Add support for vehicle breakdowns by adding depot maintenance orders.
