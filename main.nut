@@ -416,6 +416,27 @@ function WormAI::RemoveAirport(tile)
 }
 
 /**
+ * GetOptimalAvailableAirportType. Get the optimal type of airport that is available.
+ * For now we only choose between small, large and metropolitan. Larger ones would only
+ * be useful for very high cargo/passenger amounts with many airplanes.
+ * returns null if no suitable airport is available.
+**/
+function WormAI::GetOptimalAvailableAirportType()
+{
+	local AirType = null;
+	if (AIAirport.IsValidAirportType(AIAirport.AT_METROPOLITAN)) {
+		AirType = AIAirport.AT_METROPOLITAN;
+	}
+	else if (AIAirport.IsValidAirportType(AIAirport.AT_LARGE)) {
+		AirType = AIAirport.AT_LARGE;
+	}
+	else if (AIAirport.IsValidAirportType(AIAirport.AT_SMALL)) {
+		AirType = AIAirport.AT_SMALL;
+	}
+	return AirType;
+}
+
+/**
  * Build an airport route. Find 2 cities that are big enough and try to build airport in both cities.
  * Then we can build an aircraft and make some money.
  * We limit our amount of airports to max aircraft / 3 * 2 (2 airports for a route, and 3 planes per route)
