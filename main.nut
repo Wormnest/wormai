@@ -80,6 +80,7 @@ const ERROR_BUILD_AIRPORT1	= -3;				/* There was an error building airport 1. */
 const ERROR_BUILD_AIRPORT2	= -4;				/* There was an error building airport 2. */
 const ERROR_FIND_AIRPORT_ACCEPTANCE = -5;		/* We couldn't find a suitable airport but we lowered our acceptance rate limit so we can try again. */
 const ERROR_FIND_AIRPORT_FINAL = -6;			/* We couldn't find a suitable airport and we are at the minimum acceptable acceptance limit. */
+const ERROR_NO_SUITABLE_AIRPORT = -7;			/* There is no suitable airport type available. */
 const ERROR_MAX_AIRCRAFT = -10;					/* We have reached the maximum allowed number of aircraft. */
 const ERROR_MAX_AIRPORTS = -11;					/* We have reached the maximum number of airports. */
 const ERROR_NOT_ENOUGH_MONEY = -20;				/* We don't have enough money. */
@@ -459,7 +460,11 @@ function WormAI::BuildAirportRoute()
 
 	// See for capacity of different airport types:
 	// Airport capacity test: http://www.tt-forums.net/viewtopic.php?f=2&t=47279
-	local airport_type = (AIAirport.IsValidAirportType(AIAirport.AT_LARGE) ? AIAirport.AT_LARGE : AIAirport.AT_SMALL);
+	local airport_type = GetOptimalAvailableAirportType();
+	if (airport_type == null) {
+		AILog.Warning("No suitable airport type available that we know how to use.");
+		return ERROR_NO_SUITABLE_AIRPORT;
+	}
 
 	/* Get enough money to work with */
 	if (!this.GetMoney(AIAirport.GetPrice(airport_type)*2 + AIRCRAFT_LOW_PRICE)) {
