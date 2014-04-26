@@ -554,7 +554,7 @@ function WormAI::GetMaximumDistance(engine) {
 	local max_dist = AIEngine.GetMaximumOrderDistance(engine);
 	if (max_dist == 0) {
 		/* Unlimited distance. Since we need to be able to keep values above a squared distance
-		We set it to a predefined maximum value. Maps can be maximum 2048x2048. Diagonal will
+		We set it to a predefined maximum value. Maps can be maximum 4096x4096. Diagonal will
 		be more than that. To be safe we compute 10000 * 10000. */
 		return 10000 * 10000;
 	}
