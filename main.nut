@@ -448,7 +448,7 @@ function WormAI::IsTownFirstOrder(town_id)
 	local route1 = AIList();
 	route1.AddList(route_1);
 	// Keep only those with our station tile
-	route1.KeepValue(st_tile);
+	route1.KeepValue(station_tile);
 	// return true if found (not 0) in route_1
 	return (route1.Count() != 0);
 }
