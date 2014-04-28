@@ -462,7 +462,28 @@ function WormAI::IsTownFirstOrder(town_id)
 **/
 function WormAI::CheckForAirportsNeedingToBeUpgraded()
 {
-	AILog.Info("Upgrading airports not yet implemented.");
+	AILog.Warning("Upgrading airports not yet implemented.");
+	for (local t = towns_used.Begin(); !towns_used.IsEnd(); t = towns_used.Next()) {
+		// TODO: Maybe use the station2 list and order by highest amount of waiting cargo to
+		// choose the station to be converted first.
+		if (!IsTownFirstOrder(t)) {
+			AILog.Info("Upgrade check for: " + AITown.GetName(t));
+			// Start looking at stations in towns that are the last/second order.
+			local station_tile = towns_used.GetValue(t);
+			local station_id = AIStation.GetStationID(station_tile);
+			local airport_type = AIAirport.GetAirportType(station_tile);
+			local optimal_airport = GetOptimalAvailableAirportType();
+			if (airport_type != optimal_airport) {
+				AILog.Info("Upgrade: Airport: " + AIStation.GetName(AIStation.GetStationID(station_tile)) + " needs upgrading!");
+				// Needs upgrading if possible...
+				// TODO: Remove airplanes from airport!
+				local upgrade_list = [optimal_airport];
+				Airport.UpgradeAirportInTown(t, station_id, upgrade_list, this.passenger_cargo_id, this.passenger_cargo_id);
+				// Need to check if it succeeds and if it did:
+				// Need to get the station id of the upgraded station
+			}
+		}
+	}
 }
 
 /**
