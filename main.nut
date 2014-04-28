@@ -90,11 +90,11 @@ const ERROR_BUILD_AIRCRAFT_INVALID = -31;		/* No suitable aircraft found when tr
 class WormAI extends AIController {
 	/* Declare the variables here. */
 	name = null;
-	towns_used = null;
-	route_1 = null;
-	route_2 = null;
-	distance_of_route = {};
-	vehicle_to_depot = {};
+	towns_used = null;							/* town id, airport station tile */
+	route_1 = null;								/* vehicle id, station_tile of first station in an order */
+	route_2 = null;								/* vehicle id, station_tile of last station in an order */
+	distance_of_route = {};						/* vehicle id, distance between first/last order stations */
+	vehicle_to_depot = {};						/* vehicle id, boolean always true currently */
 	delay_build_airport_route = 0;
 	delay_evaluate_aircraft = 0;
 	delay_manage_routes = 0;
@@ -1385,6 +1385,7 @@ function WormAI::Start()
 				// Handle once a month tasks here.
 				AILog.Info(Helper.GetCurrentDateString() + " --- Monthly Tasks ---");
 				cur_month = new_month;
+				CheckForAirportsNeedingToBeUpgraded();
 				ManageVehicleRenewal(VEHICLE_AGE_LEFT_LIMIT);
 				/* TEST ONCE A MONTH? SELL VEHICLES IN DEPOT */
 				SellVehiclesInDepot();
