@@ -438,6 +438,22 @@ function WormAI::GetOptimalAvailableAirportType()
 }
 
 /**
+ * IsTownFirstOrder returns true if the airport near this town is used as the 
+ * first order, if false then it is used as the last/second order.
+**/
+function WormAI::IsTownFirstOrder(town_id)
+{
+	local station_tile = towns_used.GetValue(town_id);
+	// Copy the list of First order routes
+	local route1 = AIList();
+	route1.AddList(route_1);
+	// Keep only those with our station tile
+	route1.KeepValue(st_tile);
+	// return true if found (not 0) in route_1
+	return (route1.Count() != 0);
+}
+
+/**
  * Checks all airports to see if they can and should be upgraded.
  * TODO If yes then starts the upgrade process.
  * Because we might get stuck with 1 airport of a route being upgraded and the
