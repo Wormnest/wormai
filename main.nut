@@ -438,6 +438,18 @@ function WormAI::GetOptimalAvailableAirportType()
 }
 
 /**
+ * Checks all airports to see if they can and should be upgraded.
+ * TODO If yes then starts the upgrade process.
+ * Because we might get stuck with 1 airport of a route being upgraded and the
+ * other still the old type (possibly different in size small/large) we are going
+ * to check the last airport of the orders first.
+**/
+function WormAI::CheckForAirportsNeedingToBeUpgraded()
+{
+	AILog.Info("Upgrading airports not yet implemented.");
+}
+
+/**
  * Build an airport route. Find 2 cities that are big enough and try to build airport in both cities.
  * Then we can build an aircraft and make some money.
  * We limit our amount of airports to max aircraft / 3 * 2 (2 airports for a route, and 3 planes per route)
