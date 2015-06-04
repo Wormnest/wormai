@@ -226,7 +226,7 @@ function WormAI::GetAgeString(AgeInDays)
 function WormAI::DebugListRoutes()
 {
 	AILog.Info("---------- DEBUG route info ----------");
-		AILog.Info("Number or routes: " + (this.towns_used.Count() / 2) );
+		AILog.Info("Number of routes: " + (this.towns_used.Count() / 2) );
 		for (local t = towns_used.Begin(); !towns_used.IsEnd(); t = towns_used.Next()) {
 			local st_tile = towns_used.GetValue(t);
 			// Find out whether this station is the first or last order
