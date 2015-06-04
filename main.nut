@@ -1255,7 +1255,12 @@ function WormAI::EvaluateAircraft() {
 	this.engine_usefulness.Clear();
 	this.engine_usefulness.AddList(factor_list);
 	AILog.Info("Evaluated engines count: " + this.engine_usefulness.Count());
-	AILog.Warning("Best overall engine: " + AIEngine.GetName(best_engine) + ", cost factor: " + best_factor);
+	if (!best_engine) {
+		AILog.Warning("Best overall engine: <no engine available>");
+	}
+	else {
+		AILog.Warning("Best overall engine: " + AIEngine.GetName(best_engine) + ", cost factor: " + best_factor);
+	}
 }
 
 function WormAI::GetCostFactor(engine, costfactor_list) {
