@@ -1390,8 +1390,8 @@ function WormAI::Start()
 				&& this.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
 				local ret = this.BuildAirportRoute();
 				if ((ret == ERROR_FIND_AIRPORT1) || (ret == ERROR_MAX_AIRPORTS) ||
-					(ret == ERROR_MAX_AIRCRAFT)&& old_ticker != 0) {
-					/* No more route found or we have max allowed aircraft, delay even more before trying to find an other */
+					(ret == ERROR_MAX_AIRCRAFT) && old_ticker != 0) {
+					/* No more routes found or we have the max allowed aircraft, delay even more before trying to find an other */
 					build_delay_factor = 10;
 				}
 				else {
