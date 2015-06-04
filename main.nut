@@ -57,12 +57,7 @@ const AIRCRAFT_HIGH_PRICE = 1500000;			/* Maximum price of a high price aircraft
 
 /* Default delays */
 const SLEEPING_TIME = 100;						/* Default time to sleep between loops of our AI (NB: should be a multiple of 100). */
-/* Warning: delays should always be a multiple of 100 since Modulo is used! */
-const DEFAULT_DELAY_EVALUATE_AIRCRAFT = 25000;	/* Default delay for evaluating aircraft usefulness. */
 const DEFAULT_DELAY_BUILD_AIRPORT = 500; 		/* Default delay before building a new airport route. */
-const DEFAULT_DELAY_MANAGE_ROUTES = 1000;		/* Default delay for managing air routes. */
-const DEFAULT_DELAY_HANDLE_LOAN = 2500;			/* Default delay for handling our loan. */
-const DEFAULT_DELAY_HANDLE_EVENTS = 100;		/* Default delay for handling events. */
 
 const STARTING_ACCEPTANCE_LIMIT = 150;			/* Starting limit in acceptance for finding suitable airport tile. */
 const BAD_YEARLY_PROFIT = 10000;				/* Yearly profit limit below which profit is deemed bad. */
@@ -95,11 +90,8 @@ class WormAI extends AIController {
 	route_2 = null;								/* vehicle id, station_tile of last station in an order */
 	distance_of_route = {};						/* vehicle id, distance between first/last order stations */
 	vehicle_to_depot = {};						/* vehicle id, boolean always true currently */
+	ai_speed_factor = 1;						/* speed factor for our ai actions (1=fast..3=slow) */
 	delay_build_airport_route = 0;
-	delay_evaluate_aircraft = 0;
-	delay_manage_routes = 0;
-	delay_handle_loan = 0;
-	delay_handle_events = 0;
 	passenger_cargo_id = -1;
 
 	/* WormAI: New variables added. */
@@ -1282,20 +1274,13 @@ function WormAI::GetCostFactor(engine, costfactor_list) {
 function WormAI::InitSettings()
 {
 	local ai_speed = GetSetting("ai_speed");
-	if (ai_speed == 1) {
-		ai_speed = 3;
+	switch (ai_speed) {
+		case 1: {this.ai_speed_factor = 3;} break;
+		case 3: {this.ai_speed_factor = 1;} break;
+		default: {this.ai_speed_factor = 2;} break;
 	}
-	else if (ai_speed == 3) {
-		ai_speed = 1;
-	}
-	this.delay_evaluate_aircraft = DEFAULT_DELAY_EVALUATE_AIRCRAFT * ai_speed;
-	this.delay_build_airport_route = DEFAULT_DELAY_BUILD_AIRPORT * ai_speed;
-	this.delay_manage_routes = DEFAULT_DELAY_MANAGE_ROUTES * ai_speed;
-	this.delay_handle_loan = DEFAULT_DELAY_HANDLE_LOAN * ai_speed;
-	this.delay_handle_events = DEFAULT_DELAY_HANDLE_EVENTS * ai_speed;
 	
-	// N.B.: WARNING: Since the ticker MODulo is used to start after delays, all delays
-	// above are assumed to be multiples of 100.
+	this.delay_build_airport_route = DEFAULT_DELAY_BUILD_AIRPORT * this.ai_speed_factor;
 	
 	/* Since autorenew can change the vehicle id it may cause trouble to have it turned on,
 	 * therefore we turn it off and will renew manually in the future. */
@@ -1354,8 +1339,9 @@ function WormAI::Start()
 	/* We start with almost no loan, and we take a loan when we want to build something */
 	AICompany.SetLoanAmount(AICompany.GetLoanInterval());
 
-	/* We need our local ticker, as GetTick() will skip ticks */
-	local ticker = 0;
+	/* We need our local tickers, as GetTick() will skip ticks */
+	local old_ticker = 0;
+	local cur_ticker = 0;
 	/* The amount of time we may sleep between loops.
 	   Warning: don't change this value unless your understand the implications for all the delays! 
 	*/
@@ -1370,6 +1356,7 @@ function WormAI::Start()
 
 	/* Let's go on for ever */
 	while (true) {
+		cur_ticker = GetTick();
 		/* Need to check if we can build aircraft and how many. Since this can change we do it inside the loop. */
 		if (AIGameSettings.IsDisabledVehicleType(AIVehicle.VT_AIR)) {
 			if (aircraft_disabled_shown == 0) {
@@ -1390,23 +1377,12 @@ function WormAI::Start()
 			}
 		}
 		else {
-			/* Evaluate the available aircraft once in a while. */
-			if ((ticker % this.delay_evaluate_aircraft == 0 || ticker == 0)) {
-				this.EvaluateAircraft();
-				/* This seems like a good place to show some debuggin info in case we turned
-				   that setting on. */
-				if (GetSetting("debug_show_lists") == 1) {
-					/* Debugging info */
-					DebugListTownsUsed();
-					//DebugListRouteInfo();
-					DebugListRoutes();
-				}
-			}
 			/* Once in a while, with enough money, try to build something */
-			if ((ticker % (build_delay_factor * this.delay_build_airport_route) == 0 || ticker == 0) && this.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
+			if (((cur_ticker - old_ticker > build_delay_factor * this.delay_build_airport_route) || old_ticker == 0) 
+				&& this.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
 				local ret = this.BuildAirportRoute();
 				if ((ret == ERROR_FIND_AIRPORT1) || (ret == ERROR_MAX_AIRPORTS) ||
-					(ret == ERROR_MAX_AIRCRAFT)&& ticker != 0) {
+					(ret == ERROR_MAX_AIRCRAFT)&& old_ticker != 0) {
 					/* No more route found or we have max allowed aircraft, delay even more before trying to find an other */
 					build_delay_factor = 10;
 				}
@@ -1414,42 +1390,61 @@ function WormAI::Start()
 					/* Set default delay back in case we had it increased, see above. */
 					build_delay_factor = 1;
 				}
+				old_ticker = cur_ticker;
 			}
-			/* Manage the routes once in a while */
-			if (ticker % this.delay_manage_routes == 0) {
-				this.ManageAirRoutes();
-			}
-			/* Try to get rid of our loan once in a while */
-			if (ticker % this.delay_handle_loan == 0) {
-				AICompany.SetLoanAmount(0);
-			}
+
 			/* Check for events once in a while */
-			if (ticker % this.delay_handle_events == 0) {
-				this.HandleEvents();
-			}
+			this.HandleEvents();
 			
 			/* Task scheduling. */
 			new_year = AIDate.GetYear(AIDate.GetCurrentDate());
 			if (cur_year < new_year) {
 				// Handle once a year tasks here.
+				AILog.Info(Helper.GetCurrentDateString() + " --- Yearly Tasks ---");
 				cur_year = new_year;
+				
+				/* Some things we do more or less often depending on this.ai_speed_factor setting */
+				if (cur_year % this.ai_speed_factor == 0) {
+					this.EvaluateAircraft();
+					}
+				
+				/* This seems like a good place to show some debugging info in case we turned
+				   that setting on. Always once a year. */
+				if (GetSetting("debug_show_lists") == 1) {
+					/* Debugging info */
+					DebugListTownsUsed();
+					//DebugListRouteInfo();
+					DebugListRoutes();
+				}
+				
+				AILog.Info(Helper.GetCurrentDateString() + " --- Yearly Tasks Done ---");
 			}
 			new_month = AIDate.GetMonth(AIDate.GetCurrentDate());
 			if (cur_month != new_month) { // Don't use < here since we need to handle December -> January
 				// Handle once a month tasks here.
 				AILog.Info(Helper.GetCurrentDateString() + " --- Monthly Tasks ---");
 				cur_month = new_month;
+
+				/* Some things we do more or less often depending on this.ai_speed_factor setting */
+				if (cur_month % this.ai_speed_factor == 0) {
+					/* Manage the routes once in a while */
+					this.ManageAirRoutes();
+				}
+
 				CheckForAirportsNeedingToBeUpgraded();
 				ManageVehicleRenewal(VEHICLE_AGE_LEFT_LIMIT);
 				/* TEST ONCE A MONTH? SELL VEHICLES IN DEPOT */
 				SellVehiclesInDepot();
+				
+				/* Try to get rid of our loan once in a while */
+				AICompany.SetLoanAmount(0);
+				
 				AILog.Info(Helper.GetCurrentDateString() + " --- Monthly Tasks Done ---");
 			}
 		}
 
 		/* Make sure we do not create infinite loops */
 		Sleep(sleepingtime);
-		ticker += sleepingtime;
 	} // END OF OUR MAIN LOOP
 }
 
