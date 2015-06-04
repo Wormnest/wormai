@@ -1268,6 +1268,32 @@ function WormAI::GetCostFactor(engine, costfactor_list) {
 	}
 }
 
+function WormAI::CanBuildAircraft()
+{
+	/* Need to check if we can build aircraft and how many. Since this can change we do it inside the loop. */
+	if (AIGameSettings.IsDisabledVehicleType(AIVehicle.VT_AIR)) {
+		if (this.aircraft_disabled_shown == 0) {
+			AILog.Warning("Using aircraft is disabled in your game settings. Since this AI currently only uses aircraft it will not build anything until you change this setting.")
+			this.aircraft_disabled_shown = 1;
+		}
+	}
+	else if (Vehicle.IsVehicleTypeDisabledByAISettings(AIVehicle.VT_AIR)) {
+		if (this.aircraft_disabled_shown == 0) {
+			AILog.Warning("Using aircraft is disabled in this AI's settings. Since this AI currently only uses aircraft it will not build anything until you change this setting.")
+			this.aircraft_disabled_shown = 1;
+		}
+	}
+	else if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) == 0) {
+		if (this.aircraft_max0_shown == 0) {
+			AILog.Warning("Amount of allowed aircraft for AI is set to 0 in your game settings. This means we can't build any aircraft which is currently our only option.")
+			this.aircraft_max0_shown = 1;
+		}
+	}
+	else {
+		return true;
+	}
+	return false;
+}
 /*
  * InitSettings initializes a number of required variables based on the gamesettings of our AI.
 */
@@ -1354,29 +1380,11 @@ function WormAI::Start()
 	local cur_month = 0;
 	local new_month = 0;
 
-	/* Let's go on for ever */
+	/* Let's go on forever */
 	while (true) {
 		cur_ticker = GetTick();
-		/* Need to check if we can build aircraft and how many. Since this can change we do it inside the loop. */
-		if (AIGameSettings.IsDisabledVehicleType(AIVehicle.VT_AIR)) {
-			if (aircraft_disabled_shown == 0) {
-				AILog.Warning("Using aircraft is disabled in your game settings. Since this AI currently only uses aircraft it will not build anything until you change this setting.")
-				aircraft_disabled_shown = 1;
-			}
-		}
-		else if (Vehicle.IsVehicleTypeDisabledByAISettings(AIVehicle.VT_AIR)) {
-			if (aircraft_disabled_shown == 0) {
-				AILog.Warning("Using aircraft is disabled in this AI's settings. Since this AI currently only uses aircraft it will not build anything until you change this setting.")
-				aircraft_disabled_shown = 1;
-			}
-		}
-		else if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) == 0) {
-			if (aircraft_max0_shown == 0) {
-				AILog.Warning("Amount of allowed aircraft for AI is set to 0 in your game settings. This means we can't build any aircraft which is currently our only option.")
-				aircraft_max0_shown = 1;
-			}
-		}
-		else {
+		/* Check if we can build aircraft. If yes then handle some tasks. */
+		if (CanBuildAircraft()) {
 			/* Once in a while, with enough money, try to build something */
 			if (((cur_ticker - old_ticker > build_delay_factor * this.delay_build_airport_route) || old_ticker == 0) 
 				&& this.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
