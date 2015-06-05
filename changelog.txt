@@ -1,11 +1,15 @@
 WormAI Changelog
 ================
 
-Version 3, 2014-
+Version 3, 2015-
 ----------------
-+ Don't use large aircraft on small airports.
++ Fix: Don't use large aircraft on small airports.
++ Fix: Don't crash when there isn't a best engine at all.
 + Don't add more airplanes to a route when there are too many planes 
   waiting in the landing queue.
++ Change how we are starting tasks. Do it monthly/yearly instead of
+  based on a tick count.
++ Add basic support for upgrading airports.
 
 Version 2, 2013-08-02
 ---------------------
