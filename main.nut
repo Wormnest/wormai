@@ -104,9 +104,9 @@ class WormAI extends AIController {
 	aircraft_disabled_shown = 0;		/* Has the aircraft disabled in game settings message been shown (1) or not (0). */
 	aircraft_max0_shown = 0;			/* Has the max aircraft is 0 in game settings message been shown. */
 
-	function Start();
-
-	constructor() {
+	/* Our class constructor. */
+	constructor()
+	{
 		/* Initialize the class variables here (or later when possible). */
 		this.loaded_from_save = false;
 		distance_of_route = {};
@@ -119,7 +119,7 @@ class WormAI extends AIController {
 		this.aircraft_disabled_shown = 0;
 		this.aircraft_max0_shown = 0;
 		// Delays: we don't set them here but in start because we need to check the selected
-		// speed set in gamesettings
+		// speed set in game settings
 
 		local list = AICargoList();
 		for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
@@ -129,7 +129,155 @@ class WormAI extends AIController {
 			}
 		}
 	}
-};
+
+	/* --- Implementation of base class functions. --- */
+	function Start();
+	function Save();
+	function Load(version, data);
+	
+	/* --- Utility functions that should be moved to a separate unit. --- */
+	/* Convert number to its hexadecimal string representation. */
+	function decToHex(number);
+	/* Writes a tile as a hexadecimal number. */
+	function WriteTile(tile);
+	/* Returns aircraft type as text. */
+	function GetAircraftTypeAsText(airplane_id);
+	/* Rough year/month age estimation string where year = 365 days and month = 30 days. */
+	function GetAgeString(AgeInDays);
+	/**
+	 * This function taken from Rondje.
+	 * Add a rectangular area to an AITileList containing tiles that are within /radius/
+	 * tiles from the center tile, taking the edges of the map into account.
+	 */  
+	function SafeAddRectangle(list, tile, radius);
+	
+	/* --- Debugging output functions. --- */
+	/* List of towns used and stations near those towns. */
+	function DebugListTownsUsed();
+	/* List all routes: per route all stations and all vehicles on that route with relevant info. */
+	function DebugListRoutes();
+	function DebugListRoute1(); 			/* Not used currently. */
+	/* List all our air routes. */
+	function DebugListRouteInfo();
+	function DebugListRoute2(); 			/* Not used currently. */
+	function DebugListDistanceOfRoute(); 	/* Not used currently. */
+
+	/* --- Money related functions. --- */
+	/* Check if we have enough money (via loan and on bank). */
+	function HasMoney(money);
+	/* Get the amount of money requested, loan if needed. */
+	function GetMoney(money);
+	
+	/* --- Airport handling functions. --- */
+	/**
+	 * RemoveAirport. Remove airport at specified tile.
+	 * If removing fails then give a warning.
+	 * Note that using Sleep(x) here and trying again doesn't work for some reason (removing still fails)
+	**/
+	function RemoveAirport(tile);
+	/**
+	 * GetOptimalAvailableAirportType. Get the optimal type of airport that is available.
+	 * For now we only choose between small, large and metropolitan. Larger ones would only
+	 * be useful for very high cargo/passenger amounts with many airplanes.
+	 * returns null if no suitable airport is available.
+	**/
+	function GetOptimalAvailableAirportType();
+	/**
+	 * Checks all airports to see if they can and should be upgraded.
+	 * TODO If yes then starts the upgrade process.
+	 * Because we might get stuck with 1 airport of a route being upgraded and the
+	 * other still the old type (possibly different in size small/large) we are going
+	 * to check the last airport of the orders first.
+	**/
+	function CheckForAirportsNeedingToBeUpgraded();
+	/**
+	 * Build an airport route. Find 2 cities that are big enough and try to build airport in both cities.
+	 * Then we can build an aircraft and make some money.
+	 * We limit our amount of airports to max aircraft / 3 * 2 (2 airports for a route, and 3 planes per route)
+	 */
+	function BuildAirportRoute();
+	/**
+	 * Find a suitable spot for an airport, walking all towns hoping to find one.
+	 *  When a town is used, it is marked as such and not re-used.
+	 */
+	function FindSuitableAirportSpot(airport_type, center_tile);
+	/**
+	  * Sells the airports from tile_1 and tile_2
+	  * Removes towns from towns_used list too
+	  */
+	function SellAirports(airport_1_tile, airport_2_tile);
+
+	/* --- Order handling. --- */
+	/**
+	 * IsTownFirstOrder returns true if the airport near this town is used as the 
+	 * first order, if false then it is used as the last/second order.
+	**/
+	function IsTownFirstOrder(town_id);
+
+	/* --- Aircraft handling. --- */
+	/* Get the maximum distance this aircraft can safely fly without landing. */
+	function GetMaximumDistance(engine);
+	/**
+	 * Build an aircraft with orders from tile_1 to tile_2.
+	 * The best available aircraft of that time will be bought.
+	 * start_tile is the tile where the airplane should start, or 0 to start at the first tile.
+	 */
+	function BuildAircraft(tile_1, tile_2, start_tile);
+	/*
+	 * Send the vehicle to depot to be sold when it arrives.
+	 * Vehicle - the vehicle id of the vehicle to be sold
+	 * is_low_profit - boolean, if true sold because of low profit, false because of old age
+	*/
+	function SendToDepotForSelling(vehicle,is_low_profit);
+	/*
+	 * Sell the vehicle provided it's in depot. If it's not yet in depot it will fail silently.
+	*/
+	function SellVehicleInDepot(vehicle);
+	/*
+	 * Sell all vehicles in depot that are marked to be sold.
+	*/
+	function SellVehiclesInDepot();
+	/* Checks if we can build an aircraft and if not outputs a string with the reason. */
+	function CanBuildAircraft();
+
+	/* --- Task related functions. --- */
+	/*
+	 * ManageVehicleRenewal will check all vehicles for being old or needing upgrading
+	 * to a newer type. It will send all vehicles that are non optimal to depot for
+	 * selling.
+	 * Parameters:
+	 * age_limit - the age in days left limit below which we send to depot for selling
+	*/
+	function ManageVehicleRenewal(age_limit);
+	/* 
+	 * Manage air routes: 
+	 * - Send unprofitable aircraft to depot for selling
+	 * - Add aircraft to routes that have a lot of waiting cargo
+	 */
+	function ManageAirRoutes();
+	/* Callback that handles events. */
+	function HandleEvents();
+	/* 
+	 * Task that once in a while evaluates all available aircraft for how suited they are
+	 * for our purposes.
+	 */
+	function EvaluateAircraft();
+
+	/* --- Valuator functions. --- */
+	/* Get the cost factor of an aircraft. */
+	function GetCostFactor(engine, costfactor_list);
+	
+	/* --- Initialization functions. --- */
+	/*
+	 * InitSettings initializes a number of required variables based on the game settings of our AI.
+	*/
+	function InitSettings();
+	/*
+	 * Welcome says hello to the user and prints out it's current AI gamesettings.
+	 */
+	function Welcome();
+
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Functions that should be moved to a utility/library unit
@@ -174,6 +322,15 @@ function WormAI::GetAircraftTypeAsText(airplane_id)
 	return planetype;
 }
 
+/* Rough year/month age estimation string where year = 365 days and month = 30 days. */
+function WormAI::GetAgeString(AgeInDays)
+{
+	local y = AgeInDays / 365;
+	local days = AgeInDays - (y * 365);
+	local m = days / 30;
+	return y + " years " + m + " months";
+}
+
 //////////////////////////////////////////////////////////////////////////
 //	Debugging functions
 
@@ -203,15 +360,6 @@ function WormAI::DebugListTownsUsed()
 		}
 	}
 	AILog.Info("");
-}
-
-/* Rough year/month age estimation string where year = 365 days and month = 30 days. */
-function WormAI::GetAgeString(AgeInDays)
-{
-	local y = AgeInDays / 365;
-	local days = AgeInDays - (y * 365);
-	local m = days / 30;
-	return y + " years " + m + " months";
 }
 
 // List all routes: per route all stations and all vehicles on that route with relevant info
