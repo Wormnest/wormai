@@ -2,13 +2,13 @@ require("version.nut");
 
 class WormAI extends AIInfo {
 	function GetAuthor()        { return "Wormnest"; }
-	function GetName()          { return "WormAI"; }
-	function GetShortName()     { return "WORM"; }
+	function GetName()          { return "WormAIDev"; }
+	function GetShortName()     { return "WOR0"; }
 	function GetDescription()   { return "Worm AI: A new Transport Tycoon arises. Version " + GetVersion() + " released on " + GetDate() + "."; }
 	function GetVersion()       { return SELF_VERSION; }
 	function GetDate()          { return SELF_DATE; }
 	function MinVersionToLoad() { return 1; }
-	function CreateInstance()   { return "WormAI"; }
+	function CreateInstance()   { return "WormAIDev"; }
 	function GetAPIVersion()    { return "1.2"; }
 	function GetURL()           { return "http://www.tt-forums.net/viewtopic.php?f=65&t=67167"; }
 
