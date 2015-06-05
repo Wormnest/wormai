@@ -3,6 +3,9 @@
 # Replace AI names with some other names
 # Useful to have different names for developing and then being
 # able to switch names for releases.
+# Note: we assume that CreateInstance() assignment will always be
+# after assignment of GetName(). If not then the value of
+# CreateInstance should differ from the value of GetName().
 
 import os
 import io
@@ -29,6 +32,7 @@ info_nut_file = "info.nut";
 # Thus we can't do it at the same time.
 quoted_name = ""
 replace_name = ""
+name_found = False
 
 # Open file for reading and writing (r+)
 info_file = io.open(info_nut_file, "r+", newline='')   # newline='' means don't convert line endings
@@ -45,11 +49,17 @@ for i, line in enumerate(lines):
         if quoted_name == ai_name_short:
             replace_name = ai_dev_name_short;
         elif quoted_name == ai_name_long:
+            if name_found:
+                do_replace = False;
             replace_name = ai_dev_name_long;
+            name_found = True;
         elif quoted_name == ai_dev_name_short:
             replace_name = ai_name_short;
         elif quoted_name == ai_dev_name_long:
+            if name_found:
+                do_replace = False;
             replace_name = ai_name_long;
+            name_found = True;
         else:
             do_replace = False;
             replace_name = "";
