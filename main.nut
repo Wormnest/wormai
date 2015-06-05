@@ -5,7 +5,7 @@
 //
 // License: GNU GPL - version 2 (see license.txt)
 // Author: Wormnest (Jacob Boerema)
-// Copyright: Jacob Boerema - 2013-2014
+// Copyright: Jacob Boerema - 2013-2015
 //
 // 
 
