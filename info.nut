@@ -8,7 +8,7 @@ class WormAI extends AIInfo {
 	function GetVersion()       { return SELF_VERSION; }
 	function GetDate()          { return SELF_DATE; }
 	function MinVersionToLoad() { return 1; }
-	function CreateInstance()   { return "WormAIDev"; }
+	function CreateInstance()   { return "WormAI"; }
 	function GetAPIVersion()    { return "1.2"; }
 	function GetURL()           { return "http://www.tt-forums.net/viewtopic.php?f=65&t=67167"; }
 
