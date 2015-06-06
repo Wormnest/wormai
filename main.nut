@@ -911,7 +911,8 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
  * Add a rectangular area to an AITileList containing tiles that are within /radius/
  * tiles from the center tile, taking the edges of the map into account.
  */  
-function SafeAddRectangle(list, tile, radius) {
+function WormAI::SafeAddRectangle(list, tile, radius)
+{
 	local x1 = max(0, AIMap.GetTileX(tile) - radius);
 	local y1 = max(0, AIMap.GetTileY(tile) - radius);
 	
