@@ -973,6 +973,9 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 	*/
 
 	/* Now find 2 suitable towns */
+	/* First compute distance limits outside the loop. */
+	local min_distance_squared = GetSetting("min_airport_distance") * GetSetting("min_airport_distance");
+	local max_distance_squared = GetSetting("max_airport_distance") * GetSetting("max_airport_distance");
 	for (local town = town_list.Begin(); !town_list.IsEnd(); town = town_list.Next()) {
 		/* Don't make this a CPU hog */
 		Sleep(1);
@@ -991,12 +994,10 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 		if (center_tile != 0) {
 			/* If we have a tile defined, check to see if it's within the minimum and maximum allowed. */
 			list.Valuate(AITile.GetDistanceSquareToTile, center_tile);
-			local min_distance = GetSetting("min_airport_distance");
-			local max_distance = GetSetting("max_airport_distance");
 			/* Keep above minimum distance. */
-			list.KeepAboveValue(min_distance * min_distance);
+			list.KeepAboveValue(min_distance_squared);
 			/* Keep below maximum distance. */
-			list.KeepBelowValue(max_distance * max_distance);
+			list.KeepBelowValue(max_distance_squared);
 			// TODO: In early games with low maximum speeds we may need to adjust maximum and
 			// maybe even minimum distance to get a round trip within a year.
 		}
