@@ -1564,35 +1564,19 @@ function WormAI::Start()
 		cur_ticker = GetTick();
 		/* Check if we can build aircraft. If yes then handle some tasks. */
 		if (CanBuildAircraft()) {
-			/* Once in a while, with enough money, try to build something */
-			if (((cur_ticker - old_ticker > build_delay_factor * this.delay_build_airport_route) || old_ticker == 0) 
-				&& this.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
-				local ret = this.BuildAirportRoute();
-				if ((ret == ERROR_FIND_AIRPORT1) || (ret == ERROR_MAX_AIRPORTS) ||
-					(ret == ERROR_MAX_AIRCRAFT) && old_ticker != 0) {
-					/* No more routes found or we have the max allowed aircraft, delay even more before trying to find an other */
-					build_delay_factor = 10;
-				}
-				else {
-					/* Set default delay back in case we had it increased, see above. */
-					build_delay_factor = 1;
-				}
-				old_ticker = cur_ticker;
-			}
-
-			/* Check for events once in a while */
-			this.HandleEvents();
-			
 			/* Task scheduling. */
 			new_year = AIDate.GetYear(AIDate.GetCurrentDate());
 			if (cur_year < new_year) {
 				// Handle once a year tasks here.
 				AILog.Info(Helper.GetCurrentDateString() + " --- Yearly Tasks ---");
 				cur_year = new_year;
+				/* Evaluate best aircraft: Needs to be done every year to be sure it's done 
+				   the first time before we try to build a route. */
+				this.EvaluateAircraft();
 				
 				/* Some things we do more or less often depending on this.ai_speed_factor setting */
 				if (cur_year % this.ai_speed_factor == 0) {
-					this.EvaluateAircraft();
+					/* Nothing for now. */
 					}
 				
 				/* This seems like a good place to show some debugging info in case we turned
@@ -1628,6 +1612,25 @@ function WormAI::Start()
 				
 				AILog.Info(Helper.GetCurrentDateString() + " --- Monthly Tasks Done ---");
 			}
+
+			/* Once in a while, with enough money, try to build something */
+			if (((cur_ticker - old_ticker > build_delay_factor * this.delay_build_airport_route) || old_ticker == 0) 
+				&& this.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
+				local ret = this.BuildAirportRoute();
+				if ((ret == ERROR_FIND_AIRPORT1) || (ret == ERROR_MAX_AIRPORTS) ||
+					(ret == ERROR_MAX_AIRCRAFT) && old_ticker != 0) {
+					/* No more routes found or we have the max allowed aircraft, delay even more before trying to find an other */
+					build_delay_factor = 10;
+				}
+				else {
+					/* Set default delay back in case we had it increased, see above. */
+					build_delay_factor = 1;
+				}
+				old_ticker = cur_ticker;
+			}
+
+			/* Check for events once in a while */
+			this.HandleEvents();
 		}
 
 		/* Make sure we do not create infinite loops */
