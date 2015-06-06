@@ -154,6 +154,8 @@ class WormAI extends AIController {
 	/* --- Debugging output functions. --- */
 	/* List of towns used and stations near those towns. */
 	function DebugListTownsUsed();
+	/* List all towns in the supplied list. */
+	function DebugListTowns(towns_list);
 	/* List all routes: per route all stations and all vehicles on that route with relevant info. */
 	function DebugListRoutes();
 	function DebugListRoute1(); 			/* Not used currently. */
@@ -357,6 +359,26 @@ function WormAI::DebugListTownsUsed()
 				AIStation.GetCargoWaiting(sid, passenger_cargo_id) + ", cargo rating: " + 
 				AIStation.GetCargoRating(sid, passenger_cargo_id) + ", aircraft: " +
 				st_veh.Count());
+		}
+	}
+	AILog.Info("");
+}
+
+/* List all towns in the supplied list. */
+function WormAI::DebugListTowns(towns_list)
+{
+	AILog.Info("---------- DEBUG list towns in list----------");
+	if (!this.towns_used) {
+		AILog.Warning("WARNING: towns_list is null!");
+	}
+	else {
+		AILog.Info("Number of towns in list: " + towns_list.Count());
+		for (local t = towns_list.Begin(); !towns_list.IsEnd(); t = towns_list.Next()) {
+			local is_city = (AITown.IsCity(t) ? "city" : "town");
+			AILog.Info("Town: " + AITown.GetName(t) + " (id: " + t + "), " + is_city +
+				", population: " + AITown.GetPopulation(t) + ", houses: " + AITown.GetHouseCount(t) +
+				", grows every " + AITown.GetGrowthRate(t) + " days");
+			AILog.Info("    Location: " + WriteTile(AITown.GetLocation(t)) );
 		}
 	}
 	AILog.Info("");
