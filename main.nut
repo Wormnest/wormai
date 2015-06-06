@@ -967,6 +967,10 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 	   a town in case there are a lot of unsuitable locations. */
 	town_list.KeepTop(20);
 	town_list.Valuate(AIBase.RandItem);
+	
+	/* DEBUG
+	DebugListTowns(town_list);
+	*/
 
 	/* Now find 2 suitable towns */
 	for (local town = town_list.Begin(); !town_list.IsEnd(); town = town_list.Next()) {
@@ -979,9 +983,11 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 		local list = AITileList();
 		/* Safely add a rectangle taking care of border tiles. */
 		SafeAddRectangle(list, tile, 15);
-		//list.AddRectangle(tile - AIMap.GetTileIndex(15, 15), tile + AIMap.GetTileIndex(15, 15));
+		/* Remove all tiles where an airport can't be built and finally keep the best value. */
 		list.Valuate(AITile.IsBuildableRectangle, airport_x, airport_y);
 		list.KeepValue(1);
+
+		/* Check if we need to consider the distance to another tile. */
 		if (center_tile != 0) {
 			/* If we have a tile defined, check to see if it's within the minimum and maximum allowed. */
 			list.Valuate(AITile.GetDistanceSquareToTile, center_tile);
@@ -994,14 +1000,16 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 			// TODO: In early games with low maximum speeds we may need to adjust maximum and
 			// maybe even minimum distance to get a round trip within a year.
 		}
+
 		/* Sort on acceptance, remove places that don't have acceptance */
 		list.Valuate(AITile.GetCargoAcceptance, this.passenger_cargo_id, airport_x, airport_y, airport_rad);
 		list.RemoveBelowValue(this.acceptance_limit);
 		
 		/** debug off
-		for (tile = list.Begin(); !list.IsEnd(); tile = list.Next()) {
-			AILog.Info("Town: " + AITown.GetName(town) + ", Tile: " + WriteTile(tile) +
-				", Passenger Acceptance: " + list.GetValue(tile));
+		AILog.Info("DEBUG tile list count: " + list.Count());
+		for (local t = list.Begin(); !list.IsEnd(); t = list.Next()) {
+			AILog.Info("DEBUG Town: " + AITown.GetName(town) + ", Tile: " + WriteTile(t) +
+				", Passenger Acceptance: " + list.GetValue(t));
 		} **/
 
 		/* Couldn't find a suitable place for this town, skip to the next */
