@@ -30,6 +30,7 @@ Saving and loading are supported.
 Aircraft maximum distance supported.
 Handling of reaching maximum allowed aircraft.
 Handling of breakdown setting and selling of old aircraft.
+Handling of airport upgrading.
 
 
 Settings
@@ -67,15 +68,13 @@ changed during the game.
 Limitations and shortcomings
 ----------------------------
 Currently only supports aircraft and only transports pax.
-Airports do not get upgraded to newer types.
 It doesn't do very well when infrastructure maintenance is on.
 Every route consists of 2 airports, unconnected to other airports.
 Only tested in temperate climate, not sure if it matters for pax
 air transport.
-Not checking for reliability.
 Doesn't start building as fast as a lot of other AI's meaning that
 in situations with a limited amount of suitable spots for airports
 it might have a difficult time starting.
 
 
-Wormnest (Jacob Boerema), 2013-2014
+Wormnest (Jacob Boerema), 2013-2015
