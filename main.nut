@@ -158,10 +158,10 @@ class WormAI extends AIController {
 	function DebugListTowns(towns_list);
 	/* List all routes: per route all stations and all vehicles on that route with relevant info. */
 	function DebugListRoutes();
-	function DebugListRoute1(); 			/* Not used currently. */
+	/* List all route info in the supplied list. */
+	function DebugListRoute(route);
 	/* List all our air routes. */
 	function DebugListRouteInfo();
-	function DebugListRoute2(); 			/* Not used currently. */
 	function DebugListDistanceOfRoute(); 	/* Not used currently. */
 
 	/* --- Money related functions. --- */
@@ -445,17 +445,16 @@ function WormAI::DebugListRoutes()
 	AILog.Info("");
 }
 
-function WormAI::DebugListRoute1()
+/* List all route info in the supplied list. */
+function WormAI::DebugListRoute(route)
 {
-	//this.route_1.AddItem(vehicle, tile_1);
-	//this.route_2.AddItem(vehicle, tile_2);
-	AILog.Info("---------- DEBUG route_1 ----------");
-	if (!this.route_1) {
-		AILog.Warning("WARNING: route_1 is null!");
+	AILog.Info("---------- DEBUG route ----------");
+	if (!route) {
+		AILog.Error("ERROR: route is null!");
 	}
 	else {
-		AILog.Info("Number or routes used: " + this.route_1.Count());
-		for (local r = route_1.Begin(); !route_1.IsEnd(); r = route_1.Next()) {
+		AILog.Info("Number of routes used: " + route.Count());
+		for (local r = route.Begin(); !route.IsEnd(); r = route.Next()) {
 			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + WriteTile(route_1.GetValue(r)) + ").");
 		}
 	}
@@ -493,23 +492,6 @@ function WormAI::DebugListRouteInfo()
 			local dist = this.distance_of_route.rawget(r);
 			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + "), from: " + 
 				AITown.GetName(t1) + ", to: " + AITown.GetName(t2) + ", distance: " + dist);
-		}
-	}
-	AILog.Info("");
-}
-
-function WormAI::DebugListRoute2()
-{
-	//this.route_1.AddItem(vehicle, tile_1);
-	//this.route_2.AddItem(vehicle, tile_2);
-	AILog.Info("---------- DEBUG route_2 ----------");
-	if (!this.route_1) {
-		AILog.Warning("WARNING: route_2 is null!");
-	}
-	else {
-		AILog.Info("Number routes used: " + this.route_2.Count());
-		for (local r = route_2.Begin(); !route_2.IsEnd(); r = route_2.Next()) {
-			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + WriteTile(route_2.GetValue(r)) + ").");
 		}
 	}
 	AILog.Info("");
