@@ -191,6 +191,14 @@ class WormAI extends AIController {
 	 * other still the old type (possibly different in size small/large) we are going
 	 * to check the last airport of the orders first.
 	**/
+	/**
+	 * Update the airport station tile info in our lists after upgrading airport.
+	 * Expects a valid station_id.
+	 * town_idx Index into towns_used list.
+	 * station_id Id of the Airport station that got upgraded.
+	 * old_tile The old tile for the airport before upgrading.
+	**/
+	function UpdateAirportTileInfo(town_idx, station_id, old_tile)
 	function CheckForAirportsNeedingToBeUpgraded();
 	/**
 	 * Build an airport route. Find 2 cities that are big enough and try to build airport in both cities.
@@ -598,6 +606,43 @@ function WormAI::IsTownFirstOrder(town_id)
 }
 
 /**
+ * Update the airport station tile info in our lists after upgrading airport.
+ * Expects a valid station_id.
+ * town_idx Index into towns_used list.
+ * station_id Id of the Airport station that got upgraded.
+ * old_tile The old tile for the airport before upgrading.
+**/
+function WormAI:UpdateAirportTileInfo(town_idx, station_id, old_tile)
+{
+	/* Get the new tile for the airport after upgrading. */
+	local new_airport_tile = Airport.GetAirportTile(station_id);
+	/* Update the airport tile in our towns_used list. */
+	this.towns_used.SetValue(town_idx, new_airport_tile);
+	/* Update our route info. */
+	local route = AIList();
+	if (IsTownFirstOrder(town_idx)) {
+		route = route_1;
+	}
+	else {
+		route = route_2;
+	}
+	/* Loop through the route info that should contain our airport. */
+	for (local r = route.Begin(); !route.IsEnd(); r = route.Next()) {
+		/* Update airport station tiles. */
+		if (route.GetValue(r) == old_tile) {
+			route.SetValue(r, new_airport_tile);
+		}
+	}
+	/* DEBUG:
+	if (IsTownFirstOrder(t)) {
+		DebugListRoute(route_1);
+	}
+	else {
+		DebugListRoute(route_2);
+	} */
+}
+
+/**
  * Checks all airports to see if they can and should be upgraded.
  * TODO If yes then starts the upgrade process.
  * Because we might get stuck with 1 airport of a route being upgraded and the
@@ -632,32 +677,7 @@ function WormAI::CheckForAirportsNeedingToBeUpgraded()
 					AILog.Warning("Upgrading airport succeeded!");
 					/* Check if old station_id is still valid */
 					if (AIStation.IsValidStation(station_id)) {
-						local new_airport_tile = Airport.GetAirportTile(station_id);
-						/* Update the airport tile in our towns_used list. */
-						this.towns_used.SetValue(t, new_airport_tile);
-						/* Update our route info. */
-						local route = AIList();
-						if (IsTownFirstOrder(t)) {
-							route = route_1;
-						}
-						else {
-							route = route_2;
-						}
-						/* Loop through the route info that should contain our airport. */
-						for (local r = route.Begin(); !route.IsEnd(); r = route.Next()) {
-							/* Update airport station tiles. */
-							if (route.GetValue(r) == station_tile) {
-								route.SetValue(r, new_airport_tile);
-							}
-						}
-						/* DEBUG: Test to see if the above works without explicitly assigning back
-						   to the correct route_X
-						if (IsTownFirstOrder(t)) {
-							DebugListRoute(route_1);
-						}
-						else {
-							DebugListRoute(route_2);
-						} */
+						UpdateAirportTileInfo(t, station_id, station_tile);
 					}
 					else {
 						AILog.Info("We're out of luck: station id is no longer valid!");
