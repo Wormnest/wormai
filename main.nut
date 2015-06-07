@@ -606,7 +606,8 @@ function WormAI::IsTownFirstOrder(town_id)
 **/
 function WormAI::CheckForAirportsNeedingToBeUpgraded()
 {
-	AILog.Warning("Upgrading airports not yet implemented.");
+	AILog.Info("Check if there are airports that can be upgraded.");
+	// TODO: Maybe set a max amount of upgrades at one time?
 	for (local t = towns_used.Begin(); !towns_used.IsEnd(); t = towns_used.Next()) {
 		// TODO: Maybe use the station2 list and order by highest amount of waiting cargo to
 		// choose the station to be converted first.
@@ -617,14 +618,58 @@ function WormAI::CheckForAirportsNeedingToBeUpgraded()
 			local station_id = AIStation.GetStationID(station_tile);
 			local airport_type = AIAirport.GetAirportType(station_tile);
 			local optimal_airport = GetOptimalAvailableAirportType();
-			if (airport_type != optimal_airport) {
-				AILog.Info("Upgrade: Airport: " + AIStation.GetName(AIStation.GetStationID(station_tile)) + " needs upgrading!");
+			if ((airport_type != optimal_airport) && AIStation.IsValidStation(station_id)) {
+				AILog.Info("Upgrade: Airport: " + AIStation.GetName(station_id) + " needs upgrading!");
 				// Needs upgrading if possible...
 				// TODO: Remove airplanes from airport!
 				local upgrade_list = [optimal_airport];
-				Airport.UpgradeAirportInTown(t, station_id, upgrade_list, this.passenger_cargo_id, this.passenger_cargo_id);
-				// Need to check if it succeeds and if it did:
-				// Need to get the station id of the upgraded station
+				/* Try to upgrade airport. */
+				local upgrade_result = Airport.UpgradeAirportInTown(t, station_id, upgrade_list, this.passenger_cargo_id, 
+				  this.passenger_cargo_id);
+				/* Need to check if it succeeds. */
+				if (upgrade_result == Result.SUCCESS) {
+					/* Need to get the station id of the upgraded station. */
+					AILog.Warning("Upgrading airport succeeded!");
+					/* Check if old station_id is still valid */
+					if (AIStation.IsValidStation(station_id)) {
+						local new_airport_tile = Airport.GetAirportTile(station_id);
+						/* Update the airport tile in our towns_used list. */
+						this.towns_used.SetValue(t, new_airport_tile);
+						/* Update our route info. */
+						local route = AIList();
+						if (IsTownFirstOrder(t)) {
+							route = route_1;
+						}
+						else {
+							route = route_2;
+						}
+						/* Loop through the route info that should contain our airport. */
+						for (local r = route.Begin(); !route.IsEnd(); r = route.Next()) {
+							/* Update airport station tiles. */
+							if (route.GetValue(r) == station_tile) {
+								route.SetValue(r, new_airport_tile);
+							}
+						}
+						/* DEBUG: Test to see if the above works without explicitly assigning back
+						   to the correct route_X
+						if (IsTownFirstOrder(t)) {
+							DebugListRoute(route_1);
+						}
+						else {
+							DebugListRoute(route_2);
+						} */
+					}
+					else {
+						AILog.Info("We're out of luck: station id is no longer valid!");
+						/* TODO: Figure out what we should do now.
+							Can we expect this to happen in normal situations? */
+					}
+				}
+				else if (upgrade_result == Result.REBUILD_FAILED) {
+					/* Oh boy. Airport was removed but rebuilding a replacement failed.
+					   TODO: Figure out what we should do now. */
+					AILog.Warning("We removed the old airport but failed to build a new one!");
+				}
 			}
 		}
 	}
