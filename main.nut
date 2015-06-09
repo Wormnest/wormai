@@ -1467,8 +1467,17 @@ function WormAI::SellVehicleInDepot(vehicle)
 		if (AIVehicle.SellVehicle(vehicle)) {
 			AILog.Info("--> Sold " + veh_name + " (id: " + vehicle + ").");
 			/* Check if we are the last one serving those airports; else sell the airports */
-			local list2 = AIVehicleList_Station(AIStation.GetStationID(this.route_1.GetValue(vehicle)));
-			if (list2.Count() == 0) {
+			/* Since the cause of removing vehicles can now also be a failed upgrade of airports,
+			   it's possible that one of the two airports is invalid and thus check that we get
+			   a list for a valid station. */
+			local station_id = -1;
+			station_id = AIStation.GetStationID(this.route_1.GetValue(vehicle));
+			if (!AIStation.IsValidStation(station_id)) {
+				AILog.Info("First station of route invalid. Using second station to get vehicle list.");
+				station_id = AIStation.GetStationID(this.route_2.GetValue(vehicle));
+			}
+			local veh_list = AIVehicleList_Station(station_id);
+			if (veh_list.Count() == 0) {
 				local t1 = route_1.GetValue(vehicle);
 				local t2 = route_2.GetValue(vehicle);
 				this.SellAirports(t1, t2);
