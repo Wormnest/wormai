@@ -677,13 +677,13 @@ function WormAI::GetAiportTileOtherEndOfRoute(town_id, station_tile)
 	}
 	// Keep only those with our station tile
 	route1.KeepValue(station_tile);
-	if (route1.Count() == 0) {return -1;}
-	
-	local st_veh = AIVehicleList_Station(AIStation.GetStationID(station_tile));
-	if (st_veh.Count() == 0) {return -1;}
+	if (route1.Count() == 0) {
+		AILog.Warning("  No routes found that contain this station!");
+		return -1;
+	}
 
-	/* Return tile for other end of route from first vehicle belonging to this station. */
-	return route2.GetValue(st_veh.Begin());
+	/* Return tile for other end of route from first vehicle belonging to other end of route. */
+	return route2.GetValue(route1.Begin());
 }
 
 /**
