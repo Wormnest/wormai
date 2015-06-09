@@ -281,6 +281,11 @@ class WormAI extends AIController {
 	 * start_tile is the tile where the airplane should start, or 0 to start at the first tile.
 	 */
 	function BuildAircraft(tile_1, tile_2, start_tile);
+	/**
+	 * Send all vehicles belonging to station to depot for selling
+	 * sell_reason Reason for selling
+	**/
+	function SendAllVehiclesOfStationToDepot(station_id, sell_reason);
 	/*
 	 * Send the vehicle to depot to be sold when it arrives.
 	 * Vehicle - the vehicle id of the vehicle to be sold
@@ -888,10 +893,21 @@ function WormAI::ReplaceOrders(veh, is_first_order, breakdowns, station_tile)
 	}
 }
 
-function WormAI::SendVehiclesToDepot()
+/**
+ * Send all vehicles belonging to station to depot for selling
+ * sell_reason Reason for selling
+**/
+function WormAI::SendAllVehiclesOfStationToDepot(station_id, sell_reason)
 {
-	/* TODO */
-	AILog.Warning("SendVehiclesToDepot not implemented yet!");
+	if (AIStation.IsValidStation(station_id)) {
+		local st_veh = AIVehicleList_Station(station_id);
+		for (local veh = st_veh.Begin(); !st_veh.IsEnd(); veh = st_veh.Next()) {
+			SendToDepotForSelling(veh, sell_reason);
+		}
+	}
+	else {
+		AILog.Warning("Can't send vehicles to depot: station id is invalid!");
+	}
 }
 
 /**
