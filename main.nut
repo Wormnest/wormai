@@ -67,6 +67,11 @@ const AIRPORT_CARGO_WAITING_HIGH_LIMIT = 1250;	/* Limit of waiting cargo (passen
 const AIRPORT2_WAITING_DIFF = 150;				/* Cargo waiting diff (less) value at the other station to allow extra aircraft. */
 const VEHICLE_AGE_LEFT_LIMIT = 150;				/* Number of days limit before maximum age for vehicle to get sent to depot for selling. */
 
+/* Reasons for selling vehicles */
+const VEH_OLD_AGE			= 0;				/* Vehicle is sold because of its old age. */
+const VEH_LOW_PROFIT		= 1;				/* Vehicle is sold because it has low profits. */
+const VEH_STATION_REMOVAL	= 2;				/* Vehicle is sold because one of its stations got removed and could not be replaced. */
+
 /* ERROR CODE constants */
 const ALL_OK = 0;
 const ERROR_FIND_AIRPORT1	= -1;				/* There was an error finding a spot for airport 1. */
@@ -279,9 +284,9 @@ class WormAI extends AIController {
 	/*
 	 * Send the vehicle to depot to be sold when it arrives.
 	 * Vehicle - the vehicle id of the vehicle to be sold
-	 * is_low_profit - boolean, if true sold because of low profit, false because of old age
+	 * sell_reason - Reason for selling vehicle
 	*/
-	function SendToDepotForSelling(vehicle,is_low_profit);
+	function SendToDepotForSelling(vehicle,sell_reason);
 	/*
 	 * Sell the vehicle provided it's in depot. If it's not yet in depot it will fail silently.
 	*/
@@ -1383,21 +1388,26 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 /*
  * Send the vehicle to depot to be sold when it arrives.
  * Vehicle - the vehicle id of the vehicle to be sold
- * is_low_profit - boolean, if true sold because of low profit, false because of old age
+ * sell_reason - Reason for selling vehicle
 */
-function WormAI::SendToDepotForSelling(vehicle,is_low_profit)
+function WormAI::SendToDepotForSelling(vehicle,sell_reason)
 {
 	/* Send the vehicle to depot if we didn't do so yet */
 	if (!vehicle_to_depot.rawin(vehicle) || vehicle_to_depot.rawget(vehicle) != true) {
 		local info_text = "--> Sending " + AIVehicle.GetName(vehicle) + " (id: " + vehicle + 
 			") to depot because of ";
-		if (is_low_profit) {
-			info_text += "low profits: " + AIVehicle.GetProfitLastYear(vehicle) + " / " + 
-				AIVehicle.GetProfitThisYear(vehicle);
-		}
-		else {
-			info_text += "old age: " +  GetAgeString(AIVehicle.GetAge(vehicle)) + " / " + 
-				GetAgeString(AIVehicle.GetMaxAge(vehicle));
+		switch(sell_reason) {
+			case VEH_OLD_AGE: {
+				info_text += "old age: " +  GetAgeString(AIVehicle.GetAge(vehicle)) + " / " + 
+					GetAgeString(AIVehicle.GetMaxAge(vehicle));
+			} break;
+			case VEH_LOW_PROFIT: {
+				info_text += "low profits: " + AIVehicle.GetProfitLastYear(vehicle) + " / " + 
+					AIVehicle.GetProfitThisYear(vehicle);
+			} break;
+			case VEH_STATION_REMOVAL: {
+				info_text += "removal of station";
+			} break;
 		}
 		AILog.Info(info_text);
 		/* Send it to depot. */
@@ -1476,7 +1486,7 @@ function WormAI::ManageVehicleRenewal(age_limit)
 	list.KeepBelowValue(age_limit);
 	/* Send them all to depot to be sold. */
 	for (local veh = list.Begin(); !list.IsEnd(); veh = list.Next()) {
-		SendToDepotForSelling(veh, false); // false = old age
+		SendToDepotForSelling(veh, VEH_OLD_AGE);
 	}
 }
 
@@ -1554,7 +1564,7 @@ function WormAI::ManageAirRoutes()
 	// TODO: Don't sell all aircraft from the same route all at once, try selling 1 per year?
 	for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
 		/* Profit last year and this year bad? Let's sell the vehicle */
-		SendToDepotForSelling(i, true); // true = low profit
+		SendToDepotForSelling(i, VEH_LOW_PROFIT);
 		/* Sell vehicle provided it's in depot. If not we will get it a next time.
 		   This line can also be removed probably since we handle selling once a 
 		   month anyway. */
