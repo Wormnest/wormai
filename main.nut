@@ -926,72 +926,75 @@ function WormAI::CheckForAirportsNeedingToBeUpgraded()
 	AILog.Info("Check if there are airports that can be upgraded.");
 	// TODO: Maybe set a max amount of upgrades at one time?
 	for (local t = towns_used.Begin(); !towns_used.IsEnd(); t = towns_used.Next()) {
-		// TODO: Maybe use the station2 list and order by highest amount of waiting cargo to
-		// choose the station to be converted first.
-		if (!IsTownFirstOrder(t)) {
-			// AILog.Info("Upgrade check for: " + AITown.GetName(t));
-			// Start looking at stations in towns that are the last/second order.
-			local station_tile = towns_used.GetValue(t);
-			local station_id = AIStation.GetStationID(station_tile);
-			local airport_type = AIAirport.GetAirportType(station_tile);
-			local optimal_airport = GetOptimalAvailableAirportType();
-			if ((airport_type != optimal_airport) && AIStation.IsValidStation(station_id)) {
-				AILog.Info("Airport: " + AIStation.GetName(station_id) + " needs upgrading!");
-				// Needs upgrading if possible...
-				// TODO: Remove airplanes from airport!
-				local upgrade_list = [optimal_airport];
-				/* Try to upgrade airport. */
-				local upgrade_result = Airport.UpgradeAirportInTown(t, station_id, upgrade_list, this.passenger_cargo_id, 
-				  this.passenger_cargo_id);
-				/* Need to check if it succeeds. */
-				if (upgrade_result == Result.SUCCESS) {
-					/* Need to get the station id of the upgraded station. */
-					AILog.Warning("Upgrading airport succeeded!");
-					/* Check if old station_id is still valid */
-					if (AIStation.IsValidStation(station_id)) {
-						UpdateAirportTileInfo(t, station_id, station_tile);
-					}
-					else {
-						AILog.Info("We're out of luck: station id is no longer valid!");
-						/* TODO: Figure out what we should do now.
-							Can we expect this to happen in normal situations? */
-					}
+		// TODO: Maybe order by highest amount of waiting cargo to choose the station to be converted first.
+		// AILog.Info("Upgrade check for: " + AITown.GetName(t));
+		// Start looking at stations in towns that are the last/second order.
+		local station_tile = towns_used.GetValue(t);
+		local station_id = AIStation.GetStationID(station_tile);
+		local airport_type = AIAirport.GetAirportType(station_tile);
+		local optimal_airport = GetOptimalAvailableAirportType();
+		if ((airport_type != optimal_airport) && AIStation.IsValidStation(station_id)) {
+			AILog.Info("Airport: " + AIStation.GetName(station_id) + " needs upgrading!");
+			// Needs upgrading if possible...
+			// TODO: Remove airplanes from airport!
+			local upgrade_list = [optimal_airport];
+			/* Try to upgrade airport. */
+			local upgrade_result = Airport.UpgradeAirportInTown(t, station_id, upgrade_list, this.passenger_cargo_id, 
+			  this.passenger_cargo_id);
+			/* Need to check if it succeeds. */
+			if (upgrade_result == Result.SUCCESS) {
+				/* Need to get the station id of the upgraded station. */
+				AILog.Warning("Upgrading airport " + AIStation.GetName(station_id) + " succeeded!");
+				/* Check if old station_id is still valid */
+				if (AIStation.IsValidStation(station_id)) {
+					UpdateAirportTileInfo(t, station_id, station_tile);
 				}
-				else if (upgrade_result == Result.REBUILD_FAILED) {
-					/* Oh boy. Airport was removed but rebuilding a replacement failed.
-					   TODO: Figure out what we should do now. */
-					AILog.Warning("We removed the old airport but failed to build a new one!");
-					/* 1. Try to build a second airport as replacement. */
-					/* First get tile of other end of route. */
-					local tile_other_end = GetAiportTileOtherEndOfRoute(t, station_tile);
-					if (tile_other_end != -1) {
-						/* Try to build an airport somewhere. */
-						/* TODO: Currently we don't consider the case that if the new airport will
-						   be farther away than the old one that certain aircraft with limited
-						   range will cause problems. */
-						AILog.Info("Try to build a replacement airport somewhere");
-						local tile_2 = this.FindSuitableAirportSpot(optimal_airport, tile_other_end);
-						if (tile_2 >= 0) {
-							/* Valid tile for airport: try to build it. */
-							if (!AIAirport.BuildAirport(tile_2, optimal_airport, AIStation.STATION_NEW)) {
-								AILog.Warning(AIError.GetLastErrorString());
-								AILog.Error("Although the testing told us we could build an airport, it still failed at tile " + WriteTile(tile_2) + ".");
-								this.towns_used.RemoveValue(tile_2);
-								SendVehiclesToDepot();
-							}
-							else {
-								/* Building new airport succeeded. Now update tiles, routes and orders. */
-								ReplaceAirportTileInfo(t, station_tile, tile_2, tile_other_end);
-							}
+				else {
+					AILog.Info("We're out of luck: station id is no longer valid!");
+					/* TODO: Figure out what we should do now.
+						Can we expect this to happen in normal situations? */
+				}
+			}
+			else if (upgrade_result == Result.REBUILD_FAILED) {
+				/* Oh boy. Airport was removed but rebuilding a replacement failed.
+				   TODO: Figure out what we should do now. */
+				AILog.Warning("We removed the old airport but failed to build a replacement!");
+				/* 1. Try to build a second airport as replacement. */
+				/* First get tile of other end of route. */
+				local tile_other_end = GetAiportTileOtherEndOfRoute(t, station_tile);
+				if (tile_other_end != -1) {
+					/* Try to build an airport somewhere. */
+					/* TODO: Currently we don't consider the case that if the new airport will
+					   be farther away than the old one that certain aircraft with limited
+					   range will cause problems. */
+					AILog.Info("Try to build a replacement airport somewhere else");
+					local tile_2 = this.FindSuitableAirportSpot(optimal_airport, tile_other_end);
+					if (tile_2 >= 0) {
+						/* Valid tile for airport: try to build it. */
+						if (!AIAirport.BuildAirport(tile_2, optimal_airport, AIStation.STATION_NEW)) {
+							AILog.Warning(AIError.GetLastErrorString());
+							AILog.Error("Although the testing told us we could build an airport, it still failed at tile " + WriteTile(tile_2) + ".");
+							this.towns_used.RemoveValue(tile_2);
+							SendAllVehiclesOfStationToDepot(station_id, VEH_STATION_REMOVAL);
 						}
 						else {
-							SendVehiclesToDepot();
+							/* Building new airport succeeded. Now update tiles, routes and orders. */
+							ReplaceAirportTileInfo(t, station_tile, tile_2, tile_other_end);
+							AILog.Warning("Replaced airport " + AIStation.GetName(station_id) + 
+								" with " + AIStation.GetName(AIStation.GetStationID(tile_2)) + "." );
 						}
 					}
 					else {
-						/* Unlikely failure, send aircraft to hangar then delete aircraft and airport. */
-						SendVehiclesToDepot();
+						AILog.Warning("Finding a suitable spot for a new airport failed.");
+						AILog.Info("Sending vehicles to depot to be sold.");
+						SendAllVehiclesOfStationToDepot(station_id, VEH_STATION_REMOVAL);
 					}
+				}
+				else {
+					/* Unlikely failure, send aircraft to hangar then delete aircraft and airport. */
+					AILog.Warning("We couldn't find the other station belonging to this route!");
+					AILog.Info("Sending vehicles to depot to be sold.");
+					SendAllVehiclesOfStationToDepot(station_id, VEH_STATION_REMOVAL);
 				}
 			}
 		}
