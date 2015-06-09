@@ -1711,8 +1711,13 @@ function WormAI::SellAirports(airport_1_tile, airport_2_tile) {
 	/* Remove the airports */
 	AILog.Info("==> Removing airports " + AIStation.GetName(AIStation.GetStationID(airport_1_tile)) + " and " + 
 		AIStation.GetName(AIStation.GetStationID(airport_2_tile)) + " since they are not used anymore");
-	this.RemoveAirport(airport_1_tile);
-	this.RemoveAirport(airport_2_tile);
+
+	/* Since it's possible for one of the airports to be already removed we check for that too. 
+		(Because of a failed airport upgrade.) */
+	if (AIStation.IsValidStation(AIStation.GetStationID(airport_1_tile)))
+		{ this.RemoveAirport(airport_1_tile); }
+	if (AIStation.IsValidStation(AIStation.GetStationID(airport_2_tile)))
+		{ this.RemoveAirport(airport_2_tile); }
 	/* Free the towns_used entries */
 	this.towns_used.RemoveValue(airport_1_tile);
 	this.towns_used.RemoveValue(airport_2_tile);
