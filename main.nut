@@ -847,9 +847,13 @@ function WormAI::ReplaceOrders(veh, is_first_order, breakdowns, station_tile)
 			if (!breakdowns) {
 				/* Delete maintenance order of station 2. */
 				AIOrder.RemoveOrder(veh, order_pos);
+				order_pos = 2;
+			}
+			else {
+				order_pos = 3;
 			}
 			/* Delete maintenance order of station 1.*/
-			AIOrder.RemoveOrder(veh, order_pos+1);
+			AIOrder.RemoveOrder(veh, order_pos);
 		}
 		if (breakdowns) {
 			/* If old station 2 order didn't have a maintenance order then add it. */
