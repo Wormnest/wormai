@@ -185,12 +185,11 @@ class WormAI extends AIController {
 	**/
 	function GetOptimalAvailableAirportType();
 	/**
-	 * Checks all airports to see if they can and should be upgraded.
-	 * TODO If yes then starts the upgrade process.
-	 * Because we might get stuck with 1 airport of a route being upgraded and the
-	 * other still the old type (possibly different in size small/large) we are going
-	 * to check the last airport of the orders first.
+	 * Get tile of airport at the other end of the route.
+	 * town_id Town id of town at this end of route.
+	 * station_tile tile of station at this end of route.
 	**/
+	function GetAiportTileOtherEndOfRoute(town_id, station_tile);
 	/**
 	 * Update the airport station tile info in our lists after upgrading airport.
 	 * Expects a valid station_id.
@@ -198,7 +197,22 @@ class WormAI extends AIController {
 	 * station_id Id of the Airport station that got upgraded.
 	 * old_tile The old tile for the airport before upgrading.
 	**/
-	function UpdateAirportTileInfo(town_idx, station_id, old_tile)
+	function UpdateAirportTileInfo(town_idx, station_id, old_tile);
+	/**
+	 * Replace the airport town and station tile info in our lists.
+	 * old_town_idx Index into towns_used list of town/station being replaced
+	 * old_tile The old tile for the airport being replaced.
+	 * new_tile The tile of the new airport.
+	 * other_end_of_route_tile Tile of other end of route (needed to access vehicles of route)
+	**/
+	function ReplaceAirportTileInfo(old_town_idx, old_tile, new_tile, other_end_of_route_tile);
+	/**
+	 * Checks all airports to see if they can and should be upgraded.
+	 * TODO If yes then starts the upgrade process.
+	 * Because we might get stuck with 1 airport of a route being upgraded and the
+	 * other still the old type (possibly different in size small/large) we are going
+	 * to check the last airport of the orders first.
+	**/
 	function CheckForAirportsNeedingToBeUpgraded();
 	/**
 	 * Build an airport route. Find 2 cities that are big enough and try to build airport in both cities.
@@ -223,6 +237,35 @@ class WormAI extends AIController {
 	 * first order, if false then it is used as the last/second order.
 	**/
 	function IsTownFirstOrder(town_id);
+	/**
+	 * Replace orders of vehicle, either the first station or last station is replaced
+	 * veh Vehicle to replace the orders for.
+	 * is_first_order Whether to replace the orders for the first or last station
+	 * breakdowns Whether breakdowns are on, if on then add maintenance orders
+	 * station_tile Tile of new station
+	**/
+	function ReplaceOrders(veh, is_first_order, breakdowns, station_tile);
+	/**
+	 * Insert go to station order for airport at station_tile
+	 * veh Vehicle to set the order for
+	 * order_pos Position in the order list where order should be inserted
+	 * station_tile Tile for the Airport
+	**/
+	function InsertGotoStationOrder(veh, order_pos, station_tile);
+	/**
+	 * Insert Maintenance order for airport at station_tile
+	 * veh Vehicle to set the order for
+	 * order_pos Position in the order list where order should be inserted
+	 * station_tile Tile for the Airport (not the hangar)
+	**/
+	function InsertMaintenanceOrder(veh, order_pos, station_tile);
+	/**
+	 * Insert go to station order for airport at station_tile
+	 * veh Vehicle to set the order for
+	 * order_pos Position in the order list where order should be inserted
+	 * station_tile Tile for the Airport
+	**/
+	function ReplaceGotoStationOrder(veh, order_pos, station_tile);
 
 	/* --- Aircraft handling. --- */
 	/* Get the maximum distance this aircraft can safely fly without landing. */
@@ -606,6 +649,34 @@ function WormAI::IsTownFirstOrder(town_id)
 }
 
 /**
+ * Get tile of airport at the other end of the route.
+ * town_id Town id of town at this end of route.
+ * station_tile tile of station at this end of route.
+**/
+function WormAI::GetAiportTileOtherEndOfRoute(town_id, station_tile)
+{
+	local route1 = AIList();
+	local route2 = AIList();
+	if (IsTownFirstOrder(town_id)) {
+		route1.AddList(route_1);
+		route2 = route_2;
+	}
+	else {
+		route1.AddList(route_2);
+		route2 = route_1;
+	}
+	// Keep only those with our station tile
+	route1.KeepValue(station_tile);
+	if (route1.Count() == 0) {return -1;}
+	
+	local st_veh = AIVehicleList_Station(AIStation.GetStationID(station_tile));
+	if (st_veh.Count() == 0) {return -1;}
+
+	/* Return tile for other end of route from first vehicle belonging to this station. */
+	return route2.GetValue(st_veh.Begin());
+}
+
+/**
  * Update the airport station tile info in our lists after upgrading airport.
  * Expects a valid station_id.
  * town_idx Index into towns_used list.
@@ -640,6 +711,182 @@ function WormAI::UpdateAirportTileInfo(town_idx, station_id, old_tile)
 	else {
 		DebugListRoute(route_2);
 	} */
+}
+
+/**
+ * Replace the airport town and station tile info in our lists and update orders.
+ * old_town_idx Index into towns_used list of town/station being replaced
+ * old_tile The old tile for the airport being replaced.
+ * new_tile The tile of the new airport.
+ * other_end_of_route_tile Tile of other end of route (needed to access vehicles of route)
+**/
+function WormAI::ReplaceAirportTileInfo(old_town_idx, old_tile, new_tile, other_end_of_route_tile)
+{
+	/* Determine which end of a route is being replaced. */
+	local route = AIList();
+	local is_first_order = true;
+	if (IsTownFirstOrder(old_town_idx)) {
+		route = route_1;
+	}
+	else {
+		route = route_2;
+		is_first_order = false;
+	}
+
+	/* Remove old town from towns_used. */
+	this.towns_used.RemoveValue(old_tile);
+
+	/* Loop through the route info that should contain our airport. */
+	for (local r = route.Begin(); !route.IsEnd(); r = route.Next()) {
+		/* Update airport station tiles. */
+		if (route.GetValue(r) == old_tile) {
+			route.SetValue(r, new_tile);
+		}
+	}
+	
+	/* Change the orders of vehicles belonging to this route. */
+	/* Since we group vehicles with the same orders we only have to do that once. */
+	/* First get a vehicle belonging to our station. */
+	local st_veh = AIVehicleList_Station(AIStation.GetStationID(other_end_of_route_tile));
+	if (st_veh.Count() > 0) {
+		local veh = st_veh.Begin();
+		local breakdowns = AIGameSettings.GetValue("difficulty.vehicle_breakdowns") > 0;
+		/* Now update the vehicle orders. */
+		ReplaceOrders(veh, is_first_order, breakdowns, new_tile);
+	}
+}
+
+/**
+ * Insert Maintenance order for airport at station_tile
+ * veh Vehicle to set the order for
+ * order_pos Position in the order list where order should be inserted
+ * station_tile Tile for the Airport (not the hangar)
+**/
+function WormAI::InsertMaintenanceOrder(veh, order_pos, station_tile)
+{
+	/* Get the hangar tile. */
+	local Depot_Airport = AIAirport.GetHangarOfAirport(station_tile);
+	/* Add maintenance order for our station. */
+	if (!AIOrder.InsertOrder(veh, order_pos, Depot_Airport, AIOrder.OF_SERVICE_IF_NEEDED )) {
+		AILog.Warning("Failed to insert go to depot order at order postion " + order_pos +
+			", depot tile " + WriteTile(Depot_Airport));
+		return false;
+	}
+	else
+		{ return true; }
+}
+
+/**
+ * Insert go to station order for airport at station_tile
+ * veh Vehicle to set the order for
+ * order_pos Position in the order list where order should be inserted
+ * station_tile Tile for the Airport
+**/
+function WormAI::InsertGotoStationOrder(veh, order_pos, station_tile)
+{
+	if (!AIOrder.InsertOrder(veh, order_pos, station_tile, AIOrder.OF_FULL_LOAD_ANY )) {
+		AILog.Warning("Failed to add order for station tile " + WriteTile(station_tile));
+		return false;
+	}
+	else
+		{ return true; }
+}
+
+/**
+ * Insert go to station order for airport at station_tile
+ * veh Vehicle to set the order for
+ * order_pos Position in the order list where order should be inserted
+ * station_tile Tile for the Airport
+**/
+function WormAI::ReplaceGotoStationOrder(veh, order_pos, station_tile)
+{
+	/* Replace the orders for the station at order_pos. */
+	/* First insert new order below current order. */
+	InsertGotoStationOrder(veh, order_pos+1, station_tile);
+	/* Delete order to old station. By doing it in this order the aircraft going to the old order 
+	   will now go to the new one. */
+	AIOrder.RemoveOrder(veh, order_pos);
+}
+
+/**
+ * Replace orders of vehicle, either the first station or last station is replaced
+ * veh Vehicle to replace the orders for.
+ * is_first_order Whether to replace the orders for the first or last station
+ * breakdowns Whether breakdowns are on, if on then add maintenance orders
+ * station_tile Tile of new station
+**/
+function WormAI::ReplaceOrders(veh, is_first_order, breakdowns, station_tile)
+{
+	/* Order of aircraft orders (with breakdowns on):
+		0/0. Goto station 1
+		1/-. Maintain at hangar of station 2
+		2/1. Goto station 2
+		3/-. Maintain at hangar of station 1
+	*/
+	local order_pos = 0;
+	/* Beware that the current setting of breakdowns doesn't have to be the same as when
+	   the orders were created. We determine if there are maintenance orders by looking
+	   at the order count. */
+	local has_maint_orders = AIOrder.GetOrderCount(veh) == 4;
+	if (is_first_order) {
+		/* Replace the orders for the first station. */
+		ReplaceGotoStationOrder(veh, 0, station_tile);
+		order_pos = 1;
+		/* If we had maintenance before and not now then remove maintenance of station 2. */
+		if (has_maint_orders) {
+			if (!breakdowns) {
+				/* Delete maintenance order of station 2. */
+				AIOrder.RemoveOrder(veh, order_pos);
+			}
+			/* Delete maintenance order of station 1.*/
+			AIOrder.RemoveOrder(veh, order_pos+1);
+		}
+		if (breakdowns) {
+			/* If old station 2 order didn't have a maintenance order then add it. */
+			if (!has_maint_orders) {
+				/* We need destination of station 2. */
+				local st2 = AIOrder.GetOrderDestination(veh, 1);
+				/* Insert maintenance order for station 2. */
+				InsertMaintenanceOrder(veh, 2, st2);
+			}
+			/* Insert maintenance order for station 1. */
+			InsertMaintenanceOrder(veh, 3, station_tile);
+		}
+	}
+	else {
+		if (has_maint_orders)
+			{ order_pos = 2; }
+		else
+			{ order_pos = 1; }
+		/* Replace the orders for the second station. */
+		ReplaceGotoStationOrder(veh, order_pos, station_tile);
+		/* If we had maintenance before and not now then also remove maintenance of station 1. */
+		if (has_maint_orders) {
+			/* Delete maintenance order of station 2.*/
+			AIOrder.RemoveOrder(veh, 1);
+			if (!breakdowns) {
+				/* Delete maintenance order of station 1. */
+				AIOrder.RemoveOrder(veh, 2);
+			}
+		}
+		if (breakdowns) {
+			/* Insert maintenance order for station 2. */
+			InsertMaintenanceOrder(veh, 1, station_tile);
+			/* If old station 1 order didn't have a maintenance order then add it. */
+			if (!has_maint_orders) {
+				/* We need destination of station 1. */
+				local st2 = AIOrder.GetOrderDestination(veh, 0);
+				/* Insert maintenance order for station 1. */
+				InsertMaintenanceOrder(veh, 3, st2);
+			}
+		}
+	}
+}
+
+function WormAI::SendVehiclesToDepot()
+{
+	/* TODO */
+	AILog.Warning("SendVehiclesToDepot not implemented yet!");
 }
 
 /**
@@ -689,6 +936,37 @@ function WormAI::CheckForAirportsNeedingToBeUpgraded()
 					/* Oh boy. Airport was removed but rebuilding a replacement failed.
 					   TODO: Figure out what we should do now. */
 					AILog.Warning("We removed the old airport but failed to build a new one!");
+					/* 1. Try to build a second airport as replacement. */
+					/* First get tile of other end of route. */
+					local tile_other_end = GetAiportTileOtherEndOfRoute(t, station_tile);
+					if (tile_other_end != -1) {
+						/* Try to build an airport somewhere. */
+						/* TODO: Currently we don't consider the case that if the new airport will
+						   be farther away than the old one that certain aircraft with limited
+						   range will cause problems. */
+						AILog.Info("Try to build a replacement airport somewhere");
+						local tile_2 = this.FindSuitableAirportSpot(optimal_airport, tile_other_end);
+						if (tile_2 >= 0) {
+							/* Valid tile for airport: try to build it. */
+							if (!AIAirport.BuildAirport(tile_2, optimal_airport, AIStation.STATION_NEW)) {
+								AILog.Warning(AIError.GetLastErrorString());
+								AILog.Error("Although the testing told us we could build an airport, it still failed at tile " + WriteTile(tile_2) + ".");
+								this.towns_used.RemoveValue(tile_2);
+								SendVehiclesToDepot();
+							}
+							else {
+								/* Building new airport succeeded. Now update tiles, routes and orders. */
+								ReplaceAirportTileInfo(t, station_tile, tile_2, tile_other_end);
+							}
+						}
+						else {
+							SendVehiclesToDepot();
+						}
+					}
+					else {
+						/* Unlikely failure, send aircraft to hangar then delete aircraft and airport. */
+						SendVehiclesToDepot();
+					}
 				}
 			}
 		}
