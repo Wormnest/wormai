@@ -1142,8 +1142,16 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 
 	/* order_start_tile: where our order should start */
 	local order_start_tile = start_tile;
+	local order_end_tile = 0;
 	if (start_tile == 0) {
 		order_start_tile = tile_1;
+		order_end_tile = tile_2
+	}
+	else {
+		if (start_tile == tile_1)
+			{ order_end_tile = tile_2; }
+		else
+			{ order_end_tile = tile_1; }
 	}
 	/* Build an aircraft */
 	local hangar = AIAirport.GetHangarOfAirport(order_start_tile);
@@ -1168,11 +1176,12 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 	
 	/*  We can't use large planes on small airports. Filter them out if needed.
 		In fact if there is at least 1 small airport part of this order, then all large planes
-		should be removed. However, since we currently make airports in pairs
-		we can safely assume for now that both airports will be of the same type.
+		should be removed.
 	*/
 	local airport_type = AIAirport.GetAirportType(order_start_tile);
-	if (airport_type == AIAirport.AT_SMALL || airport_type == AIAirport.AT_COMMUTER ) {
+	local airport_type2 = AIAirport.GetAirportType(order_end_tile);
+	if (airport_type == AIAirport.AT_SMALL || airport_type == AIAirport.AT_COMMUTER ||
+		airport_type2 == AIAirport.AT_SMALL || airport_type2 == AIAirport.AT_COMMUTER) {
 		AILog.Info("Removing big planes from selection since we are building for a small airport.");
 		engine_list.RemoveValue(AIAirport.PT_BIG_PLANE);
 	}
