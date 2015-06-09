@@ -612,7 +612,7 @@ function WormAI::IsTownFirstOrder(town_id)
  * station_id Id of the Airport station that got upgraded.
  * old_tile The old tile for the airport before upgrading.
 **/
-function WormAI:UpdateAirportTileInfo(town_idx, station_id, old_tile)
+function WormAI::UpdateAirportTileInfo(town_idx, station_id, old_tile)
 {
 	/* Get the new tile for the airport after upgrading. */
 	local new_airport_tile = Airport.GetAirportTile(station_id);
