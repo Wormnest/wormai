@@ -61,7 +61,7 @@ const DEFAULT_DELAY_BUILD_AIRPORT = 500; 		/* Default delay before building a ne
 
 const STARTING_ACCEPTANCE_LIMIT = 150;			/* Starting limit in acceptance for finding suitable airport tile. */
 const BAD_YEARLY_PROFIT = 10000;				/* Yearly profit limit below which profit is deemed bad. */
-const AIRPORT_LIMIT_FACTOR = 3;					/* We limit airports to max aircraft / FACTOR * 2 (2 needed per route). */
+const AIRPORT_LIMIT_FACTOR = 4;					/* We limit airports to max aircraft / FACTOR * 2 (2 needed per route). */
 const AIRPORT_CARGO_WAITING_LOW_LIMIT = 250;	/* Limit of waiting cargo (passengers) on airport above which we add an aircraft. */
 const AIRPORT_CARGO_WAITING_HIGH_LIMIT = 1250;	/* Limit of waiting cargo (passengers) on airport above which we add 2 aircraft. */
 const AIRPORT2_WAITING_DIFF = 150;				/* Cargo waiting diff (less) value at the other station to allow extra aircraft. */
