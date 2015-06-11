@@ -449,7 +449,10 @@ function WormAI::DebugListTowns(towns_list)
 function WormAI::DebugListRoutes()
 {
 	AILog.Info("---------- DEBUG route info ----------");
-		AILog.Info("Number of routes: " + (this.towns_used.Count() / 2) );
+		local expected_route_count = this.towns_used.Count() / 2;
+		local route_count = 0;
+		local veh_count = 0;
+		AILog.Info("Number of routes: " + expected_route_count );
 		for (local t = towns_used.Begin(); !towns_used.IsEnd(); t = towns_used.Next()) {
 			local st_tile = towns_used.GetValue(t);
 			// Find out whether this station is the first or last order
@@ -457,13 +460,20 @@ function WormAI::DebugListRoutes()
 			route1.AddList(route_1);
 			// Keep only those with our station tile
 			route1.KeepValue(st_tile);
-			if (route1.Count() == 0) continue;
+			if (route1.Count() == 0) {
+				/* Don't warn here since a station can be either on route_1 or route_2. */
+				continue;
+			}
 			// List from and to station names, and distance between them, and total profit of
 			// all planes on route in the last year
 			local st_id = AIStation.GetStationID(st_tile);
 			local st_veh = AIVehicleList_Station(st_id);
+			route_count += 1;
 			if (st_veh.Count() == 0) {
-				AILog.Warning("Station " + AIStation.GetName(st_id) + " has 0 aircraft!");
+				/* Might happen after a failed upgrading of stations. The other one will then get
+					removed after all aircraft haven been sold. */
+				AILog.Warning("Station " + AIStation.GetName(st_id) + " near town " + AITown.GetName(t)
+					+ " has 0 aircraft!");
 				continue;
 			}
 			local first = true;
@@ -501,8 +511,21 @@ function WormAI::DebugListRoutes()
 				AILog.Info("        Profit last year: " + last_profit + ", this year: " + 
 					AIVehicle.GetProfitThisYear(veh));
 			}
+			veh_count += st_veh.Count();
 			AILog.Warning("     Total " + st_veh.Count() + " aircraft. Total profit last year: " + total_profit + ", average: " + (total_profit / st_veh.Count()));
 		}
+	if (route_count != expected_route_count) {
+		AILog.Error("Attention! Route count: " + route_count + " is not the same as the expected route count: " +
+			expected_route_count);
+		DebugListRoute(route_1);
+		DebugListRoute(route_2);
+	}
+	if (veh_count != this.route_1.Count()) {
+		AILog.Error("Attention! Vehicle count on our stations: " + veh_count +
+			" is not the same as vehicles on routes count: " + this.route_1.Count());
+		DebugListRoute(route_1);
+		DebugListRoute(route_2);
+	}
 	AILog.Info("");
 }
 
