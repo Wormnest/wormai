@@ -537,9 +537,9 @@ function WormAI::DebugListRoute(route)
 		AILog.Error("ERROR: route is null!");
 	}
 	else {
-		AILog.Info("Number of routes used: " + route.Count());
+		AILog.Info("Number of aircraft used: " + route.Count());
 		for (local r = route.Begin(); !route.IsEnd(); r = route.Next()) {
-			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + WriteTile(route_1.GetValue(r)) + ").");
+			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + WriteTile(route.GetValue(r)) + ").");
 		}
 	}
 	AILog.Info("");
