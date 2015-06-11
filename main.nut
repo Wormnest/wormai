@@ -1613,6 +1613,8 @@ function WormAI::ManageAirRoutes()
 	/* Show some info about what we are doing */
 	AILog.Info(Helper.GetCurrentDateString() + " Managing air routes.");
 	
+	CheckAirportsWithoutVehicles();
+	
 	list.Valuate(AIVehicle.GetAge);
 	/* Give the plane at least 2 full years to make a difference, thus check for 3 years old. */
 	list.KeepAboveValue(365 * 3);
@@ -1694,23 +1696,9 @@ function WormAI::ManageAirRoutes()
 		local list2 = AIVehicleList_Station(i);
 		/* No vehicles going to this station, abort and sell */
 		if (list2.Count() == 0) {
-			// This can happen when after building 2 airports it fails to build an aircraft
-			// due to lack of money or whatever and then removing one of the airports fails
-			// due to unknown reasons. A fix that seems to help so far is doing a Sleep(1)
-			// before removing the airports but just to be sure we check here anyway.
-			// In that case tile_1 and 2 will be 0 although there still is a station.
-			local t1 = this.route_1.GetValue(i);
-			local t2 = this.route_2.GetValue(i);
-			if ((t1 == 0) && (t2 == 0)) {
-				AILog.Warning("Airport " + AIStation.GetName(i) + " still exists. Trying to remove it now.");
-				this.RemoveAirport(AIStation.GetLocation(i));
-			}
-			else {
-				AILog.Warning("***** Encountered station without vehicles, should not happen here! *****");
-				AILog.Info("Station " + i + " = " + AIStation.GetName(i) );
-				AILog.Info("Stations at tiles " + WriteTile(t1) + " and " + WriteTile(t2) );
-				this.SellAirports(t1, t2);
-			}
+			/* Should not happen anymore since we called CheckAirportsWithoutVehicles earlier.*/
+			AILog.Error("Error: Unexpectedly no vehicles are going to station " + 
+				 AIStation.GetName(i) + "!");
 			continue;
 		};
 
