@@ -1045,6 +1045,12 @@ function WormAI::BuildAirportRoute()
 		return ERROR_MAX_AIRCRAFT;
 	}
 	
+	if (engine_usefulness.Count() == 0) {
+		// Most likely no aircraft found for the range we wanted of before any aircraft are introduced
+		AILog.Warning("There are no aircraft available at the moment that we can use.");
+		return ERROR_BUILD_AIRCRAFT_INVALID;
+	}
+
 	// Check for our maximum allowed airports (max only set by our own script, not OpenTTD)
 	local airport_count = this.towns_used.Count();
 	if ((max_vehicles * 2 / AIRPORT_LIMIT_FACTOR) <= airport_count) {
