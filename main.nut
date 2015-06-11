@@ -703,22 +703,30 @@ function WormAI::GetAiportTileOtherEndOfRoute(town_id, station_tile)
 **/
 function WormAI::UpdateAirportTileInfo(town_idx, station_id, old_tile)
 {
+	/* Determine if old town data belongs to route 1 or 2. */
+	local route = AIList();
+	if (IsTownFirstOrder(town_idx)) {
+		route = route_1;
+		//AILog.Info("route 1");
+	}
+	else {
+		route = route_2;
+		//AILog.Info("route 2");
+	}
+	/* Note: IsTownFirstOrder must be called BEFORE towns_used.SetValue because it uses the
+		old tile value to determine if it belongs to route 1. */
 	/* Get the new tile for the airport after upgrading. */
 	local new_airport_tile = Airport.GetAirportTile(station_id);
 	/* Update the airport tile in our towns_used list. */
 	this.towns_used.SetValue(town_idx, new_airport_tile);
-	/* Update our route info. */
-	local route = AIList();
-	if (IsTownFirstOrder(town_idx)) {
-		route = route_1;
-	}
-	else {
-		route = route_2;
-	}
+
+	//AILog.Warning("Update route tile " + WriteTile(old_tile) + " to " + WriteTile(new_airport_tile));
+
 	/* Loop through the route info that should contain our airport. */
 	for (local r = route.Begin(); !route.IsEnd(); r = route.Next()) {
 		/* Update airport station tiles. */
 		if (route.GetValue(r) == old_tile) {
+			//AILog.Info("Updating info for vehicle: " + AIVehicle.GetName(r));
 			route.SetValue(r, new_airport_tile);
 		}
 	}
