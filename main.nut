@@ -951,8 +951,14 @@ function WormAI::CheckForAirportsNeedingToBeUpgraded()
 		local optimal_airport = GetOptimalAvailableAirportType();
 		if ((airport_type != optimal_airport) && AIStation.IsValidStation(station_id)) {
 			AILog.Info("Airport: " + AIStation.GetName(station_id) + " needs upgrading!");
-			// Needs upgrading if possible...
-			// TODO: Remove airplanes from airport!
+			/* Airport needs upgrading if possible... */
+			/* Close airport to make sure no airplanes will land, but those still there
+				will be handled. */
+			/* If airport still closed after one full loop then open it again after one more try. */
+			local old_airport_closed = AIStation.IsAirportClosed(station_id);
+			/* Make sure airport is closed. */
+			if (!old_airport_closed)
+				{ AIStation.OpenCloseAirport(station_id); }
 			local upgrade_list = [optimal_airport];
 			/* Try to upgrade airport. */
 			local upgrade_result = Airport.UpgradeAirportInTown(t, station_id, upgrade_list, this.passenger_cargo_id, 
@@ -966,14 +972,15 @@ function WormAI::CheckForAirportsNeedingToBeUpgraded()
 					UpdateAirportTileInfo(t, station_id, station_tile);
 				}
 				else {
-					AILog.Info("We're out of luck: station id is no longer valid!");
+					AILog.Error("We're out of luck: station id is no longer valid!");
 					/* TODO: Figure out what we should do now.
 						Can we expect this to happen in normal situations? */
 				}
+				if (AIStation.IsAirportClosed(station_id))
+					{ AIStation.OpenCloseAirport(station_id); }
 			}
 			else if (upgrade_result == Result.REBUILD_FAILED) {
-				/* Oh boy. Airport was removed but rebuilding a replacement failed.
-				   TODO: Figure out what we should do now. */
+				/* Oh boy. Airport was removed but rebuilding a replacement failed. */
 				AILog.Warning("We removed the old airport but failed to build a replacement!");
 				/* 1. Try to build a second airport as replacement. */
 				/* First get tile of other end of route. */
@@ -1012,6 +1019,13 @@ function WormAI::CheckForAirportsNeedingToBeUpgraded()
 					AILog.Info("Sending vehicles to depot to be sold.");
 					SendAllVehiclesOfStationToDepot(station_id, VEH_STATION_REMOVAL);
 				}
+			}
+			else {
+				/* If airport was already closed before we started trying to upgrade and is now
+					still closed then open it again to give airplanes a chance to land and be
+					handled. We will try upgrading again at a later time. */
+				if (old_airport_closed && AIStation.IsAirportClosed(station_id))
+					{ AIStation.OpenCloseAirport(station_id); }
 			}
 		}
 	}
