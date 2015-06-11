@@ -311,6 +311,10 @@ class WormAI extends AIController {
 	 * age_limit - the age in days left limit below which we send to depot for selling
 	*/
 	function ManageVehicleRenewal(age_limit);
+	/**
+	 * Check for airports that don't have any vehicles anymore and delete them.
+	**/
+	function CheckAirportsWithoutVehicles();
 	/* 
 	 * Manage air routes: 
 	 * - Send unprofitable aircraft to depot for selling
@@ -1564,6 +1568,32 @@ function WormAI::ManageVehicleRenewal(age_limit)
 	/* Send them all to depot to be sold. */
 	for (local veh = list.Begin(); !list.IsEnd(); veh = list.Next()) {
 		SendToDepotForSelling(veh, VEH_OLD_AGE);
+	}
+}
+
+/**
+ * Check for airports that don't have any vehicles anymore and delete them.
+**/
+function WormAI::CheckAirportsWithoutVehicles()
+{
+	local list = AIStationList(AIStation.STATION_AIRPORT);
+	/* Loop over all stations we have. */
+	for (local st = list.Begin(); !list.IsEnd(); st = list.Next()) {
+		local veh_list = AIVehicleList_Station(st);
+		/* If no vehicles go to this station then sell it. */
+		if (veh_list.Count() == 0) {
+			/* This can happen when on a route with 1 plane the plane crashes.
+				or when after building 2 airports it fails to build an aircraft
+				due to lack of money or whatever and then removing one of the airports fails
+				due to unknown reasons. A fix that seems to help so far is doing a Sleep(1)
+				before removing the airports but just to be sure we check here anyway.
+				In that case tile_1 and 2 will be 0 although there still is a station. */
+			AILog.Warning("Airport " + AIStation.GetName(st) + " (" + st + ") has no vehicles using it.");
+			AILog.Info("Removing airport");
+			local st_tile = AIStation.GetLocation(st);
+			this.RemoveAirport(st_tile);
+			this.towns_used.RemoveValue(st_tile);
+		}
 	}
 }
 
