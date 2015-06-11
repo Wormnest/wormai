@@ -660,6 +660,8 @@ function WormAI::IsTownFirstOrder(town_id)
 	route1.AddList(route_1);
 	// Keep only those with our station tile
 	route1.KeepValue(station_tile);
+	/* AILog.Info("Town: " + AITown.GetName(town_id) + ", station at tile: " + WriteTile(station_tile) +
+		", route1 count: " + route1.Count()); */
 	// return true if found (not 0) in route_1
 	return (route1.Count() != 0);
 }
@@ -1974,6 +1976,8 @@ function WormAI::Start()
 					DebugListTownsUsed();
 					//DebugListRouteInfo();
 					DebugListRoutes();
+					//DebugListRoute(route_1);
+					//DebugListRoute(route_2);
 				}
 				
 				AILog.Info(Helper.GetCurrentDateString() + " --- Yearly Tasks Done ---");
