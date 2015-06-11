@@ -167,7 +167,6 @@ class WormAI extends AIController {
 	function DebugListRoute(route);
 	/* List all our air routes. */
 	function DebugListRouteInfo();
-	function DebugListDistanceOfRoute(); 	/* Not used currently. */
 
 	/* --- Money related functions. --- */
 	/* Check if we have enough money (via loan and on bank). */
@@ -576,22 +575,6 @@ function WormAI::DebugListRouteInfo()
 			local dist = this.distance_of_route.rawget(r);
 			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + "), from: " + 
 				AITown.GetName(t1) + ", to: " + AITown.GetName(t2) + ", distance: " + dist);
-		}
-	}
-	AILog.Info("");
-}
-
-function WormAI::DebugListDistanceOfRoute()
-{
-	//this.distance_of_route.rawset(vehicle, AIMap.DistanceManhattan(tile_1, tile_2));
-	AILog.Info("---------- DEBUG distance_of_route ----------");
-	if (!this.route_1) {
-		AILog.Warning("WARNING: route_2 is null!");
-	}
-	else {
-		AILog.Info("Number routes used: " + this.route_2.Count());
-		for (local r = route_2.Begin(); !route_2.IsEnd(); r = route_2.Next()) {
-			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + WriteTile(route_2.GetValue(r)) + ").");
 		}
 	}
 	AILog.Info("");
