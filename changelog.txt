@@ -1,15 +1,17 @@
 WormAI Changelog
 ================
 
-Version 3, 2015-06-XX
+Version 3, 2015-06-12
 ---------------------
 + Add basic support for upgrading airports.
 + Fix: Don't use large aircraft on small airports.
 + Fix: Don't crash when there isn't a best engine at all.
-+ Don't add more airplanes to a route when there are too many planes 
-  waiting in the landing queue.
-+ Change how we are starting tasks. Do it monthly/yearly instead of
-  based on a tick count.
++ Change: Don't add more airplanes to a route when there are
+  too many planes waiting in the landing queue.
++ Change how we are starting tasks. Do it monthly/yearly instead
+  of based on a tick count.
++ Some changes in the min/max and default values of some settings.
++ Increased required OpenTTD version to 1.4.
 
 Version 2, 2013-08-02
 ---------------------
