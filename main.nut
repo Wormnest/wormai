@@ -546,7 +546,9 @@ function WormAI::DebugListRoute(route)
 	else {
 		AILog.Info("Number of aircraft used: " + route.Count());
 		for (local r = route.Begin(); !route.IsEnd(); r = route.Next()) {
-			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + WriteTile(route.GetValue(r)) + ").");
+			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + 
+				WriteTile(route.GetValue(r)) + " = station " + 
+				AIStation.GetName(AIStation.GetStationID(st_tile)) + ").");
 		}
 	}
 	AILog.Info("");
