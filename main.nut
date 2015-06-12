@@ -1542,7 +1542,13 @@ function WormAI::SellVehicleInDepot(vehicle)
 		else {
 			/* Since vehicle not yet being in depot is an expected error we
 			   won't show a log message for that. */
-			if (AIError.GetLastError() != AIVehicle.ERR_VEHICLE_NOT_IN_DEPOT) {
+			local last_error = AIError.GetLastError();
+			if (last_error == AIVehicle.ERR_VEHICLE_IS_DESTROYED ) {
+				/* Vehicle destroyed so will never arrive in depot. Delete it from our lists. */
+				AILog.Info("--> Aircraft " + veh_name + " was destroyed.");
+				RemoveVehicleFromLists(vehicle);
+			}
+			else if (last_error != AIVehicle.ERR_VEHICLE_NOT_IN_DEPOT) {
 				AILog.Warning(AIError.GetLastErrorString());
 				AILog.Warning("Failed to sell vehicle " + AIVehicle.GetName(vehicle));
 			}
