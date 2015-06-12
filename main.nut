@@ -459,6 +459,8 @@ function WormAI::DebugListRoutes()
 		local expected_route_count = this.towns_used.Count() / 2;
 		local route_count = 0;
 		local veh_count = 0;
+		local veh_check = AIList();
+		veh_check.AddList(route_1); // Check to see if all vehicles are accounted for
 		AILog.Info("Number of routes: " + expected_route_count );
 		for (local t = towns_used.Begin(); !towns_used.IsEnd(); t = towns_used.Next()) {
 			local st_tile = towns_used.GetValue(t);
@@ -488,6 +490,7 @@ function WormAI::DebugListRoutes()
 			// Sort vehicle list on last years profit
 			st_veh.Valuate(AIVehicle.GetProfitLastYear);
 			for (local veh = st_veh.Begin(); !st_veh.IsEnd(); veh = st_veh.Next()) {
+				veh_check.RemoveItem(veh); // Remove vehicle from our checklist
 				if (first) {
 					// Get list of stations this vehicle has in its orders
 					local veh_stations = AIStationList_Vehicle(veh);
@@ -532,6 +535,13 @@ function WormAI::DebugListRoutes()
 			" is not the same as vehicles on routes count: " + this.route_1.Count());
 		DebugListRoute(route_1);
 		//DebugListRoute(route_2);
+	}
+	if (veh_check.Count() > 0) {
+		/* Should result in the same amount as the previous check. */
+		/* A reason for showing up here is vehicles that are sent to depot to be sold
+			because of a failed upgrade of a station of a route. */
+		AILog.Warning("The following vehicles were not used by the airports listed above.");
+		DebugListRoute(veh_check);
 	}
 	AILog.Info("");
 }
