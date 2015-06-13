@@ -333,6 +333,31 @@ class WormAI extends AIController {
 	 */
 	function EvaluateAircraft();
 
+	/* --- General functions. --- */
+	/**
+	 * Get Town id in our towns_used list based on tile of station built near it
+	 * @return id of town or null if not found.
+	 */
+	function GetTownFromStationTile(st_tile);
+	/**
+	 * Determine if a station is valid based on the station tile.
+	 * @param st_tile The tile of the station.
+	 * @return true if station is valid, otherwise false.
+	 */
+	function IsValidStationFromTile(st_tile);
+	/**
+	 * Determine if the first station of the route of a vehicle is valid.
+	 * @param veh Vehicle to determine the validity of the station for.
+	 * @return true if station is valid, otherwise false.
+	 */
+	function IsValidFirstStation(veh);
+	/**
+	 * Determine if the last station of the route of a vehicle is valid.
+	 * @param veh Vehicle to determine the validity of the station for.
+	 * @return true if station is valid, otherwise false.
+	 */
+	function IsValidLastStation(veh);
+
 	/* --- Valuator functions. --- */
 	/* Get the cost factor of an aircraft. */
 	function GetCostFactor(engine, costfactor_list);
@@ -603,6 +628,21 @@ function WormAI::DebugListRouteInfo()
 
 //	End debugging functions
 //////////////////////////////////////////////////////////////////////////
+
+/**
+ * Get Town id in our towns_used list based on tile of station built near it
+ * @return id of town or null if not found.
+ */
+function WormAI::GetTownFromStationTile(st_tile) {
+	local towns = AIList();
+	towns.AddList(this.towns_used);
+	towns.KeepValue(st_tile);
+	if (towns.Count() > 0) {
+		return towns.Begin();
+	}
+	else
+		{ return null; }
+}
 
 /**
  * Check if we have enough money (via loan and on bank).
@@ -1786,6 +1826,36 @@ function WormAI::ManageAirRoutes()
 		return ret;
 	}
 	AILog.Info(Helper.GetCurrentDateString() + " Finished managing air routes.");
+}
+
+/**
+ * Determine if a station is valid based on the station tile.
+ * @param st_tile The tile of the station.
+ * @return true if station is valid, otherwise false.
+ */
+function WormAI::IsValidStationFromTile(st_tile)
+{
+	return AIStation.IsValidStation(AIStation.GetStationID(st_tile));
+}
+
+/**
+ * Determine if the first station of the route of a vehicle is valid.
+ * @param veh Vehicle to determine the validity of the station for.
+ * @return true if station is valid, otherwise false.
+ */
+function WormAI::IsValidFirstStation(veh)
+{
+	return IsValidStationFromTile(this.route_1.GetValue(veh));
+}
+
+/**
+ * Determine if the last station of the route of a vehicle is valid.
+ * @param veh Vehicle to determine the validity of the station for.
+ * @return true if station is valid, otherwise false.
+ */
+function WormAI::IsValidLastStation(veh)
+{
+	return IsValidStationFromTile(this.route_2.GetValue(veh));
 }
 
 /**
