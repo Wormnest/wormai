@@ -167,6 +167,13 @@ class WormAI extends AIController {
 	function DebugListRoute(route);
 	/* List all our air routes. */
 	function DebugListRouteInfo();
+	/* List all vehicles that were sent to depot to be sold. */
+	function DebugListVehiclesSentToDepot();
+	/**
+	 * Show info about the specified vehicle. It's start and end town and distance between them.
+	 * @param veh = Vehicle id
+	 */
+	function DebugVehicleInfo(veh);
 
 	/* --- Money related functions. --- */
 	/* Check if we have enough money (via loan and on bank). */
@@ -624,6 +631,56 @@ function WormAI::DebugListRouteInfo()
 		}
 	}
 	AILog.Info("");
+}
+
+/**
+ * Show info about the specified vehicle. It's start and end town and distance between them.
+ * @param veh = Vehicle id
+ */
+function WormAI::DebugVehicleInfo(veh) {
+	local output_str = "Aircraft: ";
+	if (AIVehicle.IsValidVehicle(veh)) {
+		output_str += AIVehicle.GetName(veh);
+	}
+	else {
+		output_str += "<invalid aircraft id>";
+	}
+	output_str += " (id: " + veh + "), from: ";
+	/* Get route start and end points. */
+	local tile1 = route_1.GetValue(veh);
+	local tile2 = route_2.GetValue(veh);
+	local town1 = GetTownFromStationTile(tile1);
+	local town2 = GetTownFromStationTile(tile2);
+	if (town1 > -1)
+		{ output_str += AITown.GetName(town1); }
+	else
+		{ output_str += "<invalid town id>"; }
+	output_str += ", to: ";
+	if (town2 > -1)
+		{ output_str += AITown.GetName(town2); }
+	else
+		{ output_str += "<invalid town id>"; }
+	local dist = this.distance_of_route.rawget(veh);
+	output_str += ", distance: " + dist + ".";
+	
+	/* If vehicle was sent to depot to be sold give some info about that. */
+	if (vehicle_to_depot.rawin(veh)) {
+		output_str += " [On the way to depot to be sold.]";
+	}
+	
+	AILog.Info(output_str);
+}
+
+/**
+ * List all vehicles that were sent to depot to be sold.
+ */
+function WormAI::DebugListVehiclesSentToDepot() {
+	AILog.Info("The following vehicles are on the way to depot to be sold.");
+
+	// veh_id = vehicle id, veh_value = boolean, always true currently
+	foreach( veh_id, veh_value in vehicle_to_depot) {
+		DebugVehicleInfo(veh_id);
+	}
 }
 
 //	End debugging functions
