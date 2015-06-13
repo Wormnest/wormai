@@ -559,13 +559,13 @@ function WormAI::DebugListRoutes()
 	if (route_count != expected_route_count) {
 		AILog.Error("Attention! Route count: " + route_count + " is not the same as the expected route count: " +
 			expected_route_count);
-		DebugListRoute(route_1);
+		//DebugListRoute(route_1);
 		//DebugListRoute(route_2);
 	}
 	if (veh_count != this.route_1.Count()) {
 		AILog.Error("Attention! Vehicle count on our stations: " + veh_count +
 			" is not the same as vehicles on routes count: " + this.route_1.Count());
-		DebugListRoute(route_1);
+		//DebugListRoute(route_1);
 		//DebugListRoute(route_2);
 	}
 	if (veh_check.Count() > 0) {
