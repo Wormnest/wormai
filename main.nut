@@ -574,6 +574,7 @@ function WormAI::DebugListRoutes()
 			because of a failed upgrade of a station of a route. */
 		AILog.Warning("The following vehicles were not used by the airports listed above.");
 		DebugListRoute(veh_check);
+		DebugListVehiclesSentToDepot();
 	}
 	AILog.Info("");
 }
