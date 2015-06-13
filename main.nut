@@ -1068,7 +1068,24 @@ function WormAI::CheckForAirportsNeedingToBeUpgraded()
 		local station_id = AIStation.GetStationID(station_tile);
 		local airport_type = AIAirport.GetAirportType(station_tile);
 		local optimal_airport = GetOptimalAvailableAirportType();
+		/* Determine tile of other side of route: If station there is invalid we won't
+			try to upgrade this one since it will be soon deleted (after all aircraft
+			have been sold). */
+		local tile_other_st = GetAiportTileOtherEndOfRoute(t, station_tile);
+		local st_id_other = -1;
+		if (tile_other_st > -1) {
+			st_id_other = AIStation.GetStationID(tile_other_st);
+		}
 		if ((airport_type != optimal_airport) && AIStation.IsValidStation(station_id)) {
+			if (!AIStation.IsValidStation(st_id_other)) {
+				/* Make sure this station isn't closed because we may have to send
+					aircraft there in case of upgrade failure. */
+				if (AIStation.IsAirportClosed(station_id)) {
+					AIStation.OpenCloseAirport(station_id);
+					AILog.Warning("Opening airport again since other one got removed.");
+				}
+				continue;
+			}
 			AILog.Info("Airport: " + AIStation.GetName(station_id) + " needs upgrading!");
 			/* Airport needs upgrading if possible... */
 			/* Close airport to make sure no airplanes will land, but those still there
