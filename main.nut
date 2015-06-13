@@ -1681,6 +1681,25 @@ function WormAI::SellVehicleInDepot(vehicle)
 				AILog.Warning(AIError.GetLastErrorString());
 				AILog.Warning("Failed to sell vehicle " + AIVehicle.GetName(vehicle));
 			}
+			else {
+				/* Vehicle not yet in depot. Check to see if this is a "lost" vehicle.
+					This can happen when the depot/airport a vehicle to be sold is going
+					to is destroyed because of a failed upgrade. If this is the case then
+					send the vehicle to the depot of the airport at the other end of the
+					route. */
+				if (!IsValidFirstStation(vehicle) ||
+					!IsValidLastStation(vehicle)) {
+					/* Either first or last station is not valid. Testing for IsGotoDepotOrder
+						doesn't work well since we can have a normal maintenance in depot order too. */
+					if ((AIOrder.GetOrderFlags(vehicle, AIOrder.ORDER_CURRENT) & AIOrder.OF_STOP_IN_DEPOT) !=
+						AIOrder.OF_STOP_IN_DEPOT) {
+						/* Only send to depot if that is not it's current order otherwise
+							the go to depot order will be cancelled. */
+						AIVehicle.SendVehicleToDepot(vehicle);
+						AILog.Warning("Vehicle " + veh_name + " on the way to depot was lost. Sent it to depot again!");
+					}
+				}
+			}
 		}
 	}
 }
