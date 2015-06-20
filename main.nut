@@ -300,11 +300,12 @@ class WormAI extends AIController {
 	function SellAirports(airport_1_tile, airport_2_tile);
 	/// @}
 
-	/* --- Order handling. --- */
+	/** @name Order handling */
+    /// @{
 	/**
 	 * IsTownFirstOrder returns true if the airport near this town is used as the 
 	 * first order, if false then it is used as the last/second order.
-	**/
+	 */
 	function IsTownFirstOrder(town_id);
 	/**
 	 * Replace orders of vehicle, either the first station or last station is replaced
@@ -312,32 +313,34 @@ class WormAI extends AIController {
 	 * is_first_order Whether to replace the orders for the first or last station
 	 * breakdowns Whether breakdowns are on, if on then add maintenance orders
 	 * station_tile Tile of new station
-	**/
+	 */
 	function ReplaceOrders(veh, is_first_order, breakdowns, station_tile);
 	/**
 	 * Insert go to station order for airport at station_tile
 	 * veh Vehicle to set the order for
 	 * order_pos Position in the order list where order should be inserted
 	 * station_tile Tile for the Airport
-	**/
+	 */
 	function InsertGotoStationOrder(veh, order_pos, station_tile);
 	/**
 	 * Insert Maintenance order for airport at station_tile
 	 * veh Vehicle to set the order for
 	 * order_pos Position in the order list where order should be inserted
 	 * station_tile Tile for the Airport (not the hangar)
-	**/
+	 */
 	function InsertMaintenanceOrder(veh, order_pos, station_tile);
 	/**
 	 * Insert go to station order for airport at station_tile
 	 * veh Vehicle to set the order for
 	 * order_pos Position in the order list where order should be inserted
 	 * station_tile Tile for the Airport
-	**/
+	 */
 	function ReplaceGotoStationOrder(veh, order_pos, station_tile);
+	/// @}
 
-	/* --- Aircraft handling. --- */
-	/* Get the maximum distance this aircraft can safely fly without landing. */
+	/** @name Aircraft handling */
+    /// @{
+	/** Get the maximum distance this aircraft can safely fly without landing. */
 	function GetMaximumDistance(engine);
 	/**
 	 * Build an aircraft with orders from tile_1 to tile_2.
@@ -348,57 +351,61 @@ class WormAI extends AIController {
 	/**
 	 * Send all vehicles belonging to station to depot for selling
 	 * sell_reason Reason for selling
-	**/
+	 */
 	function SendAllVehiclesOfStationToDepot(station_id, sell_reason);
-	/*
+	/**
 	 * Send the vehicle to depot to be sold when it arrives.
 	 * Vehicle - the vehicle id of the vehicle to be sold
 	 * sell_reason - Reason for selling vehicle
-	*/
+	 */
 	function SendToDepotForSelling(vehicle,sell_reason);
 	/**
 	 * Remove vehicle from route lists and to depot list.
-	**/
+	 */
 	function RemoveVehicleFromLists(vehicle);
-	/*
+	/**
 	 * Sell the vehicle provided it's in depot. If it's not yet in depot it will fail silently.
-	*/
+	 */
 	function SellVehicleInDepot(vehicle);
-	/*
+	/**
 	 * Sell all vehicles in depot that are marked to be sold.
-	*/
+	 */
 	function SellVehiclesInDepot();
-	/* Checks if we can build an aircraft and if not outputs a string with the reason. */
+	/** Checks if we can build an aircraft and if not outputs a string with the reason. */
 	function CanBuildAircraft();
+	/// @}
 
-	/* --- Task related functions. --- */
-	/*
+	/** @name Task related functions */
+    /// @{
+	/**
 	 * ManageVehicleRenewal will check all vehicles for being old or needing upgrading
 	 * to a newer type. It will send all vehicles that are non optimal to depot for
 	 * selling.
 	 * Parameters:
 	 * age_limit - the age in days left limit below which we send to depot for selling
-	*/
+	 */
 	function ManageVehicleRenewal(age_limit);
 	/**
 	 * Check for airports that don't have any vehicles anymore and delete them.
-	**/
+	 */
 	function CheckAirportsWithoutVehicles();
-	/* 
+	/** 
 	 * Manage air routes: 
 	 * - Send unprofitable aircraft to depot for selling
 	 * - Add aircraft to routes that have a lot of waiting cargo
 	 */
 	function ManageAirRoutes();
-	/* Callback that handles events. */
+	/** Callback that handles events. */
 	function HandleEvents();
-	/* 
+	/** 
 	 * Task that once in a while evaluates all available aircraft for how suited they are
 	 * for our purposes.
 	 */
 	function EvaluateAircraft();
+	/// @}
 
-	/* --- General functions. --- */
+	/** @name General functions */
+    /// @{
 	/**
 	 * Get Town id in our towns_used list based on tile of station built near it.
 	 * @return id of town or null if not found.
@@ -422,20 +429,25 @@ class WormAI extends AIController {
 	 * @return true if station is valid, otherwise false.
 	 */
 	function IsValidLastStation(veh);
+	/// @}
 
-	/* --- Valuator functions. --- */
-	/* Get the cost factor of an aircraft. */
+	/** @name Valuator functions */
+    /// @{
+	/** Get the cost factor of an aircraft. */
 	function GetCostFactor(engine, costfactor_list);
+	/// @}
 	
-	/* --- Initialization functions. --- */
-	/*
+	/** @name Initialization functions */
+    /// @{
+	/**
 	 * InitSettings initializes a number of required variables based on the game settings of our AI.
-	*/
+	 */
 	function InitSettings();
-	/*
+	/**
 	 * Welcome says hello to the user and prints out it's current AI gamesettings.
 	 */
 	function Welcome();
+	/// @}
 
 };
 
