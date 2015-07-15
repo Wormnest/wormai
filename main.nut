@@ -16,6 +16,8 @@ require("libversions.nut");
 // Import SuperLib
 import("util.superlib", "SuperLib", SUPERLIB_VERSION);
 
+/** @name SuperLib imports */
+/// @{
 Result <- SuperLib.Result;
 Log <- SuperLib.Log;
 Helper <- SuperLib.Helper;
@@ -39,6 +41,7 @@ OrderList <- SuperLib.OrderList;
 
 Road <- SuperLib.Road;
 RoadBuilder <- SuperLib.RoadBuilder;
+/// @}
 
 // Import List library
 import("AILib.List", "ExtendedList", AILIBLIST_VERSION);
@@ -67,12 +70,18 @@ const AIRPORT_CARGO_WAITING_HIGH_LIMIT = 1250;	///< Limit of waiting cargo (pass
 const AIRPORT2_WAITING_DIFF = 150;				///< Cargo waiting diff (less) value at the other station to allow extra aircraft.
 const VEHICLE_AGE_LEFT_LIMIT = 150;				///< Number of days limit before maximum age for vehicle to get sent to depot for selling.
 
-/* Reasons for selling vehicles */
+/// @{
+/**
+ * @name Reasons for selling vehicles
+ * @todo Maybe convert to enum.
+ */
 const VEH_OLD_AGE			= 0;				///< Vehicle is sold because of its old age.
 const VEH_LOW_PROFIT		= 1;				///< Vehicle is sold because it has low profits.
 const VEH_STATION_REMOVAL	= 2;				///< Vehicle is sold because one of its stations got removed and could not be replaced.
+/// @}
 
-/* ERROR CODE constants */
+/// @{
+/** @name ERROR CODE constants */
 const ALL_OK = 0;
 const ERROR_FIND_AIRPORT1	= -1;				///< There was an error finding a spot for airport 1.
 const ERROR_FIND_AIRPORT2	= -2;				///< There was an error finding a spot for airport 2.
@@ -86,6 +95,7 @@ const ERROR_MAX_AIRPORTS = -11;					///< We have reached the maximum number of a
 const ERROR_NOT_ENOUGH_MONEY = -20;				///< We don't have enough money.
 const ERROR_BUILD_AIRCRAFT = -30;				///< General error trying to build an aircraft.
 const ERROR_BUILD_AIRCRAFT_INVALID = -31;		///< No suitable aircraft found when trying to build an aircraft.
+/// @}
 
 /**
  * Define the main class of our AI WormAI.
@@ -241,7 +251,7 @@ class WormAI extends AIController {
 	 */
 	function RemoveAirport(tile);
 	/**
-	 * GetOptimalAvailableAirportType. Get the optimal type of airport that is available.
+	 * Get the optimal type of airport that is available.
 	 * @note For now we only choose between small, large and metropolitan. Larger ones would only
 	 * be useful for very high cargo/passenger amounts with many airplanes.
 	 * @return The optimal AirportType or null if no suitable airport is available.
@@ -287,15 +297,18 @@ class WormAI extends AIController {
 	function BuildAirportRoute();
 	/**
 	 * Find a suitable spot for an airport, walking all towns hoping to find one.
-	 *  When a town is used, it is marked as such and not re-used.
+	 * When a town is used, it is marked as such and not re-used.
 	 * @param airport_type The type of airport we want to build.
 	 * @param center_tile The tile around which we will search for a spot for the airport.
 	 * @return tile where we can build the airport or an error code.
 	 */
 	function FindSuitableAirportSpot(airport_type, center_tile);
 	/**
-	  * Sells the airports from tile_1 and tile_2
-	  * Removes towns from towns_used list too
+	  * Sells the airports at tile_1 and tile_2. Removes towns from towns_used list too.
+	  * @param airport_1_tile The tile of the first airport to remove
+	  * @param airport_2_tile The tile of the other airport to remove
+	  * @note The airport tiles are allowed to be invalid. Removal will be ignored in that
+	  * case but the towns_used will be updated.
 	  */
 	function SellAirports(airport_1_tile, airport_2_tile);
 	/// @}
@@ -303,103 +316,128 @@ class WormAI extends AIController {
 	/** @name Order handling */
     /// @{
 	/**
-	 * IsTownFirstOrder returns true if the airport near this town is used as the 
-	 * first order, if false then it is used as the last/second order.
+	 * Check whether the airport at a certain town is used as the first order of a route.
+	 * @param town_id The id of the town to check if it's the first order.
+	 * @return true if it is the first order, else false if it is the last order.
 	 */
 	function IsTownFirstOrder(town_id);
 	/**
-	 * Replace orders of vehicle, either the first station or last station is replaced
-	 * veh Vehicle to replace the orders for.
-	 * is_first_order Whether to replace the orders for the first or last station
-	 * breakdowns Whether breakdowns are on, if on then add maintenance orders
-	 * station_tile Tile of new station
+	 * Replace orders of a vehicle, either the first station or last station is replaced.
+	 * @param veh Vehicle to replace the orders for.
+	 * @param is_first_order Whether to replace the orders for the first or last station.
+	 * @param breakdowns Whether breakdowns are on; if they are on we will add maintenance orders.
+	 * @param station_tile Tile of station for the new order.
 	 */
 	function ReplaceOrders(veh, is_first_order, breakdowns, station_tile);
 	/**
-	 * Insert go to station order for airport at station_tile
-	 * veh Vehicle to set the order for
-	 * order_pos Position in the order list where order should be inserted
-	 * station_tile Tile for the Airport
+	 * Insert go to station order for airport at station_tile.
+	 * @param veh Vehicle to set the order for.
+	 * @param order_pos Position in the order list where order should be inserted.
+	 * @param station_tile Tile for the Airport of the to be inserted order.
+	 * @return true if order got inserted; false in case of failure to insert.
 	 */
 	function InsertGotoStationOrder(veh, order_pos, station_tile);
 	/**
-	 * Insert Maintenance order for airport at station_tile
-	 * veh Vehicle to set the order for
-	 * order_pos Position in the order list where order should be inserted
-	 * station_tile Tile for the Airport (not the hangar)
+	 * Insert Maintenance order for airport at station_tile.
+	 * @param veh Vehicle to set the order for
+	 * @param order_pos Position in the order list where order should be inserted
+	 * @param station_tile Tile for the Airport (not the hangar) of the order to be inserted.
+	 * @return true if order got inserted; false in case of failure to insert.
 	 */
 	function InsertMaintenanceOrder(veh, order_pos, station_tile);
 	/**
-	 * Insert go to station order for airport at station_tile
-	 * veh Vehicle to set the order for
-	 * order_pos Position in the order list where order should be inserted
-	 * station_tile Tile for the Airport
+	 * Replace go to station order for airport at station_tile.
+	 * @param veh Vehicle to set the order for.
+	 * @param order_pos Position in the order list where order should be inserted.
+	 * @param station_tile Tile for the Airport of the new to be inserted order.
 	 */
 	function ReplaceGotoStationOrder(veh, order_pos, station_tile);
 	/// @}
 
 	/** @name Aircraft handling */
     /// @{
-	/** Get the maximum distance this aircraft can safely fly without landing. */
+	/**
+	 * Get the maximum distance this aircraft can safely fly without landing.
+	 * @param engine The engine id for which we want to know the maximum distance.
+	 * @return The maximum distance.
+	 */
 	function GetMaximumDistance(engine);
 	/**
 	 * Build an aircraft with orders from tile_1 to tile_2.
-	 * The best available aircraft of that time will be bought.
-	 * start_tile is the tile where the airplane should start, or 0 to start at the first tile.
+	 * The best available aircraft will be bought.
+	 * @param tile_1 Airport tile that should be used as the first order.
+	 * @param tile_2 Airport tile that should be used as the last order.
+	 * @param start_tile The Airport tile where the airplane should start. If this is 0 then
+	 * it will start at tile_1. To let it start at tile_2 use the same value as tile_2.
 	 */
 	function BuildAircraft(tile_1, tile_2, start_tile);
 	/**
-	 * Send all vehicles belonging to station to depot for selling
-	 * sell_reason Reason for selling
+	 * Send all vehicles belonging to a station to depot for selling.
+	 * @param station_id The id of the station.
+	 * @param sell_reason The reason for selling. Valid reasons are
+	 * @ref VEH_OLD_AGE, @ref VEH_LOW_PROFIT, @ref VEH_STATION_REMOVAL
 	 */
 	function SendAllVehiclesOfStationToDepot(station_id, sell_reason);
 	/**
-	 * Send the vehicle to depot to be sold when it arrives.
-	 * Vehicle - the vehicle id of the vehicle to be sold
-	 * sell_reason - Reason for selling vehicle
+	 * Send a vehicle to depot to be sold when it arrives.
+	 * @param vehicle The vehicle id of the vehicle to be sold.
+	 * @param sell_reason The reason for selling. Valid reasons are
+	 * @ref VEH_OLD_AGE, @ref VEH_LOW_PROFIT, @ref VEH_STATION_REMOVAL
 	 */
 	function SendToDepotForSelling(vehicle,sell_reason);
 	/**
-	 * Remove vehicle from route lists and to depot list.
+	 * Remove a vehicle from our route lists and to depot list.
+	 * @note If this is the last vehicle serving a certain route then after selling
+	 * the vehicle we will also sell the airports.
+	 * @param vehicle The vehicle id that should be removed from the lists.
 	 */
 	function RemoveVehicleFromLists(vehicle);
 	/**
 	 * Sell the vehicle provided it's in depot. If it's not yet in depot it will fail silently.
+	 * @param vehicle The id of the vehicle that should be sold.
 	 */
 	function SellVehicleInDepot(vehicle);
 	/**
 	 * Sell all vehicles in depot that are marked to be sold.
 	 */
 	function SellVehiclesInDepot();
-	/** Checks if we can build an aircraft and if not outputs a string with the reason. */
+	/**
+	 * Checks if we can build an aircraft and if not outputs a string with the reason.
+	 * @return true if we can build an aircraft, otherwise false.
+	 */
 	function CanBuildAircraft();
 	/// @}
 
 	/** @name Task related functions */
     /// @{
 	/**
-	 * ManageVehicleRenewal will check all vehicles for being old or needing upgrading
-	 * to a newer type. It will send all vehicles that are non optimal to depot for
-	 * selling.
-	 * Parameters:
-	 * age_limit - the age in days left limit below which we send to depot for selling
+	 * Check all vehicles for being old or needing upgrading to a newer type.
+	 * It will send all vehicles that are non optimal to depot for selling.
+	 * @param age_limit The days left age limit below which we send to depot for selling.
 	 */
 	function ManageVehicleRenewal(age_limit);
 	/**
 	 * Check for airports that don't have any vehicles anymore and delete them.
 	 */
 	function CheckAirportsWithoutVehicles();
-	/** 
-	 * Manage air routes: 
-	 * - Send unprofitable aircraft to depot for selling
-	 * - Add aircraft to routes that have a lot of waiting cargo
+	/**
+	 * Manage air routes:
+	 * ------------------
+	 * - Checks for airports without vehicles.
+	 * - Send unprofitable aircraft to depot for selling.
+	 * - Add aircraft to routes that have a lot of waiting cargo.
+	 * @return Error code if something went wrong or ok.
+	 * @todo Refactor the parts of this function into separate functions.
 	 */
 	function ManageAirRoutes();
-	/** Callback that handles events. */
-	function HandleEvents();
 	/** 
-	 * Task that once in a while evaluates all available aircraft for how suited they are
-	 * for our purposes.
+	 * Callback that handles events. Currently only AIEvent.ET_VEHICLE_CRASHED is handled.
+	 */
+	function HandleEvents();
+	/**
+	 * Task that evaluates all available aircraft for how suited they are
+	 * for our purposes. The suitedness values for aircraft which we can use are saved in
+	 * @ref engine_usefulness.
 	 */
 	function EvaluateAircraft();
 	/// @}
@@ -433,7 +471,12 @@ class WormAI extends AIController {
 
 	/** @name Valuator functions */
     /// @{
-	/** Get the cost factor of an aircraft. */
+	/**
+	 * Valuator function to get the cost factor of an aircraft.
+	 * @param engine The engine id of the aircraft.
+	 * @param costfactor_list The list (usually @ref engine_usefulness) that holds the cost factors.
+	 * @return The cost factor.
+	 */
 	function GetCostFactor(engine, costfactor_list);
 	/// @}
 	
@@ -444,7 +487,7 @@ class WormAI extends AIController {
 	 */
 	function InitSettings();
 	/**
-	 * Welcome says hello to the user and prints out it's current AI gamesettings.
+	 * Welcome says hello to the user and prints out the current AI gamesettings.
 	 */
 	function Welcome();
 	/// @}
@@ -841,7 +884,7 @@ function WormAI::RemoveAirport(tile)
 }
 
 /**
- * GetOptimalAvailableAirportType. Get the optimal type of airport that is available.
+ * Get the optimal type of airport that is available.
  * @note For now we only choose between small, large and metropolitan. Larger ones would only
  * be useful for very high cargo/passenger amounts with many airplanes.
  * @return The optimal AirportType or null if no suitable airport is available.
@@ -862,9 +905,10 @@ function WormAI::GetOptimalAvailableAirportType()
 }
 
 /**
- * IsTownFirstOrder returns true if the airport near this town is used as the 
- * first order, if false then it is used as the last/second order.
-**/
+ * Check whether the airport at a certain town is used as the first order of a route.
+ * @param town_id The id of the town to check if it's the first order.
+ * @return true if it is the first order, else false if it is the last order.
+ */
 function WormAI::IsTownFirstOrder(town_id)
 {
 	local station_tile = towns_used.GetValue(town_id);
@@ -997,11 +1041,12 @@ function WormAI::ReplaceAirportTileInfo(old_town_idx, old_tile, new_tile, other_
 }
 
 /**
- * Insert Maintenance order for airport at station_tile
- * veh Vehicle to set the order for
- * order_pos Position in the order list where order should be inserted
- * station_tile Tile for the Airport (not the hangar)
-**/
+ * Insert Maintenance order for airport at station_tile.
+ * @param veh Vehicle to set the order for
+ * @param order_pos Position in the order list where order should be inserted
+ * @param station_tile Tile for the Airport (not the hangar) of the order to be inserted.
+ * @return true if order got inserted; false in case of failure to insert.
+ */
 function WormAI::InsertMaintenanceOrder(veh, order_pos, station_tile)
 {
 	/* Get the hangar tile. */
@@ -1017,11 +1062,12 @@ function WormAI::InsertMaintenanceOrder(veh, order_pos, station_tile)
 }
 
 /**
- * Insert go to station order for airport at station_tile
- * veh Vehicle to set the order for
- * order_pos Position in the order list where order should be inserted
- * station_tile Tile for the Airport
-**/
+ * Insert go to station order for airport at station_tile.
+ * @param veh Vehicle to set the order for.
+ * @param order_pos Position in the order list where order should be inserted.
+ * @param station_tile Tile for the Airport of the to be inserted order.
+ * @return true if order got inserted; false in case of failure to insert.
+ */
 function WormAI::InsertGotoStationOrder(veh, order_pos, station_tile)
 {
 	if (!AIOrder.InsertOrder(veh, order_pos, station_tile, AIOrder.OF_FULL_LOAD_ANY )) {
@@ -1033,11 +1079,11 @@ function WormAI::InsertGotoStationOrder(veh, order_pos, station_tile)
 }
 
 /**
- * Insert go to station order for airport at station_tile
- * veh Vehicle to set the order for
- * order_pos Position in the order list where order should be inserted
- * station_tile Tile for the Airport
-**/
+ * Replace go to station order for airport at station_tile.
+ * @param veh Vehicle to set the order for.
+ * @param order_pos Position in the order list where order should be inserted.
+ * @param station_tile Tile for the Airport of the new to be inserted order.
+ */
 function WormAI::ReplaceGotoStationOrder(veh, order_pos, station_tile)
 {
 	/* Replace the orders for the station at order_pos. */
@@ -1049,12 +1095,12 @@ function WormAI::ReplaceGotoStationOrder(veh, order_pos, station_tile)
 }
 
 /**
- * Replace orders of vehicle, either the first station or last station is replaced
- * veh Vehicle to replace the orders for.
- * is_first_order Whether to replace the orders for the first or last station
- * breakdowns Whether breakdowns are on, if on then add maintenance orders
- * station_tile Tile of new station
-**/
+ * Replace orders of a vehicle, either the first station or last station is replaced.
+ * @param veh Vehicle to replace the orders for.
+ * @param is_first_order Whether to replace the orders for the first or last station.
+ * @param breakdowns Whether breakdowns are on; if they are on we will add maintenance orders.
+ * @param station_tile Tile of station for the new order.
+ */
 function WormAI::ReplaceOrders(veh, is_first_order, breakdowns, station_tile)
 {
 	/* Order of aircraft orders (with breakdowns on):
@@ -1128,9 +1174,11 @@ function WormAI::ReplaceOrders(veh, is_first_order, breakdowns, station_tile)
 }
 
 /**
- * Send all vehicles belonging to station to depot for selling
- * sell_reason Reason for selling
-**/
+ * Send all vehicles belonging to a station to depot for selling.
+ * @param station_id The id of the station.
+ * @param sell_reason The reason for selling. Valid reasons are
+ * @ref VEH_OLD_AGE, @ref VEH_LOW_PROFIT, @ref VEH_STATION_REMOVAL
+ */
 function WormAI::SendAllVehiclesOfStationToDepot(station_id, sell_reason)
 {
 	if (AIStation.IsValidStation(station_id)) {
@@ -1154,9 +1202,9 @@ function WormAI::SendAllVehiclesOfStationToDepot(station_id, sell_reason)
 function WormAI::CheckForAirportsNeedingToBeUpgraded()
 {
 	AILog.Info("Check if there are airports that can be upgraded.");
-	// TODO: Maybe set a max amount of upgrades at one time?
+	/// @todo Maybe set a max amount of upgrades at one time?
 	for (local t = towns_used.Begin(); !towns_used.IsEnd(); t = towns_used.Next()) {
-		// TODO: Maybe order by highest amount of waiting cargo to choose the station to be converted first.
+		/// @todo Maybe order by highest amount of waiting cargo to choose the station to be converted first.
 		// AILog.Info("Upgrade check for: " + AITown.GetName(t));
 		// Start looking at stations in towns that are the last/second order.
 		local station_tile = towns_used.GetValue(t);
@@ -1204,7 +1252,7 @@ function WormAI::CheckForAirportsNeedingToBeUpgraded()
 				}
 				else {
 					AILog.Error("We're out of luck: station id is no longer valid!");
-					/* TODO: Figure out what we should do now.
+					/*** @todo Figure out what we should do now.
 						Can we expect this to happen in normal situations? */
 				}
 				if (AIStation.IsAirportClosed(station_id))
@@ -1218,7 +1266,7 @@ function WormAI::CheckForAirportsNeedingToBeUpgraded()
 				local tile_other_end = GetAiportTileOtherEndOfRoute(t, station_tile);
 				if (tile_other_end != -1) {
 					/* Try to build an airport somewhere. */
-					/* TODO: Currently we don't consider the case that if the new airport will
+					/*** @todo Currently we don't consider the case that if the new airport will
 					   be farther away than the old one that certain aircraft with limited
 					   range will cause problems. */
 					AILog.Info("Try to build a replacement airport somewhere else");
@@ -1382,6 +1430,11 @@ function WormAI::BuildAirportRoute()
 	return ret;
 }
 
+/**
+ * Get the maximum distance this aircraft can safely fly without landing.
+ * @param engine The engine id for which we want to know the maximum distance.
+ * @return The maximum distance.
+ */
 function WormAI::GetMaximumDistance(engine) {
 	local max_dist = AIEngine.GetMaximumOrderDistance(engine);
 	if (max_dist == 0) {
@@ -1397,8 +1450,11 @@ function WormAI::GetMaximumDistance(engine) {
 
 /**
  * Build an aircraft with orders from tile_1 to tile_2.
- * The best available aircraft of that time will be bought.
- * start_tile is the tile where the airplane should start, or 0 to start at the first tile.
+ * The best available aircraft will be bought.
+ * @param tile_1 Airport tile that should be used as the first order.
+ * @param tile_2 Airport tile that should be used as the last order.
+ * @param start_tile The Airport tile where the airplane should start. If this is 0 then
+ * it will start at tile_1. To let it start at tile_2 use the same value as tile_2.
  */
 function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 {
@@ -1579,7 +1635,7 @@ function WormAI::SafeAddRectangle(list, tile, radius)
 
 /**
  * Find a suitable spot for an airport, walking all towns hoping to find one.
- *  When a town is used, it is marked as such and not re-used.
+ * When a town is used, it is marked as such and not re-used.
  * @param airport_type The type of airport we want to build.
  * @param center_tile The tile around which we will search for a spot for the airport.
  * @return tile where we can build the airport or an error code.
@@ -1634,8 +1690,8 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 			list.KeepAboveValue(min_distance_squared);
 			/* Keep below maximum distance. */
 			list.KeepBelowValue(max_distance_squared);
-			// TODO: In early games with low maximum speeds we may need to adjust maximum and
-			// maybe even minimum distance to get a round trip within a year.
+			/// @todo In early games with low maximum speeds we may need to adjust maximum and
+			/// maybe even minimum distance to get a round trip within a year.
 		}
 
 		/* Sort on acceptance, remove places that don't have acceptance */
@@ -1691,11 +1747,12 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 	return ret;
 }
 
-/*
- * Send the vehicle to depot to be sold when it arrives.
- * Vehicle - the vehicle id of the vehicle to be sold
- * sell_reason - Reason for selling vehicle
-*/
+/**
+ * Send a vehicle to depot to be sold when it arrives.
+ * @param vehicle The vehicle id of the vehicle to be sold.
+ * @param sell_reason The reason for selling. Valid reasons are
+ * @ref VEH_OLD_AGE, @ref VEH_LOW_PROFIT, @ref VEH_STATION_REMOVAL
+ */
 function WormAI::SendToDepotForSelling(vehicle,sell_reason)
 {
 	/* Send the vehicle to depot if we didn't do so yet */
@@ -1730,8 +1787,11 @@ function WormAI::SendToDepotForSelling(vehicle,sell_reason)
 }
 
 /**
- * Remove vehicle from route lists and to depot list.
-**/
+ * Remove a vehicle from our route lists and to depot list.
+ * @note If this is the last vehicle serving a certain route then after selling
+ * the vehicle we will also sell the airports.
+ * @param vehicle The vehicle id that should be removed from the lists.
+ */
 function WormAI::RemoveVehicleFromLists(vehicle)
 {
 	/* Check if we are the last one serving those airports; else sell the airports */
@@ -1758,7 +1818,8 @@ function WormAI::RemoveVehicleFromLists(vehicle)
 
 /**
  * Sell the vehicle provided it's in depot. If it's not yet in depot it will fail silently.
-**/
+ * @param vehicle The id of the vehicle that should be sold.
+ */
 function WormAI::SellVehicleInDepot(vehicle)
 {
 	// Make sure vehicle occurs in vehicle_to_depot
@@ -1808,7 +1869,7 @@ function WormAI::SellVehicleInDepot(vehicle)
 
 /*
  * Sell all vehicles in depot that are marked to be sold.
-*/
+ */
 function WormAI::SellVehiclesInDepot()
 {
 	AILog.Info("- Check for vehicles waiting in depot to be sold.")
@@ -1818,13 +1879,11 @@ function WormAI::SellVehiclesInDepot()
 	}
 }
 
-/*
- * ManageVehicleRenewal will check all vehicles for being old or needing upgrading
- * to a newer type. It will send all vehicles that are non optimal to depot for
- * selling.
- * Parameters:
- * age_limit - the age in days left limit below which we send to depot for selling
-*/
+/**
+ * Check all vehicles for being old or needing upgrading to a newer type.
+ * It will send all vehicles that are non optimal to depot for selling.
+ * @param age_limit The days left age limit below which we send to depot for selling.
+ */
 function WormAI::ManageVehicleRenewal(age_limit)
 {
 	AILog.Info("- Check for vehicles that are old.")
@@ -1840,7 +1899,7 @@ function WormAI::ManageVehicleRenewal(age_limit)
 
 /**
  * Check for airports that don't have any vehicles anymore and delete them.
-**/
+ */
 function WormAI::CheckAirportsWithoutVehicles()
 {
 	local list = AIStationList(AIStation.STATION_AIRPORT);
@@ -1864,16 +1923,25 @@ function WormAI::CheckAirportsWithoutVehicles()
 	}
 }
 
+/**
+ * Manage air routes:
+ * ------------------
+ * - Checks for airports without vehicles.
+ * - Send unprofitable aircraft to depot for selling.
+ * - Add aircraft to routes that have a lot of waiting cargo.
+ * @return Error code if something went wrong or ok.
+ * @todo Refactor the parts of this function into separate functions.
+ */
 function WormAI::ManageAirRoutes()
 {
-	// TODO:
-	// 1. Make groups for each route
-	// 2. When we have max aircraft/airports:
-	//  - Evaluate total profit per group, remove bad groups/airports or reduce # planes
-	//  - Favor bigger/faster aircraft over cost more when high amount waiting passengers
-	// 3. Upgrade aircraft when they are old or when newer ones would be more profitable
-	// 4. Upgrade airports when possible
-	// 5. Check reliability when breakdowns are on
+	/// @todo
+	/// 1. Make groups for each route
+	/// 2. When we have max aircraft/airports:
+	///  - Evaluate total profit per group, remove bad groups/airports or reduce # planes
+	///  - Favor bigger/faster aircraft over cost more when high amount waiting passengers
+	/// 3. Upgrade aircraft when they are old or when newer ones would be more profitable
+	/// 4. Upgrade airports only when it's needed
+	/// 5. Check reliability when breakdowns are on
 	local list = AIVehicleList();
 	local low_profit_limit = 0;
 	
@@ -1890,8 +1958,8 @@ function WormAI::ManageAirRoutes()
 	/* Decide on the best low profit limit at this moment. */
 	if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) > this.route_1.Count()) {
 		/* Since we can still add more planes keep all planes that make at least some profit. */
-		// TODO: When maintenance costs are on we should set low profit limit too at least
-		// the yearly costs.
+		/// @todo When maintenance costs are on we should set low profit limit too at least
+		/// the yearly costs.
 		low_profit_limit = 0;
 		list.KeepBelowValue(low_profit_limit);
 	}
@@ -1937,7 +2005,7 @@ function WormAI::ManageAirRoutes()
 		}
 	}
 
-	// TODO: Don't sell all aircraft from the same route all at once, try selling 1 per year?
+	/// @todo Don't sell all aircraft from the same route all at once, try selling 1 per year?
 	for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
 		/* Profit last year and this year bad? Let's sell the vehicle */
 		SendToDepotForSelling(i, VEH_LOW_PROFIT);
@@ -2056,8 +2124,11 @@ function WormAI::IsValidLastStation(veh)
 }
 
 /**
-  * Sells the airports from tile_1 and tile_2
-  * Removes towns from towns_used list too
+  * Sells the airports at tile_1 and tile_2. Removes towns from towns_used list too.
+  * @param airport_1_tile The tile of the first airport to remove
+  * @param airport_2_tile The tile of the other airport to remove
+  * @note The airport tiles are allowed to be invalid. Removal will be ignored in that
+  * case but the towns_used will be updated.
   */
 function WormAI::SellAirports(airport_1_tile, airport_2_tile) {
 	/* Remove the airports */
@@ -2073,10 +2144,13 @@ function WormAI::SellAirports(airport_1_tile, airport_2_tile) {
 	/* Free the towns_used entries */
 	this.towns_used.RemoveValue(airport_1_tile);
 	this.towns_used.RemoveValue(airport_2_tile);
-	// TODO: Make a list of removed airports/tiles so that we don't build a new airport
-	// in the same spot soon after we have removed it!
+	/// @todo Make a list of removed airports/tiles so that we don't build a new airport
+	/// in the same spot soon after we have removed it!
 }
 
+/** 
+ * Callback that handles events. Currently only AIEvent.ET_VEHICLE_CRASHED is handled.
+ */
 function WormAI::HandleEvents()
 {
 	while (AIEventController.IsEventWaiting()) {
@@ -2097,6 +2171,11 @@ function WormAI::HandleEvents()
 	}
 }
 
+/**
+ * Task that evaluates all available aircraft for how suited they are
+ * for our purposes. The suitedness values for aircraft which we can use are saved in
+ * @ref engine_usefulness.
+ */
 function WormAI::EvaluateAircraft() {
 	/* Show some info about what we are doing */
 	AILog.Info(Helper.GetCurrentDateString() + " Evaluating aircraft.");
@@ -2168,6 +2247,12 @@ function WormAI::EvaluateAircraft() {
 	}
 }
 
+/**
+ * Valuator function to get the cost factor of an aircraft.
+ * @param engine The engine id of the aircraft.
+ * @param costfactor_list The list (usually @ref engine_usefulness) that holds the cost factors.
+ * @return The cost factor.
+ */
 function WormAI::GetCostFactor(engine, costfactor_list) {
 	// For some reason we can't access this.engine_usefulness from inside the Valuate function,
 	// thus we add that as a parameter
@@ -2181,6 +2266,10 @@ function WormAI::GetCostFactor(engine, costfactor_list) {
 	}
 }
 
+/**
+ * Checks if we can build an aircraft and if not outputs a string with the reason.
+ * @return true if we can build an aircraft, otherwise false.
+ */
 function WormAI::CanBuildAircraft()
 {
 	/* Need to check if we can build aircraft and how many. Since this can change we do it inside the loop. */
@@ -2207,9 +2296,9 @@ function WormAI::CanBuildAircraft()
 	}
 	return false;
 }
-/*
- * InitSettings initializes a number of required variables based on the gamesettings of our AI.
-*/
+/**
+ * InitSettings initializes a number of required variables based on the game settings of our AI.
+ */
 function WormAI::InitSettings()
 {
 	local ai_speed = GetSetting("ai_speed");
@@ -2226,9 +2315,9 @@ function WormAI::InitSettings()
 	AICompany.SetAutoRenewStatus(false); 
 }
 
-/*
- * Welcome says hello to the user and prints out it's current AI gamesettings.
-*/
+/**
+ * Welcome says hello to the user and prints out the current AI gamesettings.
+ */
 function WormAI::Welcome()
 {
 	/* Say hello to the user */
@@ -2242,6 +2331,9 @@ function WormAI::Welcome()
 	AILog.Info("----------------------------------");
 }
 
+/**
+ * Start the main loop of WormAI.
+ */
 function WormAI::Start()
 {
 	if (this.passenger_cargo_id == -1) {
@@ -2374,7 +2466,11 @@ function WormAI::Start()
 	} // END OF OUR MAIN LOOP
 }
 
- function WormAI::Save()
+/**
+ * Save all data that WormAI uses.
+ * @return The data to be saved.
+ */
+function WormAI::Save()
  {
    /* Debugging info */
 	local MyOps1 = this.GetOpsTillSuspend();
@@ -2421,14 +2517,19 @@ function WormAI::Start()
     return table;
  }
  
- function WormAI::Load(version, data)
+/**
+ * Load previously saved information.
+ * @param version Which version of our AI saved the information.
+ * @param data The data that was saved.
+ */
+function WormAI::Load(version, data)
  {
    /* Debugging info */
 	local MyOps1 = this.GetOpsTillSuspend();
 	local MyOps2 = 0;
 	AILog.Info("Loading savegame saved by WormAI version " + version);
-	// TODO: load data in temp values then later unpack it because
-	// load has limited time available
+	/// @todo load data in temp values then later unpack it because
+	/// load has limited time available
 	if ("townsused" in data) {
 		local t = ExtendedList();
 		t.AddFromArray(data.townsused)
