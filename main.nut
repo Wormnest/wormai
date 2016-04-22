@@ -5,7 +5,7 @@
  * @file main.nut Main class and loop of our AI for OpenTTD.
  * License: GNU GPL - version 2 (see license.txt)
  * Author: Wormnest (Jacob Boerema)
- * Copyright: Jacob Boerema, 2013-2015.
+ * Copyright: Jacob Boerema, 2013-2016.
  *
  */ 
 
