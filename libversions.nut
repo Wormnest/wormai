@@ -3,5 +3,5 @@
  * Any changes you make will be lost the next time it's regenerated!
 */
 
-SUPERLIB_VERSION <- 38;
+SUPERLIB_VERSION <- 39;
 AILIBLIST_VERSION <- 3;
