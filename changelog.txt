@@ -1,9 +1,10 @@
 WormAI Changelog
 ================
 
-Version 4, 2015-XX-XX (unreleased)
+Version 4, 2016-XX-XX (unreleased)
 ---------------------
 + Airplanes could get stuck when an airport upgrade failed.
++ Updated SuperLib to latest version (39).
 
 Version 3, 2015-06-12
 ---------------------
