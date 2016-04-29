@@ -202,7 +202,18 @@ class WormAI extends AIController {
 	 * @param radius The radius of tiles.
 	 */  
 	function SafeAddSquare(list, tile, radius);
-	/// @}
+	/**
+	 * A safe implementation of AITileList.AddRectangle. Only valid tiles are
+	 *  added to the tile list. Taken from AdmiralAI.
+	 * @param tile_list The AITileList to add the tiles to.
+	 * @param center_tile The center of the rectangle.
+	 * @param x_min The amount of tiles to the north-east, relative to center_tile.
+	 * @param y_min The amount of tiles to the north-west, relative to center_tile.
+	 * @param x_plus The amount of tiles to the south-west, relative to center_tile.
+	 * @param y_plus The amount of tiles to the south-east, relative to center_tile.
+	 */
+	static function SafeAddRectangle(tile_list, center_tile, x_min, y_min, x_plus, y_plus);
+ 	/// @}
 	
     /// @{
 	/** @name Debugging output functions */
@@ -1632,6 +1643,25 @@ function WormAI::SafeAddSquare(list, tile, radius)
 	
 	list.AddRectangle(AIMap.GetTileIndex(x1, y1),AIMap.GetTileIndex(x2, y2)); 
 }
+
+/**
+ * A safe implementation of AITileList.AddRectangle. Only valid tiles are
+ *  added to the tile list. Taken from AdmiralAI.
+ * @param tile_list The AITileList to add the tiles to.
+ * @param center_tile The center of the rectangle.
+ * @param x_min The amount of tiles to the north-east, relative to center_tile.
+ * @param y_min The amount of tiles to the north-west, relative to center_tile.
+ * @param x_plus The amount of tiles to the south-west, relative to center_tile.
+ * @param y_plus The amount of tiles to the south-east, relative to center_tile.
+ */
+static function SafeAddRectangle(tile_list, center_tile, x_min, y_min, x_plus, y_plus)
+{
+	local tile_x = AIMap.GetTileX(center_tile);
+	local tile_y = AIMap.GetTileY(center_tile);
+	local tile_from = AIMap.GetTileIndex(max(1, tile_x - x_min), max(1, tile_y - y_min));
+	local tile_to = AIMap.GetTileIndex(min(AIMap.GetMapSizeX() - 2, tile_x + x_plus), min(AIMap.GetMapSizeY() - 2, tile_y + y_plus));
+	tile_list.AddRectangle(tile_from, tile_to);
+} 
 
 /**
  * Find a suitable spot for an airport, walking all towns hoping to find one.
