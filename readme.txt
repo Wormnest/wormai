@@ -5,8 +5,9 @@ Introduction
 ------------
 WormAI started as a fork of WrightAI and currently also supports only pax
 air transport. Other types of transport are planned for a future release.
-Several improvements to the original code have been made to make it
-stand out enough to release it.
+A lot of changes and improvements to the original code have been made
+since then. It should do fairly well as long as you allow a reasonable
+amount of aircraft and haven't turned on infrastruture maintenance.
 
 License: see license.txt
 Discussion topic: http://www.tt-forums.net/viewtopic.php?f=65&t=67167
@@ -17,9 +18,10 @@ Source repository: http://dev.openttdcoop.org/projects/ai-worm/repository
 Requirements
 ------------
 OpenTTD 1.4 or later.
-SuperLib and AILibList. I won't list the versions here since then I would
-have to update this text every time the versions change. However I have a
-script that updates the library versions before a release of my AI so I
+SuperLib, AILibList and AILibCommon (used by AILibList).
+I won't list the versions here since then I would have to update this
+text every time the versions change. However I have a script that
+updates the library versions before a release of my AI so I
 should always be using the latest versions at the time of release.
 
 
@@ -52,17 +54,18 @@ changed during the game.
 3. The minimum size of towns to be considered for getting an airport.
    [default depends on AI competitor speed setting]
    This setting tells WormAI the smallest town (population) where it
-   is allowed to build an airport.
+   is allowed to build an airport. You may want to change this
+   depending on the startdate you use.
 
 4. The minimum distance between airports.
    [default depends on AI competitor speed setting]
    This setting tells WormAI the minimum allowed distance between airports
-   to build a route.
+   to build a route. You may want to change this depending on your map size.
 
 5. The maximum distance between airports.
    [default depends on AI competitor speed setting]
    This setting tells WormAI the maximum allowed distance between airports
-   to build a route.
+   to build a route. You may want to change this depending on your map size.
 
 
 Limitations and shortcomings
@@ -77,4 +80,4 @@ in situations with a limited amount of suitable spots for airports
 it might have a difficult time starting.
 
 
-Wormnest (Jacob Boerema), 2013-2015
+Wormnest (Jacob Boerema), 2013-2016
