@@ -2485,9 +2485,6 @@ function WormAI::Start()
 		}
 	}
 	
-	/* We start with almost no loan, and we take a loan when we want to build something */
-	AICompany.SetLoanAmount(AICompany.GetLoanInterval());
-
 	/* We need our local tickers, as GetTick() will skip ticks */
 	local old_ticker = 0;
 	local cur_ticker = 0;
