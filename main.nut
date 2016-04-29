@@ -1774,7 +1774,10 @@ function WormAI::SendToDepotForSelling(vehicle,sell_reason)
 		}
 		AILog.Info(info_text);
 		/* Send it to depot. */
-		if (!AIVehicle.SendVehicleToDepot(vehicle))
+		/* Make also sure the vehicle isn't already stopped in depot while not being in our to depot
+		   list. This can happen after loading a saved game because we don't save our list of
+		   vehicles that get sent to depot. */
+		if (!AIVehicle.IsStoppedInDepot(vehicle) && !AIVehicle.SendVehicleToDepot(vehicle))
 		{
 			AILog.Warning(AIError.GetLastErrorString());
 			AILog.Warning("Failed to send vehicle " + AIVehicle.GetName(vehicle) + " to depot!");
