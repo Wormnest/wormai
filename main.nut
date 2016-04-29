@@ -194,14 +194,14 @@ class WormAI extends AIController {
 	 */	
 	function GetAgeString(AgeInDays);
 	/**
-	 * Add a rectangular area to an AITileList containing tiles that are within /radius/
+	 * Add a square area to an AITileList containing tiles that are within radius
 	 * tiles from the center tile, taking the edges of the map into account.
-	 * @note This function was taken from Rondje.
+	 * @note This function was taken from Rondje. Name was changed from SafeAddRectangle to SafeAddSquare.
 	 * @param list The AITileList in which the valid tiles will be returned.
 	 * @param tile The center tile.
 	 * @param radius The radius of tiles.
 	 */  
-	function SafeAddRectangle(list, tile, radius);
+	function SafeAddSquare(list, tile, radius);
 	/// @}
 	
     /// @{
@@ -1615,14 +1615,14 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 }
 
 /**
- * Add a rectangular area to an AITileList containing tiles that are within /radius/
+ * Add a square area to an AITileList containing tiles that are within radius
  * tiles from the center tile, taking the edges of the map into account.
- * @note This function was taken from Rondje.
+ * @note This function was taken from Rondje. Name was changed from SafeAddRectangle to SafeAddSquare.
  * @param list The AITileList in which the valid tiles will be returned.
  * @param tile The center tile.
  * @param radius The radius of tiles.
  */  
-function WormAI::SafeAddRectangle(list, tile, radius)
+function WormAI::SafeAddSquare(list, tile, radius)
 {
 	local x1 = max(0, AIMap.GetTileX(tile) - radius);
 	local y1 = max(0, AIMap.GetTileY(tile) - radius);
@@ -1674,10 +1674,10 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 
 		local tile = AITown.GetLocation(town);
 
-		/* Create a 30x30 grid around the core of the town and see if we can find a spot for a small airport */
+		/* Create a 30x30 grid around the core of the town and see if we can find a spot for an airport .*/
 		local list = AITileList();
-		/* Safely add a rectangle taking care of border tiles. */
-		SafeAddRectangle(list, tile, 15);
+		/* Safely add a square rectangle taking care of border tiles. */
+		SafeAddSquare(list, tile, 15);
 		/* Remove all tiles where an airport can't be built and finally keep the best value. */
 		list.Valuate(AITile.IsBuildableRectangle, airport_x, airport_y);
 		list.KeepValue(1);
