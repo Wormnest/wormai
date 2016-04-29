@@ -51,6 +51,7 @@ import("AILib.List", "ExtendedList", AILIBLIST_VERSION);
 const MINIMUM_BALANCE_BUILD_AIRPORT = 100000;	///< Minimum bank balance to start building airports.
 const MINIMUM_BALANCE_AIRCRAFT = 25000;			///< Minimum bank balance to allow buying a new aircraft.
 const MINIMUM_BALANCE_TWO_AIRCRAFT = 5000000;	///< Minimum bank balance to allow buying 2 aircraft at once.
+const MINIMUM_BALANCE_BUILD_STATUE = 1000000;	///< Minimum bank balance to allow building of statues.
 
 const AIRCRAFT_LOW_PRICE_CUT = 500000;			///< Bank balance below which we will try to buy a low price aircraft.
 const AIRCRAFT_MEDIUM_PRICE_CUT = 2000000;		///< Bank balance below which we will try to buy a medium price aircraft.
@@ -69,6 +70,7 @@ const AIRPORT_CARGO_WAITING_LOW_LIMIT = 250;	///< Limit of waiting cargo (passen
 const AIRPORT_CARGO_WAITING_HIGH_LIMIT = 1250;	///< Limit of waiting cargo (passengers) on airport above which we add 2 aircraft.
 const AIRPORT2_WAITING_DIFF = 150;				///< Cargo waiting diff (less) value at the other station to allow extra aircraft.
 const VEHICLE_AGE_LEFT_LIMIT = 150;				///< Number of days limit before maximum age for vehicle to get sent to depot for selling.
+const MAX_STATUES_BUILD_COUNT = 3;				///< Maximum number of statues we will build at one time.
 
 /// @{
 /**
@@ -456,7 +458,12 @@ class WormAI extends AIController {
 	 * @note Adapted from the version in AdmiralAI.
 	 */ 
 	function BuildHQ();
-	/// @}
+	/**
+	 * Build statues in towns where we have a station as long as we have a reasonable amount of money.
+	 * We limit the amount of statues we build at any one time.
+	 */
+	function BuildStatues();
+/// @}
 
 	/** @name General functions */
     /// @{
@@ -2328,6 +2335,30 @@ function WormAI::BuildHQ()
 }
 
 /**
+ * Build statues in towns where we have a station as long as we have a reasonable amount of money.
+ * We limit the amount of statues we build at any one time.
+ */
+function WormAI::BuildStatues()
+{
+	local build_count = 0; // Amount of statues built.
+	/* Only think of building statues if we have no outstanding loan. */
+	if (AICompany.GetLoanAmount() == 0) {
+		for (local t = towns_used.Begin(); !towns_used.IsEnd(); t = towns_used.Next()) {
+			/* Ignore towns that already have a statue. */
+			if (AITown.HasStatue(t)) continue;
+			/* Only build a statue if we have a reasonable amount of money available. */
+			if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < MINIMUM_BALANCE_BUILD_STATUE) return;
+			if (AITown.PerformTownAction(t, AITown.TOWN_ACTION_BUILD_STATUE)) {
+				AILog.Info("We built a statue in " + AITown.GetName(t) + ".");
+				build_count += 1;
+				/* Don't build more than a certain maximum number of statues at one time. */
+				if (build_count == MAX_STATUES_BUILD_COUNT) return;
+			}
+		}
+	}
+}
+
+/**
  * Valuator function to get the cost factor of an aircraft.
  * @param engine The engine id of the aircraft.
  * @param costfactor_list The list (usually @ref engine_usefulness) that holds the cost factors.
@@ -2482,6 +2513,10 @@ function WormAI::Start()
 				/* Build a headquarter if it doesn't exist yet and our speed settings is at least medium. */
 				if (this.ai_speed_factor < 3) {
 					this.BuildHQ();
+					/* Build statues only in fast, hard mode. */
+					if (this.ai_speed_factor < 2) {
+						this.BuildStatues();
+					}
 				}
 				
 				/* Some things we do more or less often depending on this.ai_speed_factor setting */
