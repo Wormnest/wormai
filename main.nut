@@ -2465,17 +2465,24 @@ function WormAI::Start()
 	Welcome();		// Write welcome and AI settings in log.
 	
 	if (loaded_from_save) {
-		/* Debugging info */
-		DebugListTownsUsed();
+		if (GetSetting("debug_show_lists") == 1) {
+			/* Debugging info */
+			DebugListTownsUsed();
+		}
+		AILog.Info("Updating route table distances.");
 		// We need to redo distance_of_route table
 		foreach( veh, tile_1 in route_1) {
 			local tile_2 = route_2.GetValue(veh);
-			AILog.Info("Vehicle: " + veh + " tile1: " + WriteTile(tile_1) + " tile2: " + WriteTile(tile_2));
-			AILog.Info("Distance: " + AIMap.DistanceManhattan(tile_1, tile_2));
+			if (GetSetting("debug_show_lists") == 1) {
+				AILog.Info("Vehicle: " + veh + " tile1: " + WriteTile(tile_1) + " tile2: " + WriteTile(tile_2));
+				AILog.Info("Distance: " + AIMap.DistanceManhattan(tile_1, tile_2));
+			}
 			this.distance_of_route.rawset(veh, AIMap.DistanceManhattan(tile_1, tile_2));
 		}
-		/* Debugging info */
-		DebugListRouteInfo();
+		if (GetSetting("debug_show_lists") == 1) {
+			/* Debugging info */
+			DebugListRouteInfo();
+		}
 	}
 	
 	/* We start with almost no loan, and we take a loan when we want to build something */
