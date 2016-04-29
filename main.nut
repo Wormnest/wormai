@@ -212,7 +212,7 @@ class WormAI extends AIController {
 	 * @param x_plus The amount of tiles to the south-west, relative to center_tile.
 	 * @param y_plus The amount of tiles to the south-east, relative to center_tile.
 	 */
-	static function SafeAddRectangle(tile_list, center_tile, x_min, y_min, x_plus, y_plus);
+	function SafeAddRectangle(tile_list, center_tile, x_min, y_min, x_plus, y_plus);
  	/// @}
 	
     /// @{
@@ -1654,7 +1654,7 @@ function WormAI::SafeAddSquare(list, tile, radius)
  * @param x_plus The amount of tiles to the south-west, relative to center_tile.
  * @param y_plus The amount of tiles to the south-east, relative to center_tile.
  */
-static function WormAI::SafeAddRectangle(tile_list, center_tile, x_min, y_min, x_plus, y_plus)
+function WormAI::SafeAddRectangle(tile_list, center_tile, x_min, y_min, x_plus, y_plus)
 {
 	local tile_x = AIMap.GetTileX(center_tile);
 	local tile_y = AIMap.GetTileY(center_tile);
