@@ -2395,7 +2395,7 @@ function WormAI::Start()
 		if (CanBuildAircraft()) {
 			/* Task scheduling. */
 			new_year = AIDate.GetYear(AIDate.GetCurrentDate());
-			if (cur_year < new_year) {
+			if (cur_year != new_year) { // Use != instead of < since user can cheat and turn back time
 				// Handle once a year tasks here.
 				AILog.Info(Helper.GetCurrentDateString() + " --- Yearly Tasks ---");
 				cur_year = new_year;
