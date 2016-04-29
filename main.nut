@@ -451,6 +451,11 @@ class WormAI extends AIController {
 	 * @ref engine_usefulness.
 	 */
 	function EvaluateAircraft();
+	/**
+	 * Build the company headquarters if there isn't one yet.
+	 * @note Adapted from the version in AdmiralAI.
+	 */ 
+	function BuildHQ();
 	/// @}
 
 	/** @name General functions */
@@ -2281,6 +2286,48 @@ function WormAI::EvaluateAircraft() {
 }
 
 /**
+ * Build the company headquarters if there isn't one yet.
+ * @note Adapted from the version in AdmiralAI.
+ */ 
+function WormAI::BuildHQ()
+{
+	/* Make sure we don't have a company headquarter yet. */
+	if (AICompany.GetCompanyHQ(AICompany.COMPANY_SELF) != AIMap.TILE_INVALID) return;
+	
+	/* Check first if we have a minimum amount of money. */
+	if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < 50000) return;
+
+	AILog.Info("Trying to find a spot to build our headquarters.");
+
+	/* We want it near one of our stations so get the list of stations we have. */
+	if (this.towns_used) {
+		/* Loop over our towns with a station until we have built our hq. */
+		for (local t = towns_used.Begin(); !towns_used.IsEnd(); t = towns_used.Next()) {
+			local st_tile = towns_used.GetValue(t);
+			local st_id = AIStation.GetStationID(st_tile);
+			if (AIStation.IsValidStation(st_id)) {
+				local airport_type = AIAirport.GetAirportType(AIStation.GetLocation(st_id));
+				local airport_width = AIAirport.GetAirportWidth(airport_type);
+				local airport_height = AIAirport.GetAirportHeight(airport_type);
+				local tiles = AITileList();
+				/* Get the tiles around this station. */
+				this.SafeAddRectangle(tiles, AIStation.GetLocation(st_id), 4, 4, 3 + airport_width, 3 + airport_height);
+				tiles.Valuate(AIMap.DistanceManhattan, AIStation.GetLocation(st_id));
+				tiles.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
+				/* Try to build our hq on one of these tiles. */
+				foreach (tile, distance in tiles) {
+					if (AICompany.BuildCompanyHQ(tile)) {
+						AILog.Warning("We built our headquarters near " + AITown.GetName(t) + 
+						  ", station " + AIStation.GetName(st_id) + ".");
+						return;
+					}
+				}
+			}
+		}
+	}
+}
+
+/**
  * Valuator function to get the cost factor of an aircraft.
  * @param engine The engine id of the aircraft.
  * @param costfactor_list The list (usually @ref engine_usefulness) that holds the cost factors.
@@ -2432,6 +2479,10 @@ function WormAI::Start()
 				/* Evaluate best aircraft: Needs to be done every year to be sure it's done 
 				   the first time before we try to build a route. */
 				this.EvaluateAircraft();
+				/* Build a headquarter if it doesn't exist yet and our speed settings is at least medium. */
+				if (this.ai_speed_factor < 3) {
+					this.BuildHQ();
+				}
 				
 				/* Some things we do more or less often depending on this.ai_speed_factor setting */
 				if (cur_year % this.ai_speed_factor == 0) {
