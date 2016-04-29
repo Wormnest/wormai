@@ -2344,7 +2344,7 @@ function WormAI::Start()
 		return;
 	}
 
-	/* Give the boy a name */
+	/* Give the AI a name */
 	if (!AICompany.SetName("WormAI")) {
 		local i = 2;
 		while (!AICompany.SetName("WormAI #" + i)) {
