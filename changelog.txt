@@ -1,6 +1,10 @@
 WormAI Changelog
 ================
 
+Version 5, UNRELEASED
+---------------------
++
+
 Version 4, 2016-04-30
 ---------------------
 + Fix: Airplanes could get stuck when an airport upgrade failed.
