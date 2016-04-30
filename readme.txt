@@ -77,9 +77,10 @@ Limitations and shortcomings
 Currently only supports aircraft and only transports pax.
 It doesn't do very well when infrastructure maintenance is on.
 Every route consists of 2 airports, unconnected to other airports.
-Only tested in temperate climate, not sure if it matters for pax
-air transport.
-Doesn't start building as fast as a lot of other AI's meaning that
+Only well tested in temperate climate. Performance in arctic is
+not as good but overall not too bad. In sub-tropic it doesn't do
+very well since it only transports passengers but not water or food.
+Doesn't start building as fast as some other AI's meaning that
 in situations with a limited amount of suitable spots for airports
 it might have a difficult time starting.
 
