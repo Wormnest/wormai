@@ -8,6 +8,8 @@ air transport. Other types of transport are planned for a future release.
 A lot of changes and improvements to the original code have been made
 since then. It should do fairly well as long as you allow a reasonable
 amount of aircraft and haven't turned on infrastruture maintenance.
+Please report crashes and other bugs either in the discussion topic
+or the issue tracker listed below.
 
 License: see license.txt
 Discussion topic: http://www.tt-forums.net/viewtopic.php?f=65&t=67167
@@ -33,6 +35,7 @@ Aircraft maximum distance supported.
 Handling of reaching maximum allowed aircraft.
 Handling of breakdown setting and selling of old aircraft.
 Handling of airport upgrading.
+Building of headquarters and statues.
 
 
 Settings
@@ -49,7 +52,8 @@ changed during the game.
    setting]
    This setting regulates the thinking speed of WormAI. Slower speed means
    the AI will wait longer between building and managing airports and
-   aircraft.
+   aircraft. HeadQuarters will only be built if the speed is normal or
+   fast. Statues will only be built if the speed is fast.
 
 3. The minimum size of towns to be considered for getting an airport.
    [default depends on AI competitor speed setting]
