@@ -51,7 +51,7 @@ import("AILib.List", "ExtendedList", AILIBLIST_VERSION);
 const MINIMUM_BALANCE_BUILD_AIRPORT = 100000;	///< Minimum bank balance to start building airports.
 const MINIMUM_BALANCE_AIRCRAFT = 25000;			///< Minimum bank balance to allow buying a new aircraft.
 const MINIMUM_BALANCE_TWO_AIRCRAFT = 5000000;	///< Minimum bank balance to allow buying 2 aircraft at once.
-const MINIMUM_BALANCE_BUILD_STATUE = 1000000;	///< Minimum bank balance to allow building of statues.
+const MINIMUM_BALANCE_BUILD_STATUE =  750000;	///< Minimum bank balance to allow building of statues.
 
 const AIRCRAFT_LOW_PRICE_CUT = 500000;			///< Bank balance below which we will try to buy a low price aircraft.
 const AIRCRAFT_MEDIUM_PRICE_CUT = 2000000;		///< Bank balance below which we will try to buy a medium price aircraft.
