@@ -1,14 +1,16 @@
 WormAI Changelog
 ================
 
-Version 4, 2016-XX-XX (unreleased)
+Version 4, 2016-04-30
 ---------------------
-+ Airplanes could get stuck when an airport upgrade failed.
-+ After loading a savegame that had airplanes stopped in depot
++ Fix: Airplanes could get stuck when an airport upgrade failed.
++ Fix: After loading a savegame that had airplanes stopped in depot
   to be sold WormAI didn't know about them being in depot and
   tried to send them to depot again which failed causing them
   to not be sold.
-+ Updated SuperLib to latest version (39).
++ Add: Build HeadQuarters (normal or fast setting).
++ Add: Build Statues in towns with an airport (fast setting only).
++ Change: Updated SuperLib to latest version (39).
 
 Version 3, 2015-06-12
 ---------------------
