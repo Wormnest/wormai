@@ -1,7 +1,7 @@
 #!python
 
 # Purpose: automatic updating of the latest library versions
-# We assume we are starting in folder OpenTTD/ai/OurAI
+# We assume we are starting in folder OpenTTD/dev/ai/OurAI
 # We assume the libraries are in folder OpenTTD/content_download/ai/library
 
 import os
@@ -18,7 +18,7 @@ name_AILibList = "AILIBLIST_VERSION";
 ver_AILibList = 0;
 
 # ai library folder
-lib_folder = os.path.abspath("../../content_download/ai/library");
+lib_folder = os.path.abspath("../../../content_download/ai/library");
 
 # nut file to put the version numbers in
 lib_versions_file = "libversions.nut";
