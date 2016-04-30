@@ -2343,6 +2343,11 @@ function WormAI::BuildStatues()
 	local build_count = 0; // Amount of statues built.
 	/* Only think of building statues if we have no outstanding loan. */
 	if (AICompany.GetLoanAmount() == 0) {
+		local build_max = MAX_STATUES_BUILD_COUNT;
+		/* In case we are wealthy increase the max amount to build. */
+		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) > 5*MINIMUM_BALANCE_BUILD_STATUE) {
+			build_max *= 4;
+		}
 		for (local t = towns_used.Begin(); !towns_used.IsEnd(); t = towns_used.Next()) {
 			/* Ignore towns that already have a statue. */
 			if (AITown.HasStatue(t)) continue;
@@ -2352,7 +2357,7 @@ function WormAI::BuildStatues()
 				AILog.Info("We built a statue in " + AITown.GetName(t) + ".");
 				build_count += 1;
 				/* Don't build more than a certain maximum number of statues at one time. */
-				if (build_count == MAX_STATUES_BUILD_COUNT) return;
+				if (build_count == build_max) return;
 			}
 		}
 	}
