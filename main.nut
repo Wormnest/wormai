@@ -48,6 +48,7 @@ import("AILib.List", "ExtendedList", AILIBLIST_VERSION);
 
 // Get our required classes.
 require("money.nut");
+require("strings.nut");
 
 
 /* Wormnest: define some constants for easier maintenance. */
@@ -171,41 +172,9 @@ class WormAI extends AIController {
 	 */
 	function Load(version, data);
 	/// @}
-	
+
     /// @{
 	/** @name Utility functions */
-	/**
-	 * Convert a number to its hexadecimal string representation.
-	 * @param number The number to convert.
-	 * @return The hexadecimal string.
-	 */	
-	function decToHex(number);
-	/**
-	 * Writes a tile as a hexadecimal number.
-	 * @param tile The tile to convert.
-	 * @return The hexadecimal string.
-	 */	
-	function WriteTile(tile);
-	/**
-	 * Returns aircraft type as text.
-	 * @param airplane_id The id of the airplane
-	 * @return The airplane type as a text string
-	 */	
-	function GetAircraftTypeAsText(airplane_id);
-	/**
-	 * Rough year/month age estimation string where year = 365 days and month = 30 days.
-	 * @param AgeInDays The age in days.
-	 * @return Text string saying how many years and months.
-	 */	
-	function GetAgeString(AgeInDays);
-	/**
-	 * Add a square area to an AITileList containing tiles that are within radius
-	 * tiles from the center tile, taking the edges of the map into account.
-	 * @note This function was taken from Rondje. Name was changed from SafeAddRectangle to SafeAddSquare.
-	 * @param list The AITileList in which the valid tiles will be returned.
-	 * @param tile The center tile.
-	 * @param radius The radius of tiles.
-	 */  
 	function SafeAddSquare(list, tile, radius);
 	/**
 	 * A safe implementation of AITileList.AddRectangle. Only valid tiles are
@@ -504,75 +473,6 @@ class WormAI extends AIController {
 
 };
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Functions that should be moved to a utility/library unit
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/*
- * Convert a number to its hexadecimal string representation.
- * @param number The number to convert.
- * @return The hexadecimal string.
- *//**
- * @note Since it seems that Squirrel string library (with format and regexp) is not enabled in OpenTTD
- * I used the following function to get a hexadecimal string.
- * Source: http://forum.iv-multiplayer.com/index.php?topic=914.60
- */	
-function WormAI::decToHex(number)
-{
-	local hexChars = "0123456789ABCDEF";
-	local ret = "";
-	local quotient = number;
-	do
-	{
-		local remainder = quotient % 16;
-		quotient /= 16;
-		ret = hexChars[(remainder < 0) ? -remainder : remainder].tochar()+ret;
-	}
-	while(quotient != 0);
-	if(number < 0) return "-"+ret;
-	return ret;
-}
-
-/**
- * Writes a tile as a hexadecimal number.
- * @param tile The tile to convert.
- * @return The hexadecimal string.
- */	
-function WormAI::WriteTile(tile)
-{
-	return "0x" + decToHex(tile);
-}
-
-/**
- * Returns aircraft type as text.
- * @param airplane_id The id of the airplane
- * @return The airplane type as a text string
- */	
-function WormAI::GetAircraftTypeAsText(airplane_id)
-{
-	// Get the aircraft type (mainly large/small)
-	local planetype = "";
-	switch(AIEngine.GetPlaneType(airplane_id)) {
-		case AIAirport.PT_BIG_PLANE: {planetype = "Large airplane";} break;
-		case AIAirport.PT_SMALL_PLANE: {planetype = "Small airplane";} break;
-		case AIAirport.PT_HELICOPTER: {planetype = "Helicopter";} break;
-		default: {planetype = "<invalid aircraft type>";} break;
-	}
-	return planetype;
-}
-
-/**
- * Rough year/month age estimation string where year = 365 days and month = 30 days.
- * @param AgeInDays The age in days.
- * @return Text string saying how many years and months.
- */	
-function WormAI::GetAgeString(AgeInDays)
-{
-	local y = AgeInDays / 365;
-	local days = AgeInDays - (y * 365);
-	local m = days / 30;
-	return y + " years " + m + " months";
-}
 
 //////////////////////////////////////////////////////////////////////////
 //	Debugging functions
@@ -593,8 +493,8 @@ function WormAI::DebugListTownsUsed()
 			AILog.Info("Town: " + AITown.GetName(t) + " (id: " + t + "), " + is_city +
 				", population: " + AITown.GetPopulation(t) + ", houses: " + AITown.GetHouseCount(t) +
 				", grows every " + AITown.GetGrowthRate(t) + " days");
-			AILog.Info("    Location: " + WriteTile(AITown.GetLocation(t)) +
-				", station tile " + WriteTile(tile) + ").")
+			AILog.Info("    Location: " + WormStrings.WriteTile(AITown.GetLocation(t)) +
+				", station tile " + WormStrings.WriteTile(tile) + ").")
 			local sid = AIStation.GetStationID(tile);
 			local st_veh = AIVehicleList_Station(sid);
 			AILog.Info("Station: " + AIStation.GetName(sid) + " (id: " + sid + "), waiting cargo: " + 
@@ -620,7 +520,7 @@ function WormAI::DebugListTowns(towns_list)
 			AILog.Info("Town: " + AITown.GetName(t) + " (id: " + t + "), " + is_city +
 				", population: " + AITown.GetPopulation(t) + ", houses: " + AITown.GetHouseCount(t) +
 				", grows every " + AITown.GetGrowthRate(t) + " days");
-			AILog.Info("    Location: " + WriteTile(AITown.GetLocation(t)) );
+			AILog.Info("    Location: " + WormStrings.WriteTile(AITown.GetLocation(t)) );
 		}
 	}
 	AILog.Info("");
@@ -686,9 +586,9 @@ function WormAI::DebugListRoutes()
 				}
 				// Show info about aircraft
 				AILog.Info("     " + AIVehicle.GetName(veh) + " (id: " + veh + "), age: " +
-					GetAgeString(AIVehicle.GetAge(veh)) + ", capacity: " + 
+					WormStrings.GetAgeString(AIVehicle.GetAge(veh)) + ", capacity: " + 
 					AIVehicle.GetCapacity(veh, passenger_cargo_id) + ", size: " + 
-					GetAircraftTypeAsText(AIVehicle.GetEngineType(veh)) );
+					WormStrings.GetAircraftTypeAsText(AIVehicle.GetEngineType(veh)) );
 				local last_profit = AIVehicle.GetProfitLastYear(veh);
 				// Increment total profit for this route
 				total_profit += last_profit;
@@ -733,7 +633,7 @@ function WormAI::DebugListRoute(route)
 		for (local r = route.Begin(); !route.IsEnd(); r = route.Next()) {
 			local st_tile = route.GetValue(r);
 			AILog.Info("Aircraft: " + AIVehicle.GetName(r) + " (id: " + r + ", tile " + 
-				WriteTile(st_tile) + " = station " + 
+				WormStrings.WriteTile(st_tile) + " = station " + 
 				AIStation.GetName(AIStation.GetStationID(st_tile)) + ").");
 		}
 	}
@@ -856,7 +756,7 @@ function WormAI::RemoveAirport(tile)
 	if (!AIAirport.RemoveAirport(tile)) {
 		AILog.Warning(AIError.GetLastErrorString());
 		AILog.Warning("Failed to remove airport " + AIStation.GetName(AIStation.GetStationID(tile)) +
-			" at tile " + WriteTile(tile) );
+			" at tile " + WormStrings.WriteTile(tile) );
 	}
 }
 
@@ -894,7 +794,7 @@ function WormAI::IsTownFirstOrder(town_id)
 	route1.AddList(route_1);
 	// Keep only those with our station tile
 	route1.KeepValue(station_tile);
-	/* AILog.Info("Town: " + AITown.GetName(town_id) + ", station at tile: " + WriteTile(station_tile) +
+	/* AILog.Info("Town: " + AITown.GetName(town_id) + ", station at tile: " + WormStrings.WriteTile(station_tile) +
 		", route1 count: " + route1.Count()); */
 	// return true if found (not 0) in route_1
 	return (route1.Count() != 0);
@@ -955,7 +855,7 @@ function WormAI::UpdateAirportTileInfo(town_idx, station_id, old_tile)
 	/* Update the airport tile in our towns_used list. */
 	this.towns_used.SetValue(town_idx, new_airport_tile);
 
-	//AILog.Warning("Update route tile " + WriteTile(old_tile) + " to " + WriteTile(new_airport_tile));
+	//AILog.Warning("Update route tile " + WormStrings.WriteTile(old_tile) + " to " + WormStrings.WriteTile(new_airport_tile));
 
 	/* Loop through the route info that should contain our airport. */
 	for (local r = route.Begin(); !route.IsEnd(); r = route.Next()) {
@@ -1031,7 +931,7 @@ function WormAI::InsertMaintenanceOrder(veh, order_pos, station_tile)
 	/* Add maintenance order for our station. */
 	if (!AIOrder.InsertOrder(veh, order_pos, Depot_Airport, AIOrder.OF_SERVICE_IF_NEEDED )) {
 		AILog.Warning("Failed to insert go to depot order at order postion " + order_pos +
-			", depot tile " + WriteTile(Depot_Airport));
+			", depot tile " + WormStrings.WriteTile(Depot_Airport));
 		return false;
 	}
 	else
@@ -1048,7 +948,7 @@ function WormAI::InsertMaintenanceOrder(veh, order_pos, station_tile)
 function WormAI::InsertGotoStationOrder(veh, order_pos, station_tile)
 {
 	if (!AIOrder.InsertOrder(veh, order_pos, station_tile, AIOrder.OF_FULL_LOAD_ANY )) {
-		AILog.Warning("Failed to add order for station tile " + WriteTile(station_tile));
+		AILog.Warning("Failed to add order for station tile " + WormStrings.WriteTile(station_tile));
 		return false;
 	}
 	else
@@ -1252,7 +1152,8 @@ function WormAI::CheckForAirportsNeedingToBeUpgraded()
 						/* Valid tile for airport: try to build it. */
 						if (!AIAirport.BuildAirport(tile_2, optimal_airport, AIStation.STATION_NEW)) {
 							AILog.Warning(AIError.GetLastErrorString());
-							AILog.Error("Although the testing told us we could build an airport, it still failed at tile " + WriteTile(tile_2) + ".");
+							AILog.Error("Although the testing told us we could build an airport, it still failed at tile " + 
+							  WormStrings.WriteTile(tile_2) + ".");
 							this.towns_used.RemoveValue(tile_2);
 							SendAllVehiclesOfStationToDepot(station_id, VEH_STATION_REMOVAL);
 						}
@@ -1368,14 +1269,16 @@ function WormAI::BuildAirportRoute()
 	/* Build the airports for real */
 	if (!AIAirport.BuildAirport(tile_1, airport_type, AIStation.STATION_NEW)) {
 		AILog.Warning(AIError.GetLastErrorString());
-		AILog.Error("Although the testing told us we could build an airport, it still failed at tile " + WriteTile(tile_1) + ".");
+		AILog.Error("Although the testing told us we could build an airport, it still failed at tile " +
+		  WormStrings.WriteTile(tile_1) + ".");
 		this.towns_used.RemoveValue(tile_1);
 		this.towns_used.RemoveValue(tile_2);
 		return ERROR_BUILD_AIRPORT1;
 	}
 	if (!AIAirport.BuildAirport(tile_2, airport_type, AIStation.STATION_NEW)) {
 		AILog.Warning(AIError.GetLastErrorString());
-		AILog.Error("Although the testing told us we could build an airport, it still failed at tile " + WriteTile(tile_2) + ".");
+		AILog.Error("Although the testing told us we could build an airport, it still failed at tile " +
+		  WormStrings.WriteTile(tile_2) + ".");
 		this.RemoveAirport(tile_1);
 		this.towns_used.RemoveValue(tile_1);
 		this.towns_used.RemoveValue(tile_2);
@@ -1697,7 +1600,7 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 		/* debug off
 		AILog.Info("DEBUG tile list count: " + list.Count());
 		for (local t = list.Begin(); !list.IsEnd(); t = list.Next()) {
-			AILog.Info("DEBUG Town: " + AITown.GetName(town) + ", Tile: " + WriteTile(t) +
+			AILog.Info("DEBUG Town: " + AITown.GetName(town) + ", Tile: " + WormStrings.WriteTile(t) +
 				", Passenger Acceptance: " + list.GetValue(t));
 		} */
 
@@ -1720,7 +1623,7 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 		}
 
 		AILog.Info("Found a good spot for an airport in " + AITown.GetName(town) + " (id: "+ town + 
-			", tile " + WriteTile(tile) + ", acceptance: " + list.GetValue(tile) + ").");
+			", tile " + WormStrings.WriteTile(tile) + ", acceptance: " + list.GetValue(tile) + ").");
 
 		/* Mark the town as used, so we don't use it again */
 		this.towns_used.AddItem(town, tile);
@@ -1757,8 +1660,8 @@ function WormAI::SendToDepotForSelling(vehicle,sell_reason)
 			") to depot because of ";
 		switch(sell_reason) {
 			case VEH_OLD_AGE: {
-				info_text += "old age: " +  GetAgeString(AIVehicle.GetAge(vehicle)) + " / " + 
-					GetAgeString(AIVehicle.GetMaxAge(vehicle));
+				info_text += "old age: " +  WormStrings.GetAgeString(AIVehicle.GetAge(vehicle)) + " / " + 
+					WormStrings.GetAgeString(AIVehicle.GetMaxAge(vehicle));
 			} break;
 			case VEH_LOW_PROFIT: {
 				info_text += "low profits: " + AIVehicle.GetProfitLastYear(vehicle) + " / " + 
@@ -2227,7 +2130,7 @@ function WormAI::EvaluateAircraft() {
 					", yearly running costs: " + AIEngine.GetRunningCost(engine));
 				AILog.Info( "    Capacity: " + AIEngine.GetCapacity(engine) + ", Maximum speed: " + 
 					AIEngine.GetMaxSpeed(engine) + ", Maximum distance: " + AIEngine.GetMaximumOrderDistance(engine) +
-					", type: " + GetAircraftTypeAsText(engine));
+					", type: " + WormStrings.GetAircraftTypeAsText(engine));
 				AILog.Warning("    Aircraft usefulness factors d: " + distance_per_year + ", p: " + pass_per_year +
 					", pass cost factor: " + cost_per_pass);
 			}
@@ -2433,7 +2336,8 @@ function WormAI::Start()
 		foreach( veh, tile_1 in route_1) {
 			local tile_2 = route_2.GetValue(veh);
 			if (GetSetting("debug_show_lists") == 1) {
-				AILog.Info("Vehicle: " + veh + " tile1: " + WriteTile(tile_1) + " tile2: " + WriteTile(tile_2));
+				AILog.Info("Vehicle: " + veh + " tile1: " + WormStrings.WriteTile(tile_1) +
+				  " tile2: " + WormStrings.WriteTile(tile_2));
 				AILog.Info("Distance: " + AIMap.DistanceManhattan(tile_1, tile_2));
 			}
 			this.distance_of_route.rawset(veh, AIMap.DistanceManhattan(tile_1, tile_2));
