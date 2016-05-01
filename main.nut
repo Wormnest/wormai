@@ -46,6 +46,9 @@ RoadBuilder <- SuperLib.RoadBuilder;
 // Import List library
 import("AILib.List", "ExtendedList", AILIBLIST_VERSION);
 
+// Get our required classes.
+require("money.nut");
+
 
 /* Wormnest: define some constants for easier maintenance. */
 const MINIMUM_BALANCE_BUILD_AIRPORT = 100000;	///< Minimum bank balance to start building airports.
@@ -238,22 +241,6 @@ class WormAI extends AIController {
 	function DebugVehicleInfo(veh);
 	/// @}
 
-	/** @name Money related functions */
-    /// @{
-	/**
-	 * Check if we have enough money (via loan and on bank).
-	 * @param money The amount of money we need.
-	 * @return Boolean saying if we do or don't have enough money.
-	 */
-	function HasMoney(money);
-	/**
-	 * Get the amount of money requested, loan if needed.
-	 * @param money The amount of money we need.
-	 * @return Boolean saying if we got the needed money or not.
-	 */
-	function GetMoney(money);
-	/// @}
-	
 	/** @name  Airport handling functions */
     /// @{
 	/**
@@ -859,39 +846,6 @@ function WormAI::GetTownFromStationTile(st_tile) {
 }
 
 /**
- * Check if we have enough money (via loan and on bank).
- * @param money The amount of money we need.
- * @return Boolean saying if we do or don't have enough money.
- */
-function WormAI::HasMoney(money)
-{
-	if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) + (AICompany.GetMaxLoanAmount() - AICompany.GetLoanAmount()) >= money) return true;
-	return false;
-}
-
-/**
- * Get the amount of money requested, loan if needed.
- * @param money The amount of money we need.
- * @return Boolean saying if we got the needed money or not.
- */
-function WormAI::GetMoney(money)
-{
-	if (!this.HasMoney(money)) {
-		AILog.Info("We don't have enough money and we also can't loan enough for our needs (" + money + ").");
-		AILog.Info("Bank balance: " + AICompany.GetBankBalance(AICompany.COMPANY_SELF) + 
-			", max loan: " + AICompany.GetMaxLoanAmount() +
-			", current loan: " + AICompany.GetLoanAmount());
-		return false;
-	}
-	if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) > money) return true;
-
-	local loan = money - AICompany.GetBankBalance(AICompany.COMPANY_SELF) + AICompany.GetLoanInterval() + AICompany.GetLoanAmount();
-	loan = loan - loan % AICompany.GetLoanInterval();
-	AILog.Info("Need a loan to get " + money + ": " + loan);
-	return AICompany.SetLoanAmount(loan);
-}
-
-/**
  * Remove airport at specified tile.
  * If removing fails then give a warning.
  * @note Note that using Sleep(x) here and trying again doesn't work for some reason (removing still fails)
@@ -1370,7 +1324,7 @@ function WormAI::BuildAirportRoute()
 	}
 
 	/* Get enough money to work with */
-	if (!this.GetMoney(AIAirport.GetPrice(airport_type)*2 + AIRCRAFT_LOW_PRICE)) {
+	if (!WormMoney.GetMoney(AIAirport.GetPrice(airport_type)*2 + AIRCRAFT_LOW_PRICE)) {
 		// Can't get enough money
 		return ERROR_NOT_ENOUGH_MONEY;
 	}
@@ -2061,7 +2015,7 @@ function WormAI::ManageAirRoutes()
 	}
 
 	/* Don't try to add planes when we are short on cash */
-	if (!this.HasMoney(AIRCRAFT_LOW_PRICE)) return ERROR_NOT_ENOUGH_MONEY;
+	if (!WormMoney.HasMoney(AIRCRAFT_LOW_PRICE)) return ERROR_NOT_ENOUGH_MONEY;
 	else if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) <= this.route_1.Count()) {
 		// No sense building plane if we already have the max (or more because amount can be changed in game)
 		AILog.Info("We already have the maximum number of aircraft. No need to check if we should add more planes.");
@@ -2117,7 +2071,7 @@ function WormAI::ManageAirRoutes()
 		AILog.Info("Going to add a new aircraft for this route.");
 
 		/* Make sure we have enough money */
-		this.GetMoney(AIRCRAFT_LOW_PRICE);
+		WormMoney.GetMoney(AIRCRAFT_LOW_PRICE);
 
 		/* Build the aircraft. */
 		local ret = this.BuildAircraft(this.route_1.GetValue(v), this.route_2.GetValue(v), 0);
@@ -2129,7 +2083,7 @@ function WormAI::ManageAirRoutes()
 			(s2_waiting > AIRPORT_CARGO_WAITING_HIGH_LIMIT-AIRPORT2_WAITING_DIFF)) {
 			AILog.Info(" Building a second aircraft since waiting passengers is very high.");
 			/* Make sure we have enough money */
-			this.GetMoney(AIRCRAFT_LOW_PRICE);
+			WormMoney.GetMoney(AIRCRAFT_LOW_PRICE);
 			/* Build the aircraft. */
 			ret = this.BuildAircraft(this.route_1.GetValue(v), this.route_2.GetValue(v), 0);
 		}
@@ -2571,7 +2525,7 @@ function WormAI::Start()
 
 			/* Once in a while, with enough money, try to build something */
 			if (((cur_ticker - old_ticker > build_delay_factor * this.delay_build_airport_route) || old_ticker == 0) 
-				&& this.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
+				&& WormMoney.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
 				local ret = this.BuildAirportRoute();
 				if ((ret == ERROR_FIND_AIRPORT1) || (ret == ERROR_MAX_AIRPORTS) ||
 					(ret == ERROR_MAX_AIRCRAFT) && old_ticker != 0) {
