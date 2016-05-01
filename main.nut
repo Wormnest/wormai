@@ -175,6 +175,14 @@ class WormAI extends AIController {
 
     /// @{
 	/** @name Utility functions */
+	/**
+	 * Add a square area to an AITileList containing tiles that are within radius
+	 * tiles from the center tile, taking the edges of the map into account.
+	 * @note This function was taken from Rondje. Name was changed from SafeAddRectangle to SafeAddSquare.
+	 * @param list The AITileList in which the valid tiles will be returned.
+	 * @param tile The center tile.
+	 * @param radius The radius of tiles.
+	 */  
 	function SafeAddSquare(list, tile, radius);
 	/**
 	 * A safe implementation of AITileList.AddRectangle. Only valid tiles are
