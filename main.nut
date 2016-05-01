@@ -49,6 +49,8 @@ import("AILib.List", "ExtendedList", AILIBLIST_VERSION);
 // Get our required classes.
 require("money.nut");
 require("strings.nut");
+require("tiles.nut");
+require("airmanager.nut");
 
 
 /* Wormnest: define some constants for easier maintenance. */
@@ -173,30 +175,6 @@ class WormAI extends AIController {
 	function Load(version, data);
 	/// @}
 
-    /// @{
-	/** @name Utility functions */
-	/**
-	 * Add a square area to an AITileList containing tiles that are within radius
-	 * tiles from the center tile, taking the edges of the map into account.
-	 * @note This function was taken from Rondje. Name was changed from SafeAddRectangle to SafeAddSquare.
-	 * @param list The AITileList in which the valid tiles will be returned.
-	 * @param tile The center tile.
-	 * @param radius The radius of tiles.
-	 */  
-	function SafeAddSquare(list, tile, radius);
-	/**
-	 * A safe implementation of AITileList.AddRectangle. Only valid tiles are
-	 *  added to the tile list. Taken from AdmiralAI.
-	 * @param tile_list The AITileList to add the tiles to.
-	 * @param center_tile The center of the rectangle.
-	 * @param x_min The amount of tiles to the north-east, relative to center_tile.
-	 * @param y_min The amount of tiles to the north-west, relative to center_tile.
-	 * @param x_plus The amount of tiles to the south-west, relative to center_tile.
-	 * @param y_plus The amount of tiles to the south-east, relative to center_tile.
-	 */
-	function SafeAddRectangle(tile_list, center_tile, x_min, y_min, x_plus, y_plus);
- 	/// @}
-	
     /// @{
 	/** @name Debugging output functions */
 	/** List of towns used and stations near those towns. */
@@ -1503,44 +1481,6 @@ function WormAI::BuildAircraft(tile_1, tile_2, start_tile)
 }
 
 /**
- * Add a square area to an AITileList containing tiles that are within radius
- * tiles from the center tile, taking the edges of the map into account.
- * @note This function was taken from Rondje. Name was changed from SafeAddRectangle to SafeAddSquare.
- * @param list The AITileList in which the valid tiles will be returned.
- * @param tile The center tile.
- * @param radius The radius of tiles.
- */  
-function WormAI::SafeAddSquare(list, tile, radius)
-{
-	local x1 = max(0, AIMap.GetTileX(tile) - radius);
-	local y1 = max(0, AIMap.GetTileY(tile) - radius);
-	
-	local x2 = min(AIMap.GetMapSizeX() - 2, AIMap.GetTileX(tile) + radius);
-	local y2 = min(AIMap.GetMapSizeY() - 2, AIMap.GetTileY(tile) + radius);
-	
-	list.AddRectangle(AIMap.GetTileIndex(x1, y1),AIMap.GetTileIndex(x2, y2)); 
-}
-
-/**
- * A safe implementation of AITileList.AddRectangle. Only valid tiles are
- *  added to the tile list. Taken from AdmiralAI.
- * @param tile_list The AITileList to add the tiles to.
- * @param center_tile The center of the rectangle.
- * @param x_min The amount of tiles to the north-east, relative to center_tile.
- * @param y_min The amount of tiles to the north-west, relative to center_tile.
- * @param x_plus The amount of tiles to the south-west, relative to center_tile.
- * @param y_plus The amount of tiles to the south-east, relative to center_tile.
- */
-function WormAI::SafeAddRectangle(tile_list, center_tile, x_min, y_min, x_plus, y_plus)
-{
-	local tile_x = AIMap.GetTileX(center_tile);
-	local tile_y = AIMap.GetTileY(center_tile);
-	local tile_from = AIMap.GetTileIndex(max(1, tile_x - x_min), max(1, tile_y - y_min));
-	local tile_to = AIMap.GetTileIndex(min(AIMap.GetMapSizeX() - 2, tile_x + x_plus), min(AIMap.GetMapSizeY() - 2, tile_y + y_plus));
-	tile_list.AddRectangle(tile_from, tile_to);
-} 
-
-/**
  * Find a suitable spot for an airport, walking all towns hoping to find one.
  * When a town is used, it is marked as such and not re-used.
  * @param airport_type The type of airport we want to build.
@@ -1584,7 +1524,7 @@ function WormAI::FindSuitableAirportSpot(airport_type, center_tile)
 		/* Create a 30x30 grid around the core of the town and see if we can find a spot for an airport .*/
 		local list = AITileList();
 		/* Safely add a square rectangle taking care of border tiles. */
-		SafeAddSquare(list, tile, 15);
+		WormTiles.SafeAddSquare(list, tile, 15);
 		/* Remove all tiles where an airport can't be built and finally keep the best value. */
 		list.Valuate(AITile.IsBuildableRectangle, airport_x, airport_y);
 		list.KeepValue(1);
@@ -2183,7 +2123,7 @@ function WormAI::BuildHQ()
 				local airport_height = AIAirport.GetAirportHeight(airport_type);
 				local tiles = AITileList();
 				/* Get the tiles around this station. */
-				this.SafeAddRectangle(tiles, AIStation.GetLocation(st_id), 4, 4, 3 + airport_width, 3 + airport_height);
+				WormTiles.SafeAddRectangle(tiles, AIStation.GetLocation(st_id), 4, 4, 3 + airport_width, 3 + airport_height);
 				tiles.Valuate(AIMap.DistanceManhattan, AIStation.GetLocation(st_id));
 				tiles.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
 				/* Try to build our hq on one of these tiles. */
