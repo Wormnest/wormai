@@ -28,21 +28,21 @@ class WormStrings
 	 * @param tile The tile to convert.
 	 * @return The hexadecimal string.
 	 */
-	function WriteTile(tile);
+	static function WriteTile(tile);
 
 	/**
 	 * Rough year/month age estimation string where year = 365 days and month = 30 days.
 	 * @param AgeInDays The age in days.
 	 * @return Text string saying how many years and months.
 	 */
-	function GetAgeString(AgeInDays);
+	static function GetAgeString(AgeInDays);
 
 	/**
 	 * Returns aircraft type as text.
 	 * @param airplane_id The id of the airplane
 	 * @return The airplane type as a text string
 	 */
-	function GetAircraftTypeAsText(airplane_id);
+	static function GetAircraftTypeAsText(airplane_id);
 
 }
 
