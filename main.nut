@@ -83,6 +83,9 @@ class WormAI extends AIController {
 
 	ai_speed_factor = 1;						///< speed factor for our ai actions (1=fast..3=slow)
 	delay_build_airport_route = 0;
+	
+	use_air = false;							///< Whether we can use aircraft or not
+	use_trains = false;							///< Whether we can use trains or not
 
 	loaded_from_save = false;
 	aircraft_disabled_shown = 0;		///< Has the aircraft disabled in game settings message been shown (1) or not (0).
@@ -296,14 +299,18 @@ function WormAI::Start()
 	/* Let's go on forever */
 	while (true) {
 		cur_ticker = GetTick();
-		/* Check if we can build aircraft. If yes then handle some tasks. */
-		if (CanBuildAircraft()) {
-			/* Task scheduling. */
-			new_year = AIDate.GetYear(AIDate.GetCurrentDate());
-			if (cur_year != new_year) { // Use != instead of < since user can cheat and turn back time
-				// Handle once a year tasks here.
-				AILog.Info(Helper.GetCurrentDateString() + " --- Yearly Tasks ---");
-				cur_year = new_year;
+		/* Check if we can build aircraft or trains. If yes then handle some tasks. */
+		/* Since these values can be changed in game we need to re-check them regularly. */
+		this.use_air = CanBuildAircraft();
+		this.use_trains = CanBuildTrains();
+		
+		/* Task scheduling. */
+		new_year = AIDate.GetYear(AIDate.GetCurrentDate());
+		if (cur_year != new_year) { // Use != instead of < since user can cheat and turn back time
+			// Handle once a year tasks here.
+			AILog.Info(Helper.GetCurrentDateString() + " --- Yearly Tasks ---");
+			cur_year = new_year;
+			if (this.use_air) {
 				/* Evaluate best aircraft: Needs to be done every year to be sure it's done 
 				   the first time before we try to build a route. */
 				this.air_manager.EvaluateAircraft();
@@ -315,49 +322,55 @@ function WormAI::Start()
 						this.air_manager.BuildStatues();
 					}
 				}
-				
-				/* Some things we do more or less often depending on this.ai_speed_factor setting */
-				if (cur_year % this.ai_speed_factor == 0) {
-					/* Nothing for now. */
-					}
-				
-				/* This seems like a good place to show some debugging info in case we turned
-				   that setting on. Always once a year. */
-				if (GetSetting("debug_show_lists") == 1) {
-					/* Debugging info */
-					this.air_manager.DebugListTownsUsed();
-					//DebugListRouteInfo();
-					this.air_manager.DebugListRoutes();
-					//DebugListRoute(route_1);
-					//DebugListRoute(route_2);
-				}
-				
-				AILog.Info(Helper.GetCurrentDateString() + " --- Yearly Tasks Done ---");
 			}
-			new_month = AIDate.GetMonth(AIDate.GetCurrentDate());
-			if (cur_month != new_month) { // Don't use < here since we need to handle December -> January
-				// Handle once a month tasks here.
-				AILog.Info(Helper.GetCurrentDateString() + " --- Monthly Tasks ---");
-				cur_month = new_month;
+			
+			/* Some things we do more or less often depending on this.ai_speed_factor setting */
+			if (cur_year % this.ai_speed_factor == 0) {
+				/* Nothing for now. */
+				}
+			
+			/* This seems like a good place to show some debugging info in case we turned
+			   that setting on. Always once a year. */
+			if (GetSetting("debug_show_lists") == 1) {
+				/* Debugging info */
+				this.air_manager.DebugListTownsUsed();
+				//DebugListRouteInfo();
+				this.air_manager.DebugListRoutes();
+				//DebugListRoute(route_1);
+				//DebugListRoute(route_2);
+			}
+			
+			AILog.Info(Helper.GetCurrentDateString() + " --- Yearly Tasks Done ---");
+		}
+		new_month = AIDate.GetMonth(AIDate.GetCurrentDate());
+		if (cur_month != new_month) { // Don't use < here since we need to handle December -> January
+			// Handle once a month tasks here.
+			AILog.Info(Helper.GetCurrentDateString() + " --- Monthly Tasks ---");
+			cur_month = new_month;
 
-				/* Some things we do more or less often depending on this.ai_speed_factor setting */
-				if (cur_month % this.ai_speed_factor == 0) {
+			/* Some things we do more or less often depending on this.ai_speed_factor setting */
+			if (cur_month % this.ai_speed_factor == 0) {
+				if (this.use_air) {
 					/* Manage the routes once in a while */
 					this.air_manager.ManageAirRoutes();
+					this.air_manager.CheckForAirportsNeedingToBeUpgraded();
 				}
+			}
 
-				this.air_manager.CheckForAirportsNeedingToBeUpgraded();
+			if (this.use_air) {
 				this.air_manager.ManageVehicleRenewal();
 				/* TEST ONCE A MONTH? SELL VEHICLES IN DEPOT */
 				this.air_manager.SellVehiclesInDepot();
-				
-				/* Try to get rid of our loan once in a while */
-				AICompany.SetLoanAmount(0);
-				
-				AILog.Info(Helper.GetCurrentDateString() + " --- Monthly Tasks Done ---");
 			}
+			
+			/* Try to get rid of our loan once in a while */
+			AICompany.SetLoanAmount(0);
+			
+			AILog.Info(Helper.GetCurrentDateString() + " --- Monthly Tasks Done ---");
+		}
 
-			/* Once in a while try to build something */
+		/* Once in a while try to build something */
+		if (this.use_air) {
 			if ((cur_ticker - old_ticker > build_delay_factor * this.delay_build_airport_route) || old_ticker == 0) {
 				local ret = this.air_manager.BuildAirportRoute();
 				if ((ret == ERROR_FIND_AIRPORT1) || (ret == ERROR_MAX_AIRPORTS) ||
