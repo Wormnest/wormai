@@ -52,41 +52,9 @@ require("strings.nut");
 require("tiles.nut");
 require("airmanager.nut");
 
-
-/* Wormnest: define some constants for easier maintenance. */
-const MINIMUM_BALANCE_BUILD_AIRPORT = 100000;	///< Minimum bank balance to start building airports.
-const MINIMUM_BALANCE_AIRCRAFT = 25000;			///< Minimum bank balance to allow buying a new aircraft.
-const MINIMUM_BALANCE_TWO_AIRCRAFT = 5000000;	///< Minimum bank balance to allow buying 2 aircraft at once.
-const MINIMUM_BALANCE_BUILD_STATUE =  750000;	///< Minimum bank balance to allow building of statues.
-
-const AIRCRAFT_LOW_PRICE_CUT = 500000;			///< Bank balance below which we will try to buy a low price aircraft.
-const AIRCRAFT_MEDIUM_PRICE_CUT = 2000000;		///< Bank balance below which we will try to buy a medium price aircraft.
-const AIRCRAFT_LOW_PRICE = 50000;				///< Maximum price of a low price aircraft.
-const AIRCRAFT_MEDIUM_PRICE = 250000;			///< Maximum price of a medium price aircraft.
-const AIRCRAFT_HIGH_PRICE = 1500000;			///< Maximum price of a high price aircraft.
-
 /* Default delays */
 const SLEEPING_TIME = 100;						///< Default time to sleep between loops of our AI (NB: should be a multiple of 100).
 const DEFAULT_DELAY_BUILD_AIRPORT = 500; 		///< Default delay before building a new airport route.
-
-const STARTING_ACCEPTANCE_LIMIT = 150;			///< Starting limit in acceptance for finding suitable airport tile.
-const BAD_YEARLY_PROFIT = 10000;				///< Yearly profit limit below which profit is deemed bad.
-const AIRPORT_LIMIT_FACTOR = 4;					///< We limit airports to max aircraft / FACTOR * 2 (2 needed per route).
-const AIRPORT_CARGO_WAITING_LOW_LIMIT = 250;	///< Limit of waiting cargo (passengers) on airport above which we add an aircraft.
-const AIRPORT_CARGO_WAITING_HIGH_LIMIT = 1250;	///< Limit of waiting cargo (passengers) on airport above which we add 2 aircraft.
-const AIRPORT2_WAITING_DIFF = 150;				///< Cargo waiting diff (less) value at the other station to allow extra aircraft.
-const VEHICLE_AGE_LEFT_LIMIT = 150;				///< Number of days limit before maximum age for vehicle to get sent to depot for selling.
-const MAX_STATUES_BUILD_COUNT = 3;				///< Maximum number of statues we will build at one time.
-
-/// @{
-/**
- * @name Reasons for selling vehicles
- * @todo Maybe convert to enum.
- */
-const VEH_OLD_AGE			= 0;				///< Vehicle is sold because of its old age.
-const VEH_LOW_PROFIT		= 1;				///< Vehicle is sold because it has low profits.
-const VEH_STATION_REMOVAL	= 2;				///< Vehicle is sold because one of its stations got removed and could not be replaced.
-/// @}
 
 /// @{
 /** @name ERROR CODE constants */
