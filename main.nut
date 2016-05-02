@@ -87,6 +87,8 @@ class WormAI extends AIController {
 	loaded_from_save = false;
 	aircraft_disabled_shown = 0;		///< Has the aircraft disabled in game settings message been shown (1) or not (0).
 	aircraft_max0_shown = 0;			///< Has the max aircraft is 0 in game settings message been shown.
+	trains_disabled_shown = 0;			///< Has the trains disabled in game settings message been shown (1) or not (0).
+	trains_max0_shown = 0;				///< Has the max trains is 0 in game settings message been shown.
 
 	/** Create an instance of WormAI. */
 	constructor()
@@ -137,6 +139,11 @@ class WormAI extends AIController {
 	 * @return true if we can build an aircraft, otherwise false.
 	 */
 	function CanBuildAircraft();
+	/**
+	 * Checks if we can build trains and if not outputs a string with the reason.
+	 * @return true if we can build trains, otherwise false.
+	 */
+	function CanBuildTrains();
 	/// @}
 
 };
@@ -169,6 +176,7 @@ function WormAI::Welcome()
 	AILog.Info("Welcome to WormAI.");
 	AILog.Info("These are our current AI settings:");
 	AILog.Info("- Use planes: " + GetSetting("use_planes"));
+	AILog.Info("- Use trains: " + GetSetting("use_trains"));
 	AILog.Info("- AI speed: " + GetSetting("ai_speed"));
 	AILog.Info("- Minimum Town Size: " + GetSetting("min_town_size"));
 	AILog.Info("- Minimum Airport Distance: " + GetSetting("min_airport_distance"));
@@ -185,20 +193,57 @@ function WormAI::CanBuildAircraft()
 	/* Need to check if we can build aircraft and how many. Since this can change we do it inside the loop. */
 	if (AIGameSettings.IsDisabledVehicleType(AIVehicle.VT_AIR)) {
 		if (this.aircraft_disabled_shown == 0) {
-			AILog.Warning("Using aircraft is disabled in your game settings. Since this AI currently only uses aircraft it will not build anything until you change this setting.")
+			AILog.Warning("Using aircraft is disabled in your game settings.")
+			AILog.Warning("No air routes will be built until you change this setting.")
 			this.aircraft_disabled_shown = 1;
 		}
 	}
 	else if (Vehicle.IsVehicleTypeDisabledByAISettings(AIVehicle.VT_AIR)) {
 		if (this.aircraft_disabled_shown == 0) {
-			AILog.Warning("Using aircraft is disabled in this AI's settings. Since this AI currently only uses aircraft it will not build anything until you change this setting.")
+			AILog.Warning("Using aircraft is disabled in this AI's settings.")
+			AILog.Warning("No air routes will be built until you change this setting.")
 			this.aircraft_disabled_shown = 1;
 		}
 	}
 	else if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) == 0) {
 		if (this.aircraft_max0_shown == 0) {
-			AILog.Warning("Amount of allowed aircraft for AI is set to 0 in your game settings. This means we can't build any aircraft which is currently our only option.")
+			AILog.Warning("Amount of allowed aircraft for AI is set to 0 in your game settings.")
+			AILog.Warning("No air routes will be built until you change this setting.")
 			this.aircraft_max0_shown = 1;
+		}
+	}
+	else {
+		return true;
+	}
+	return false;
+}
+
+/**
+ * Checks if we can build trains and if not outputs a string with the reason.
+ * @return true if we can build trains, otherwise false.
+ */
+function CanBuildTrains()
+{
+	/* Need to check if we can build trains and how many. Since this can change we do it inside the loop. */
+	if (AIGameSettings.IsDisabledVehicleType(AIVehicle.VT_RAIL)) {
+		if (this.aircraft_disabled_shown == 0) {
+			AILog.Warning("Using trains is disabled in your game settings.")
+			AILog.Warning("No train routes will be built until you change this setting.")
+			this.trains_disabled_shown = 1;
+		}
+	}
+	else if (Vehicle.IsVehicleTypeDisabledByAISettings(AIVehicle.VT_RAIL)) {
+		if (this.aircraft_disabled_shown == 0) {
+			AILog.Warning("Using trains is disabled in this AI's settings.")
+			AILog.Warning("No train routes will be built until you change this setting.")
+			this.trains_disabled_shown = 1;
+		}
+	}
+	else if (Vehicle.GetVehicleLimit(AIVehicle.VT_RAIL) == 0) {
+		if (this.aircraft_max0_shown == 0) {
+			AILog.Warning("Amount of allowed trains is set to 0 in your game settings.")
+			AILog.Warning("No train routes will be built until you change this setting.")
+			this.trains_max0_shown = 1;
 		}
 	}
 	else {
