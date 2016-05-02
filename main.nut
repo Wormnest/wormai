@@ -334,7 +334,7 @@ function WormAI::Start()
 				}
 
 				this.air_manager.CheckForAirportsNeedingToBeUpgraded();
-				this.air_manager.ManageVehicleRenewal(VEHICLE_AGE_LEFT_LIMIT);
+				this.air_manager.ManageVehicleRenewal();
 				/* TEST ONCE A MONTH? SELL VEHICLES IN DEPOT */
 				this.air_manager.SellVehiclesInDepot();
 				

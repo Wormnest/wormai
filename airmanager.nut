@@ -236,9 +236,8 @@ class WormAirManager
 	/**
 	 * Check all vehicles for being old or needing upgrading to a newer type.
 	 * It will send all vehicles that are non optimal to depot for selling.
-	 * @param age_limit The days left age limit below which we send to depot for selling.
 	 */
-	function ManageVehicleRenewal(age_limit);
+	function ManageVehicleRenewal();
 	/**
 	 * Check for airports that don't have any vehicles anymore and delete them.
 	 */
@@ -1595,15 +1594,14 @@ function WormAirManager::SellVehiclesInDepot()
 /**
  * Check all vehicles for being old or needing upgrading to a newer type.
  * It will send all vehicles that are non optimal to depot for selling.
- * @param age_limit The days left age limit below which we send to depot for selling.
  */
-function WormAirManager::ManageVehicleRenewal(age_limit)
+function WormAirManager::ManageVehicleRenewal()
 {
 	AILog.Info("- Check for vehicles that are old.")
 	local list = AIVehicleList();
 	list.Valuate(AIVehicle.GetAgeLeft);
 	/* Keep vehicles whose age is below the limit we set. */
-	list.KeepBelowValue(age_limit);
+	list.KeepBelowValue(VEHICLE_AGE_LEFT_LIMIT);
 	/* Send them all to depot to be sold. */
 	for (local veh = list.Begin(); !list.IsEnd(); veh = list.Next()) {
 		SendToDepotForSelling(veh, VEH_OLD_AGE);
