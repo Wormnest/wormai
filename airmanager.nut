@@ -1042,6 +1042,9 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
  */
 function WormAirManager::BuildAirportRoute()
 {
+	if (!WormMoney.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT))
+		return ERROR_NOT_ENOUGH_MONEY;
+	
 	// No sense building airports if we already have the max (or more because amount can be changed in game)
 	local max_vehicles = Vehicle.GetVehicleLimit(AIVehicle.VT_AIR);
 	if (max_vehicles <= this.route_1.Count()) {
