@@ -344,9 +344,8 @@ function WormAI::Start()
 				AILog.Info(Helper.GetCurrentDateString() + " --- Monthly Tasks Done ---");
 			}
 
-			/* Once in a while, with enough money, try to build something */
-			if (((cur_ticker - old_ticker > build_delay_factor * this.delay_build_airport_route) || old_ticker == 0) 
-				&& WormMoney.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT)) {
+			/* Once in a while try to build something */
+			if ((cur_ticker - old_ticker > build_delay_factor * this.delay_build_airport_route) || old_ticker == 0) {
 				local ret = this.air_manager.BuildAirportRoute();
 				if ((ret == ERROR_FIND_AIRPORT1) || (ret == ERROR_MAX_AIRPORTS) ||
 					(ret == ERROR_MAX_AIRCRAFT) && old_ticker != 0) {
