@@ -3,7 +3,8 @@ WormAI Changelog
 
 Version 5, UNRELEASED
 ---------------------
-+
++ Change: Take inflation into account.
++ Change: Refactor code to make room for train handling.
 
 Version 4, 2016-04-30
 ---------------------

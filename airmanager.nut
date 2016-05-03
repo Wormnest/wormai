@@ -1077,7 +1077,7 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
  */
 function WormAirManager::BuildAirportRoute()
 {
-	if (!WormMoney.HasMoney(MINIMUM_BALANCE_BUILD_AIRPORT))
+	if (!WormMoney.HasMoney(WormMoney.InflationCorrection(MINIMUM_BALANCE_BUILD_AIRPORT)))
 		return ERROR_NOT_ENOUGH_MONEY;
 	
 	// No sense building airports if we already have the max (or more because amount can be changed in game)
@@ -1115,7 +1115,7 @@ function WormAirManager::BuildAirportRoute()
 	}
 
 	/* Get enough money to work with. Since building on rough terrain costs more we add in overhead costs. */
-	if (!WormMoney.GetMoney(AIAirport.GetPrice(airport_type)*2 + BUILD_OVERHEAD + AIRCRAFT_LOW_PRICE)) {
+	if (!WormMoney.GetMoney(AIAirport.GetPrice(airport_type)*2 + WormMoney.InflationCorrection(BUILD_OVERHEAD + AIRCRAFT_LOW_PRICE))) {
 		// Can't get enough money
 		return ERROR_NOT_ENOUGH_MONEY;
 	}
@@ -1188,7 +1188,8 @@ function WormAirManager::BuildAirportRoute()
 	}
 	else {
 		local balance = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
-		if ((balance >= MINIMUM_BALANCE_TWO_AIRCRAFT) && (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) > this.route_1.Count())) {
+		if ((balance >= WormMoney.InflationCorrection(MINIMUM_BALANCE_TWO_AIRCRAFT))
+			&& (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) > this.route_1.Count())) {
 			/* Build a second aircraft and start it at the other airport. */
 			ret = this.BuildAircraft(tile_1, tile_2, tile_2);
 		}
@@ -1260,7 +1261,7 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 	/*** @todo Maybe try to get more loan here? */
 	
 	/* Balance below a certain minimum? Wait until we buy more planes. */
-	if (balance < MINIMUM_BALANCE_AIRCRAFT) {
+	if (balance < WormMoney.InflationCorrection(MINIMUM_BALANCE_AIRCRAFT)) {
 		AILog.Warning("We are low on money (" + balance + "). We are not going to buy an aircraft right now.");
 		return ERROR_NOT_ENOUGH_MONEY;
 	}
@@ -1283,7 +1284,9 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 	}
 	
 	engine_list.Valuate(AIEngine.GetPrice);
-	engine_list.KeepBelowValue(balance < AIRCRAFT_LOW_PRICE_CUT ? AIRCRAFT_LOW_PRICE : (balance < AIRCRAFT_MEDIUM_PRICE_CUT ? AIRCRAFT_MEDIUM_PRICE : AIRCRAFT_HIGH_PRICE));
+	engine_list.KeepBelowValue(balance < WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE_CUT) ?
+		WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE) : (balance < WormMoney.InflationCorrection(AIRCRAFT_MEDIUM_PRICE_CUT) ?
+		WormMoney.InflationCorrection(AIRCRAFT_MEDIUM_PRICE) : WormMoney.InflationCorrection(AIRCRAFT_HIGH_PRICE)));
 
 	engine_list.Valuate(AIEngine.GetCargoType);
 	engine_list.KeepValue(this.passenger_cargo_id);
@@ -1723,7 +1726,7 @@ function WormAirManager::ManageAirRoutes()
 		local list_count = 0;
 		local list_copy = AIList();
 		// Set default low yearly profit
-		low_profit_limit = BAD_YEARLY_PROFIT;
+		low_profit_limit = WormMoney.InflationCorrection(BAD_YEARLY_PROFIT);
 		list_count = list.Count();
 		// We need a copy of list before cutting off low_profit
 		list_copy.AddList(list);
@@ -1771,7 +1774,7 @@ function WormAirManager::ManageAirRoutes()
 	}
 
 	/* Don't try to add planes when we are short on cash */
-	if (!WormMoney.HasMoney(AIRCRAFT_LOW_PRICE)) return ERROR_NOT_ENOUGH_MONEY;
+	if (!WormMoney.HasMoney(WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE))) return ERROR_NOT_ENOUGH_MONEY;
 	else if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) <= this.route_1.Count()) {
 		// No sense building plane if we already have the max (or more because amount can be changed in game)
 		AILog.Info("We already have the maximum number of aircraft. No need to check if we should add more planes.");
@@ -1827,7 +1830,7 @@ function WormAirManager::ManageAirRoutes()
 		AILog.Info("Going to add a new aircraft for this route.");
 
 		/* Make sure we have enough money */
-		WormMoney.GetMoney(AIRCRAFT_LOW_PRICE);
+		WormMoney.GetMoney(WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE));
 
 		/* Build the aircraft. */
 		local ret = this.BuildAircraft(this.route_1.GetValue(v), this.route_2.GetValue(v), 0);
@@ -1839,7 +1842,7 @@ function WormAirManager::ManageAirRoutes()
 			(s2_waiting > AIRPORT_CARGO_WAITING_HIGH_LIMIT-AIRPORT2_WAITING_DIFF)) {
 			AILog.Info(" Building a second aircraft since waiting passengers is very high.");
 			/* Make sure we have enough money */
-			WormMoney.GetMoney(AIRCRAFT_LOW_PRICE);
+			WormMoney.GetMoney(WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE));
 			/* Build the aircraft. */
 			ret = this.BuildAircraft(this.route_1.GetValue(v), this.route_2.GetValue(v), 0);
 		}
@@ -2015,7 +2018,7 @@ function WormAirManager::BuildHQ()
 	if (AICompany.GetCompanyHQ(AICompany.COMPANY_SELF) != AIMap.TILE_INVALID) return;
 	
 	/* Check first if we have a minimum amount of money. */
-	if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < 50000) return;
+	if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < WormMoney.InflationCorrection(50000)) return;
 
 	AILog.Info("Trying to find a spot to build our headquarters.");
 
@@ -2058,14 +2061,14 @@ function WormAirManager::BuildStatues()
 	if (AICompany.GetLoanAmount() == 0) {
 		local build_max = MAX_STATUES_BUILD_COUNT;
 		/* In case we are wealthy increase the max amount to build. */
-		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) > 5*MINIMUM_BALANCE_BUILD_STATUE) {
+		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) > 5*WormMoney.InflationCorrection(MINIMUM_BALANCE_BUILD_STATUE)) {
 			build_max *= 4;
 		}
 		for (local t = towns_used.Begin(); !towns_used.IsEnd(); t = towns_used.Next()) {
 			/* Ignore towns that already have a statue. */
 			if (AITown.HasStatue(t)) continue;
 			/* Only build a statue if we have a reasonable amount of money available. */
-			if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < MINIMUM_BALANCE_BUILD_STATUE) return;
+			if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < WormMoney.InflationCorrection(MINIMUM_BALANCE_BUILD_STATUE)) return;
 			if (AITown.PerformTownAction(t, AITown.TOWN_ACTION_BUILD_STATUE)) {
 				AILog.Info("We built a statue in " + AITown.GetName(t) + ".");
 				build_count += 1;
