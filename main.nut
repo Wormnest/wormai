@@ -51,6 +51,8 @@ require("money.nut");
 require("strings.nut");
 require("tiles.nut");
 require("airmanager.nut");
+require("railmanager.nut");
+require("railbuilder.nut");
 
 /* Default delays */
 const SLEEPING_TIME = 100;						///< Default time to sleep between loops of our AI (NB: should be a multiple of 100).
@@ -80,6 +82,7 @@ class WormAI extends AIController {
 	/* Declare the variables here. */
 	name = null;								///< The name that we will give our AI
 	air_manager = null;							///< The Air Manager class
+	rail_manager = null;						///< The Rail Manager class
 
 	ai_speed_factor = 1;						///< speed factor for our ai actions (1=fast..3=slow)
 	delay_build_airport_route = 0;
@@ -98,8 +101,9 @@ class WormAI extends AIController {
 	{
 		/* Initialize the class variables here (or later when possible). */
 		this.loaded_from_save = false;
-		/* Instantiate our AirManager. */
+		/* Instantiate our Air and Rail Managers. */
 		this.air_manager = WormAirManager();
+		this.rail_manager = WormRailManager();
 		
 		this.aircraft_disabled_shown = 0;
 		this.aircraft_max0_shown = 0;
@@ -303,8 +307,9 @@ function WormAI::Start()
 		cur_ticker = GetTick();
 		/* Check if we can build aircraft or trains. If yes then handle some tasks. */
 		/* Since these values can be changed in game we need to re-check them regularly. */
-		this.use_air = CanBuildAircraft();
-		this.use_trains = CanBuildTrains();
+		this.use_air = this.CanBuildAircraft();
+		this.use_trains = this.CanBuildTrains();
+		if (this.use_trains) this.rail_manager.UpdateRailType();
 		
 		/* Task scheduling. */
 		new_year = AIDate.GetYear(AIDate.GetCurrentDate());
