@@ -16,6 +16,7 @@ const MINIMUM_BALANCE_BUILD_AIRPORT = 100000;	///< Minimum bank balance to start
 const MINIMUM_BALANCE_AIRCRAFT = 25000;			///< Minimum bank balance to allow buying a new aircraft.
 const MINIMUM_BALANCE_TWO_AIRCRAFT = 5000000;	///< Minimum bank balance to allow buying 2 aircraft at once.
 const MINIMUM_BALANCE_BUILD_STATUE =  750000;	///< Minimum bank balance to allow building of statues.
+const BUILD_OVERHEAD = 20000;					///< Add a little extra for building (certain terrain costs more to build on).
 
 const AIRCRAFT_LOW_PRICE_CUT = 500000;			///< Bank balance below which we will try to buy a low price aircraft.
 const AIRCRAFT_MEDIUM_PRICE_CUT = 2000000;		///< Bank balance below which we will try to buy a medium price aircraft.
@@ -1113,8 +1114,8 @@ function WormAirManager::BuildAirportRoute()
 		return ERROR_NO_SUITABLE_AIRPORT;
 	}
 
-	/* Get enough money to work with */
-	if (!WormMoney.GetMoney(AIAirport.GetPrice(airport_type)*2 + AIRCRAFT_LOW_PRICE)) {
+	/* Get enough money to work with. Since building on rough terrain costs more we add in overhead costs. */
+	if (!WormMoney.GetMoney(AIAirport.GetPrice(airport_type)*2 + BUILD_OVERHEAD + AIRCRAFT_LOW_PRICE)) {
 		// Can't get enough money
 		return ERROR_NOT_ENOUGH_MONEY;
 	}
@@ -1255,6 +1256,8 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 
 	/* When bank balance < AIRCRAFT_LOW_PRICE_CUT, buy cheaper planes */
 	local balance = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
+	
+	/*** @todo Maybe try to get more loan here? */
 	
 	/* Balance below a certain minimum? Wait until we buy more planes. */
 	if (balance < MINIMUM_BALANCE_AIRCRAFT) {
