@@ -103,6 +103,8 @@ class WormAI extends AIController {
 		
 		this.aircraft_disabled_shown = 0;
 		this.aircraft_max0_shown = 0;
+		this.trains_disabled_shown = 0;
+		this.trains_max0_shown = 0;
 		// Delays: we don't set them here but in start because we need to check the selected
 		// speed set in game settings
 
@@ -225,25 +227,25 @@ function WormAI::CanBuildAircraft()
  * Checks if we can build trains and if not outputs a string with the reason.
  * @return true if we can build trains, otherwise false.
  */
-function CanBuildTrains()
+function WormAI::CanBuildTrains()
 {
 	/* Need to check if we can build trains and how many. Since this can change we do it inside the loop. */
 	if (AIGameSettings.IsDisabledVehicleType(AIVehicle.VT_RAIL)) {
-		if (this.aircraft_disabled_shown == 0) {
+		if (this.trains_disabled_shown == 0) {
 			AILog.Warning("Using trains is disabled in your game settings.")
 			AILog.Warning("No train routes will be built until you change this setting.")
 			this.trains_disabled_shown = 1;
 		}
 	}
 	else if (Vehicle.IsVehicleTypeDisabledByAISettings(AIVehicle.VT_RAIL)) {
-		if (this.aircraft_disabled_shown == 0) {
+		if (this.trains_disabled_shown == 0) {
 			AILog.Warning("Using trains is disabled in this AI's settings.")
 			AILog.Warning("No train routes will be built until you change this setting.")
 			this.trains_disabled_shown = 1;
 		}
 	}
 	else if (Vehicle.GetVehicleLimit(AIVehicle.VT_RAIL) == 0) {
-		if (this.aircraft_max0_shown == 0) {
+		if (this.trains_max0_shown == 0) {
 			AILog.Warning("Amount of allowed trains is set to 0 in your game settings.")
 			AILog.Warning("No train routes will be built until you change this setting.")
 			this.trains_max0_shown = 1;
