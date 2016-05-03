@@ -311,9 +311,10 @@ function WormAI::Start()
 			AILog.Info(Helper.GetCurrentDateString() + " --- Yearly Tasks ---");
 			cur_year = new_year;
 			if (this.use_air) {
-				/* Evaluate best aircraft: Needs to be done every year to be sure it's done 
-				   the first time before we try to build a route. */
-				this.air_manager.EvaluateAircraft();
+				/* Evaluate best aircraft once in a while to see if there are better
+					airplanes available. Also make sure a warning is shown if no
+					suitable airplanes are found. */
+				this.air_manager.EvaluateAircraft(true);
 				/* Build a headquarter if it doesn't exist yet and our speed settings is at least medium. */
 				if (this.ai_speed_factor < 3) {
 					this.air_manager.BuildHQ();
