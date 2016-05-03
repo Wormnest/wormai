@@ -309,7 +309,6 @@ function WormAI::Start()
 		/* Since these values can be changed in game we need to re-check them regularly. */
 		this.use_air = this.CanBuildAircraft();
 		this.use_trains = this.CanBuildTrains();
-		if (this.use_trains) this.rail_manager.UpdateRailType();
 		
 		/* Task scheduling. */
 		new_year = AIDate.GetYear(AIDate.GetCurrentDate());
@@ -330,6 +329,10 @@ function WormAI::Start()
 						this.air_manager.BuildStatues();
 					}
 				}
+			}
+			if (this.use_trains) {
+				/* Doing this once a year seems enough. */
+				this.rail_manager.UpdateRailType();
 			}
 			
 			/* Some things we do more or less often depending on this.ai_speed_factor setting */
