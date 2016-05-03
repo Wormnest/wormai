@@ -2,10 +2,11 @@
  * This file is part of WormAI: An OpenTTD AI.
  * 
  * @file money.nut Class containing money related functions for WormAI.
+ * Requirements: SuperLib.Money.
  *
  * License: GNU GPL - version 2 (see license.txt)
  * Author: Wormnest (Jacob Boerema)
- * Copyright: Jacob Boerema, 2016.
+ * Copyright: Jacob Boerema, 2013-2016.
  *
  */ 
 
@@ -29,6 +30,14 @@ class WormMoney
 	 * @return Boolean saying if we got the needed money or not.
 	 */
 	static function GetMoney(money);
+	
+	/**
+	 * Compute the amount of money corrected for inflation.
+	 * @param money The uncorrected amount of money.
+	 * @return The inflation corrected amount of money.
+	 * @note Adapted from SuperLib.Money.Inflate: Computes GetInflationRate only once.
+	 */
+	static function InflationCorrection(money);
 	/// @}
 }
 
@@ -53,4 +62,11 @@ function WormMoney::GetMoney(money)
 	loan = loan - loan % AICompany.GetLoanInterval();
 	AILog.Info("Need a loan to get " + money + ": " + loan);
 	return AICompany.SetLoanAmount(loan);
+}
+
+function WormMoney::InflationCorrection(money)
+{
+	/* Using a local variable to compute inflation only once should be faster I think. */
+	local inflation = _SuperLib_Money.GetInflationRate();
+	return (money / 100) * inflation + (money % 100) * inflation / 100;
 }
