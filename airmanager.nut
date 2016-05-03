@@ -59,6 +59,7 @@ class WormAirManager
 	engine_usefulness = null;
 	acceptance_limit = 0;				///< Starting limit for passenger acceptance for airport finding.
 	passenger_cargo_id = -1;
+	no_aircraft_warning_shown = false;	///< Whether we have shown the no available aircraft warning
 
 
 	/** Create an instance of WormAirManager and initialize our variables. */
@@ -293,8 +294,9 @@ class WormAirManager
 	 * Task that evaluates all available aircraft for how suited they are
 	 * for our purposes. The suitedness values for aircraft which we can use are saved in
 	 * @ref engine_usefulness.
+	 * @param clear_warning_shown_flag Whether to clear the @ref no_aircraft_warning_shown flag.
 	 */
-	function EvaluateAircraft();
+	function EvaluateAircraft(clear_warning_shown_flag);
 	/**
 	 * Build the company headquarters if there isn't one yet.
 	 * @note Adapted from the version in AdmiralAI.
@@ -1085,9 +1087,15 @@ function WormAirManager::BuildAirportRoute()
 	}
 	
 	if (engine_usefulness.Count() == 0) {
-		// Most likely no aircraft found for the range we wanted of before any aircraft are introduced
-		AILog.Warning("There are no aircraft available at the moment that we can use.");
-		return ERROR_BUILD_AIRCRAFT_INVALID;
+		/* First look if there are any aircraft that we can use. */
+		EvaluateAircraft(false);
+		if (engine_usefulness.Count() == 0) {
+			/* Most likely no aircraft found for the range we wanted of before any aircraft are introduced. */
+			AILog.Warning("There are no aircraft available at the moment that we can use.");
+			/* Don't spam this warning in the debug log. */
+			no_aircraft_warning_shown = true;
+			return ERROR_BUILD_AIRCRAFT_INVALID;
+		}
 	}
 
 	// Check for our maximum allowed airports (max only set by our own script, not OpenTTD)
@@ -1919,10 +1927,13 @@ function WormAirManager::HandleEvents()
  * Task that evaluates all available aircraft for how suited they are
  * for our purposes. The suitedness values for aircraft which we can use are saved in
  * @ref engine_usefulness.
+ * @param clear_warning_shown_flag Whether to clear the @ref no_aircraft_warning_shown flag.
  */
-function WormAirManager::EvaluateAircraft() {
+function WormAirManager::EvaluateAircraft(clear_warning_shown_flag) {
 	/* Show some info about what we are doing */
 	AILog.Info(Helper.GetCurrentDateString() + " Evaluating aircraft.");
+	
+	if (clear_warning_shown_flag) no_aircraft_warning_shown = false;
 	
 	local engine_list = AIEngineList(AIVehicle.VT_AIR);
 	//engine_list.Valuate(AIEngine.GetPrice);
