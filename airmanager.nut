@@ -73,14 +73,8 @@ class WormAirManager
 		this.route_2 = AIList();
 		this.engine_usefulness = AIList();
 		this.acceptance_limit = STARTING_ACCEPTANCE_LIMIT;
-
-		local list = AICargoList();
-		for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
-			if (AICargo.HasCargoClass(i, AICargo.CC_PASSENGERS)) {
-				this.passenger_cargo_id = i;
-				break;
-			}
-		}
+		/* Get the correct Passengers id even when an industry NewGRF is used. */
+		this.passenger_cargo_id = Helper.GetPAXCargo();
 	}
 
     /// @{
