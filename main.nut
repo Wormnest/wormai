@@ -53,6 +53,7 @@ require("tiles.nut");
 require("airmanager.nut");
 require("railmanager.nut");
 require("railbuilder.nut");
+require("planner.nut");
 
 /* Default delays */
 const SLEEPING_TIME = 100;						///< Default time to sleep between loops of our AI (NB: should be a multiple of 100).
@@ -398,6 +399,9 @@ function WormAI::Start()
 
 			/* Check for events once in a while */
 			this.air_manager.HandleEvents();
+		}
+		if (this.use_trains) {
+			this.rail_manager.BuildRailway();
 		}
 
 		/* Make sure we do not create infinite loops */
