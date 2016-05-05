@@ -16,15 +16,19 @@
 class WormRailManager
 {
 	/* Variables used by WormRailManager */
-	/* 1. Variables that will be saved in a savegame. */
+	/* 1. Variables that will be saved in a savegame. (TODO) */
+	_serviced = null;								///< Industry/town - cargo pairs already serviced
 	
 	/* 2. Variables that will NOT be saved. */
 	_current_railtype = 0;							///< The railtype we are currently using.
+	_planner = null;
 
 	/** Create an instance of WormRailManager and initialize our variables. */
 	constructor()
 	{
+		_serviced = AIList();
 		_current_railtype = AIRail.RAILTYPE_INVALID;
+		_planner = WormPlanner(this);
 		AILog.Info("[RailManager initialized]");
 	}
 	
@@ -39,6 +43,11 @@ class WormRailManager
 	 * @todo Possible better evaluation what rail type is the most profitable.
 	 */
 	static function SetRailType();
+
+	/**
+	 * Main function for building a railway which decides all the details.
+	 */
+	function BuildRailway();
 
 }
 
@@ -78,3 +87,7 @@ function WormRailManager::SetRailType()
 	return current_railtype;
 }
 
+function WormRailManager::BuildRailway()
+{
+	_planner.PlanRailRoute();
+}
