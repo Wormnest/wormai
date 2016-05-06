@@ -38,7 +38,17 @@ class WormMoney
 	 * @note Adapted from SuperLib.Money.Inflate: Computes GetInflationRate only once.
 	 */
 	static function InflationCorrection(money);
+
+	/**
+	 * Calculates the minimum amount of cash needed to be at hand. This is used to
+	 * avoid going bankrupt because of station maintenance costs.
+	 * @note Taken from SimpleAI.
+	 * @todo Think of a better computation than stationcount * 50 since I think maintenance costs don't increase linearly.
+	 * @return 10000 pounds plus the expected station maintenance costs.
+	 */
+	function GetMinimumCashNeeded();
 	/// @}
+
 }
 
 function WormMoney::HasMoney(money)
@@ -69,4 +79,12 @@ function WormMoney::InflationCorrection(money)
 	/* Using a local variable to compute inflation only once should be faster I think. */
 	local inflation = _SuperLib_Money.GetInflationRate();
 	return (money / 100) * inflation + (money % 100) * inflation / 100;
+}
+
+function WormMoney::GetMinimumCashNeeded()
+{
+	local stationlist = AIStationList(AIStation.STATION_ANY);
+	local maintenance = WormMoney.InflationCorrection(stationlist.Count() * 50);
+	/// @todo Maybe also use InflationCorrection on GetLoanInterval or is that already corrected for inflation?
+	return maintenance + AICompany.GetLoanInterval();
 }
