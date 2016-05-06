@@ -130,8 +130,8 @@ function WormPlanner::GetSubsidizedRoute(planned_route)
 		}
 		// Check the distance
 		// @todo Change the values here to constants!
-		if (AIMap.DistanceManhattan(planned_route.SourceLocation, planned_route.DestLocation) > 140) continue;
-		if (AIMap.DistanceManhattan(planned_route.SourceLocation, planned_route.DestLocation) < 20) continue;
+		if (AIMap.DistanceManhattan(planned_route.SourceLocation, planned_route.DestLocation) > 200) continue;
+		if (AIMap.DistanceManhattan(planned_route.SourceLocation, planned_route.DestLocation) < 40) continue;
 		return true;
 	}
 	return false;
@@ -213,7 +213,7 @@ function WormPlanner::GetRoute(planned_route)
 				planned_route.DestList.Valuate(AITown.GetDistanceManhattanToTile, planned_route.SourceLocation);
 			}
 			// Check the distance of the source and the destination
-			planned_route.DestList.KeepBelowValue(130);
+			planned_route.DestList.KeepBelowValue(200);
 			planned_route.DestList.KeepAboveValue(40);
 			if (AICargo.GetTownEffect(icrg) == AICargo.TE_MAIL) planned_route.DestList.KeepBelowValue(110);
 
