@@ -36,6 +36,15 @@ class WormTiles
 	 * @param y_plus The amount of tiles to the south-east, relative to center_tile.
 	 */
 	static function SafeAddRectangle(tile_list, center_tile, x_min, y_min, x_plus, y_plus);
+
+	/**
+	 * Get the direction from one tile to another.
+	 * @note Taken from SimpleAI.
+	 * @param tilefrom The first tile.
+	 * @param tileto The second tile
+	 * @return The direction from the first tile to the second tile.
+	 */
+	static function GetDirection(tilefrom, tileto);
 }
 
 function WormTiles::SafeAddSquare(list, tile, radius)
@@ -57,3 +66,18 @@ function WormTiles::SafeAddRectangle(tile_list, center_tile, x_min, y_min, x_plu
 	local tile_to = AIMap.GetTileIndex(min(AIMap.GetMapSizeX() - 2, tile_x + x_plus), min(AIMap.GetMapSizeY() - 2, tile_y + y_plus));
 	tile_list.AddRectangle(tile_from, tile_to);
 } 
+
+function WormTiles::GetDirection(tilefrom, tileto)
+{
+	local distx = AIMap.GetTileX(tileto) - AIMap.GetTileX(tilefrom);
+	local disty = AIMap.GetTileY(tileto) - AIMap.GetTileY(tilefrom);
+	local ret = 0;
+	if (abs(distx) > abs(disty)) {
+		ret = 2;
+		disty = distx;
+	}
+	if (disty > 0) {
+		ret = ret + 1;
+	}
+	return ret;
+}
