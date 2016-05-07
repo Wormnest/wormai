@@ -10,30 +10,31 @@
  *
  */ 
 
-/** Building stages, needed to recover a savegame. */
-const BS_NOTHING		= 0;
-const BS_BUILDING		= 1;
-const BS_REMOVING		= 2;
-const BS_ELECTRIFYING	= 3;
-
 /**
  * Define the WormRailManager class which handles trains.
  */
 class WormRailManager
 {
+	/** Building stages, needed to recover a savegame. */
+	BS_NOTHING		= 0;
+	BS_BUILDING		= 1;
+	BS_REMOVING		= 2;
+	BS_ELECTRIFYING	= 3;
+
 	/* Variables used by WormRailManager */
 	/* 1. Variables that will be saved in a savegame. (TODO) */
-	_routes = null;									///< An array containing all our routes
-	_groups = null;									//?< The list of vehicle groups
-	_serviced = null;								///< Industry/town - cargo pairs already serviced
-	_railbridges = null;							///< The list of rail bridges
-	_engine_blacklist = null;						///< The blacklist of train engines
-	_buildingstage = null;							///< The current building stage
-	_lastroute = null;								///< The date the last route was built
+	_routes = null;						///< An array containing all our routes
+	_groups = null;						///< The list of vehicle groups
+	_serviced = null;					///< Industry/town - cargo pairs already serviced
+	railbridges = null;				///< The list of rail bridges
+	_engine_blacklist = null;			///< The blacklist of train engines
+	buildingstage = null;				///< The current building stage
+	_lastroute = null;					///< The date the last route was built
+	removelist = null;					///< List used to continue rail removal and electrification
 
 	/* 2. Variables that will NOT be saved. */
-	_current_railtype = 0;							///< The railtype we are currently using.
-	_planner = null;								///< The route planner class object.
+	_current_railtype = 0;				///< The railtype we are currently using.
+	_planner = null;					///< The route planner class object.
 
 	/** Create an instance of WormRailManager and initialize our variables. */
 	constructor()
@@ -41,7 +42,7 @@ class WormRailManager
 		_routes = [];
 		_groups = AIList();
 		_serviced = AIList();
-		_railbridges = AITileList();
+		railbridges = AITileList();
 		_engine_blacklist = AIList();
 		_current_railtype = AIRail.RAILTYPE_INVALID;
 		_planner = WormPlanner(this);
@@ -170,7 +171,7 @@ function WormRailManager::BuildRailway()
 	/* Plan which route with which cargo we are going to build. */
 	if (!_planner.PlanRailRoute()) return false;
 
-	_buildingstage = BS_NOTHING;
+	buildingstage = BS_NOTHING;
 
 	/* Show info about chosen route. */
 	local srcname, dstname = null;
@@ -223,7 +224,7 @@ function WormRailManager::BuildRailway()
 		// Build the source station
 		if (WormRailBuilder.BuildSingleRailStation(true, platform, _planner.route, station_data)) {
 			end = [station_data.frontfront, station_data.stafront];
-			_buildingstage = BS_BUILDING;
+			buildingstage = BS_BUILDING;
 			AILog.Info("New station successfully built: " + AIStation.GetName(station_data.stasrc));
 		} else {
 			AILog.Warning("Could not build source station at " + srcname);
@@ -235,20 +236,18 @@ function WormRailManager::BuildRailway()
 			AILog.Info("New station successfully built: " + AIStation.GetName(station_data.stadst));
 		} else {
 			AILog.Warning("Could not build destination station at " + dstname);
-/// @todo DeleteRailStation
-//			cBuilder.DeleteRailStation(station_data.stasrc);
-			_buildingstage = BS_NOTHING;
+			WormRailBuilder.DeleteRailStation(station_data.stasrc, this);
+			buildingstage = BS_NOTHING;
 			return false;
 		}
 
 		// Build the rail
-		if (WormRailBuilder.BuildRail(start, end, _railbridges)) {
+		if (WormRailBuilder.BuildRail(start, end, railbridges)) {
 			AILog.Info("Rail built successfully!");
 		} else {
-/// @todo DeleteRailStation
-//			cBuilder.DeleteRailStation(station_data.stasrc);
-//			cBuilder.DeleteRailStation(station_data.stadst);
-			_buildingstage = BS_NOTHING;
+			WormRailBuilder.DeleteRailStation(station_data.stasrc, this);
+			WormRailBuilder.DeleteRailStation(station_data.stadst, this);
+			buildingstage = BS_NOTHING;
 			return false;
 		}
 	} else {
@@ -269,7 +268,7 @@ function WormRailManager::BuildRailway()
 		// Build the source station
 		if (WormRailBuilder.BuildDoubleRailStation(true, _planner.route, station_data)) {
 			end = [station_data.morefront, station_data.frontfront];
-			_buildingstage = BS_BUILDING;
+			buildingstage = BS_BUILDING;
 			AILog.Info("New station successfully built: " + AIStation.GetName(station_data.stasrc));
 		} else {
 			AILog.Warning("Could not build source station at " + srcname);
@@ -282,9 +281,8 @@ function WormRailManager::BuildRailway()
 			AILog.Info("New station successfully built: " + AIStation.GetName(station_data.stadst));
 		} else {
 			AILog.Warning("Could not build destination station at " + dstname);
-/// @todo DeleteRailStation
-//			cBuilder.DeleteRailStation(station_data.stasrc);
-			_buildingstage = BS_NOTHING;
+			WormRailBuilder.DeleteRailStation(station_data.stasrc, this);
+			buildingstage = BS_NOTHING;
 			return false;
 		}
 
@@ -292,10 +290,9 @@ function WormRailManager::BuildRailway()
 		temp_ps = WormRailBuilder.BuildPassingLaneSection(true, station_data);
 		if (temp_ps == null) {
 			AILog.Warning("Could not build first passing lane section");
-/// @todo DeleteRailStation
-//			cBuilder.DeleteRailStation(station_data.stasrc);
-//			cBuilder.DeleteRailStation(station_data.stadst);
-			_buildingstage = BS_NOTHING;
+			WormRailBuilder.DeleteRailStation(station_data.stasrc, this);
+			WormRailBuilder.DeleteRailStation(station_data.stadst, this);
+			buildingstage = BS_NOTHING;
 			return false;
 		} else {
 			if (AIMap.DistanceManhattan(end[0], temp_ps[0][0]) < AIMap.DistanceManhattan(end[0], temp_ps[1][0])) {
@@ -310,11 +307,10 @@ function WormRailManager::BuildRailway()
 		temp_ps = WormRailBuilder.BuildPassingLaneSection(false, station_data);
 		if (temp_ps == null) {
 			AILog.Warning("Could not build second passing lane section");
-/// @todo DeleteRailStation, RemoveRailLine
-//			cBuilder.DeleteRailStation(station_data.stasrc);
-//			cBuilder.DeleteRailStation(station_data.stadst);
-//			cBuilder.RemoveRailLine(ps1_entry[1]);
-			_buildingstage = BS_NOTHING;
+			WormRailBuilder.DeleteRailStation(station_data.stasrc, this);
+			WormRailBuilder.DeleteRailStation(station_data.stadst, this);
+			WormRailBuilder.RemoveRailLine(ps1_entry[1], this);
+			buildingstage = BS_NOTHING;
 			return false;
 		} else {
 			if (AIMap.DistanceManhattan(start[0], temp_ps[0][0]) < AIMap.DistanceManhattan(start[0], temp_ps[1][0])) {
@@ -326,40 +322,37 @@ function WormRailManager::BuildRailway()
 			}
 		}
 		// Build the rail between the source station and the first passing lane section
-		if (WormRailBuilder.BuildRail(ps1_entry, end, _railbridges)) {
+		if (WormRailBuilder.BuildRail(ps1_entry, end, railbridges)) {
 			AILog.Info("Rail built successfully!");
 		} else {
-/// @todo DeleteRailStation, RemoveRailLine
-//			cBuilder.DeleteRailStation(station_data.stadst);
-//			cBuilder.DeleteRailStation(station_data.stasrc);
-//			cBuilder.RemoveRailLine(ps1_entry[1]);
-//			cBuilder.RemoveRailLine(ps2_entry[1]);
-			_buildingstage = BS_NOTHING;
+			WormRailBuilder.DeleteRailStation(station_data.stadst, this);
+			WormRailBuilder.DeleteRailStation(station_data.stasrc, this);
+			WormRailBuilder.RemoveRailLine(ps1_entry[1], this);
+			WormRailBuilder.RemoveRailLine(ps2_entry[1], this);
+			buildingstage = BS_NOTHING;
 			return false;
 		}
 		// Build the rail between the two passing lane sections
-		if (WormRailBuilder.BuildRail(ps2_entry, ps1_exit, _railbridges)) {
+		if (WormRailBuilder.BuildRail(ps2_entry, ps1_exit, railbridges)) {
 			AILog.Info("Rail built successfully!");
 		} else {
-/// @todo DeleteRailStation, RemoveRailLine
-//			cBuilder.DeleteRailStation(station_data.stadst);
-//			cBuilder.DeleteRailStation(station_data.stasrc);
-//			cBuilder.RemoveRailLine(ps2_entry[1]);
-			_buildingstage = BS_NOTHING;
+			WormRailBuilder.DeleteRailStation(station_data.stadst, this);
+			WormRailBuilder.DeleteRailStation(station_data.stasrc, this);
+			WormRailBuilder.RemoveRailLine(ps2_entry[1], this);
+			buildingstage = BS_NOTHING;
 			return false;
 		}
 		// Build the rail between the second passing lane section and the destination station
-		if (WormRailBuilder.BuildRail(start, ps2_exit, _railbridges)) {
+		if (WormRailBuilder.BuildRail(start, ps2_exit, railbridges)) {
 			AILog.Info("Rail built successfully!");
 		} else {
-/// @todo DeleteRailStation
-//			cBuilder.DeleteRailStation(station_data.stadst);
-//			cBuilder.DeleteRailStation(station_data.stasrc);
-			_buildingstage = BS_NOTHING;
+			WormRailBuilder.DeleteRailStation(station_data.stadst, this);
+			WormRailBuilder.DeleteRailStation(station_data.stasrc, this);
+			buildingstage = BS_NOTHING;
 			return false;
 		}
 	}
-	_buildingstage = BS_NOTHING;
+	buildingstage = BS_NOTHING;
 	
 	// For now always rail here
 	local vehtype = AIVehicle.VT_RAIL;
@@ -372,7 +365,7 @@ function WormRailManager::BuildRailway()
 	WormRailBuilder.BuildAndStartTrains(trains, 2 * platform - 2, engine, wagon, null, group,
 		_planner.route, station_data, _engine_blacklist);
 	/// @todo If building trains fails because of lack of money we should try again after a little wait...
-	/// @note This is probably something that is done in manager or RegisteRoute by SimpleAI. Check this!
+	/// @too BuildAndStartTrains should return a status code instead of True/False [OK, NOMONEY, BADTRAIN, ...]
 	
 	local new_route = WormRailManager.RegisterRoute(_planner.route, station_data, vehtype, group);
 	
@@ -428,6 +421,7 @@ function WormRailManager::RegisterRoute(route_data, station_data, vehtype, group
 		railtype = null
 		maxvehicles = null
 	}
+	/// @todo Also save IsSubsidy, ...
 	route.src = route_data.SourceID;
 	route.dst = route_data.DestID;
 	route.stasrc = station_data.stasrc;

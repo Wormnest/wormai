@@ -160,7 +160,7 @@ class WormRailBuilder
 	 * @param head1 The starting points of the rail line.
 	 * @param head2 The ending points of the rail line.
 	 * @param railbridges The list of railbridges. If we need to build a bridge it will be added to this list.
-	 * @recursiondepth The recursion depth used to catch infinite recursions.
+	 * @param recursiondepth The recursion depth used to catch infinite recursions.
 	 * @return True if the construction succeeded.
 	 */
 	function InternalBuildRail(head1, head2, railbridges, recursiondepth);
@@ -173,10 +173,11 @@ class WormRailBuilder
 	 * @param pp2 The piece of track before pp1.
 	 * @param pp3 The piece of track before pp2. It is not removed.
 	 * @param head1 The other end to be connected.
-	 * @recursiondepth The recursion depth used to catch infinite recursions.
+	 * @param railbridges The list of railbridges. If we need to build a bridge it will be added to this list.
+	 * @param recursiondepth The recursion depth used to catch infinite recursions.
 	 * @return True if the construction succeeded.
 	 */
-	function RetryRail(prevprev, pp1, pp2, pp3, head1, recursiondepth);
+	function RetryRail(prevprev, pp1, pp2, pp3, head1, railbridges, recursiondepth);
 
 	/**
 	 * Build a passing lane section between the current source and destination.
@@ -219,6 +220,31 @@ class WormRailBuilder
 	 * @param crg The cargo which the mail wagon will be refitted to.
 	 */
 	function MailWagonWorkaround(mailwagon, firstwagon, trainengine, crg);
+
+	/**
+	 * Remove a continuous segment of rail track starting from a single point. This includes depots
+	 * and stations, in all directions and braches. Basically the function deletes all rail tiles
+	 * which are reachable by a train from the starting point. This function is not static.
+	 * @param start_tile The starting point of the rail.
+	 * @param rail_manager The WormRailManager class object.
+	 */
+	function RemoveRailLine(start_tile, rail_manager);
+
+	/**
+	 * Determine whether two tiles are connected with rail directly.
+	 * @param tilefrom The first tile to check.
+	 * @param tileto The second tile to check.
+	 * @return True if the two tiles are connected.
+	 */
+	function AreRailTilesConnected(tilefrom, tileto);
+
+	/**
+	 * Delete a rail station together with the rail line.
+	 * Builder class variables used and set:
+	 * @param sta The StationID of the station to be deleted.
+	 * @param rail_manager The WormRailManager class object.
+	 */
+	function DeleteRailStation(sta, rail_manager);
 
 }
 
@@ -773,7 +799,7 @@ function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursion
 							return false;
 						}
 						// Try again if we have the money
-						if (!WormRailBuilder.RetryRail(prevprev, pp1, pp2, pp3, head1, recursiondepth)) return false;
+						if (!WormRailBuilder.RetryRail(prevprev, pp1, pp2, pp3, head1, railbridges, recursiondepth)) return false;
 						else return true;
 					}
 				} else {
@@ -787,7 +813,7 @@ function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursion
 							return false;
 						}
 						// Try again if we have the money
-						if (!WormRailBuilder.RetryRail(prevprev, pp1, pp2, pp3, head1, recursiondepth)) return false;
+						if (!WormRailBuilder.RetryRail(prevprev, pp1, pp2, pp3, head1, railbridges, recursiondepth)) return false;
 						else return true;
 					} else {
 						// Register the new bridge
@@ -805,7 +831,7 @@ function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursion
 				// If we are building a piece of rail track
 				if (!AIRail.BuildRail(prevprev, prev, path.GetTile())) {
 					AILog.Info("An error occured while I was building the rail: " + AIError.GetLastErrorString());
-					if (!WormRailBuilder.RetryRail(prevprev, pp1, pp2, pp3, head1, recursiondepth)) return false;
+					if (!WormRailBuilder.RetryRail(prevprev, pp1, pp2, pp3, head1, railbridges, recursiondepth)) return false;
 					else return true;
 				}
 			}
@@ -830,7 +856,7 @@ function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursion
 	return true;
 }
 
-function WormRailBuilder::RetryRail(prevprev, pp1, pp2, pp3, head1, recursiondepth)
+function WormRailBuilder::RetryRail(prevprev, pp1, pp2, pp3, head1, railbridges, recursiondepth)
 {
 	// Avoid infinite loops
 	recursiondepth++;
@@ -874,7 +900,7 @@ function WormRailBuilder::RetryRail(prevprev, pp1, pp2, pp3, head1, recursiondep
 		}
 	}
 	// Restart pathfinding from the other end
-	if (WormRailBuilder.InternalBuildRail(head2, head1, recursiondepth)) return true;
+	if (WormRailBuilder.InternalBuildRail(head2, head1, railbridges, recursiondepth)) return true;
 	else return false;
 }
 
@@ -1171,5 +1197,182 @@ function WormRailBuilder::MailWagonWorkaround(mailwagon, firstwagon, trainengine
 	AIVehicle.MoveWagon(trainengine, 1, mailwagon, 0);
 	AIVehicle.MoveWagon(mailwagon, 0, trainengine, 0);
 	AIVehicle.MoveWagon(trainengine, 1, firstwagon, 0);
+}
+
+function WormRailBuilder::RemoveRailLine(start_tile, rail_manager)
+{
+	if (start_tile == null) return;
+	// Rail line removal works without a valid start tile if the rail_manager's object's removelist is not empty, needed for save/load compatibility
+	if (!AIMap.IsValidTile(start_tile) && rail_manager.removelist.len() == 0) return;
+	// Starting date is needed to avoid infinite loops
+	local startingdate = AIDate.GetCurrentDate();
+	rail_manager.buildingstage = rail_manager.BS_REMOVING;
+	// Get the four directions
+	local all_vectors = [AIMap.GetTileIndex(1, 0), AIMap.GetTileIndex(0, 1), AIMap.GetTileIndex(-1, 0), AIMap.GetTileIndex(0, -1)];
+	if (AIMap.IsValidTile(start_tile)) rail_manager.removelist = [start_tile];
+	local tile = null;
+	while (rail_manager.removelist.len() > 0) {
+		// Avoid infinite loops
+		if (AIDate.GetCurrentDate() - startingdate > 120) {
+			AILog.Error("It looks like I got into an infinite loop.");
+			rail_manager.removelist = [];
+			return;
+		}
+		tile = rail_manager.removelist.pop();
+		// Step further if it is a tunnel or a bridge, because it takes two tiles
+		if (AITunnel.IsTunnelTile(tile)) tile = AITunnel.GetOtherTunnelEnd(tile);
+		if (AIBridge.IsBridgeTile(tile)) {
+			rail_manager.railbridges.RemoveTile(tile);
+			tile = AIBridge.GetOtherBridgeEnd(tile);
+			rail_manager.railbridges.RemoveTile(tile);
+		}
+		if (!AIRail.IsRailDepotTile(tile)) {
+			// Get the connecting rail tiles
+			foreach (idx, vector in all_vectors) {
+				if (WormRailBuilder.AreRailTilesConnected(tile, tile + vector)) {
+					rail_manager.removelist.push(tile + vector);
+				}
+			}
+		}
+		// Removing rail from a level crossing cannot be done with DemolishTile
+		if (AIRail.IsLevelCrossingTile(tile)) {
+			local track = AIRail.GetRailTracks(tile);
+			if (!AIRail.RemoveRailTrack(tile, track)) {
+				// Try again a few times if a road vehicle was in the way
+				local counter = 0;
+				AIController.Sleep(75);
+				while (!AIRail.RemoveRailTrack(tile, track) && counter < 3) {
+					counter++;
+					AIController.Sleep(75);
+				}
+			}
+		} else {
+			AITile.DemolishTile(tile);
+		}
+	}
+	rail_manager.buildingstage = rail_manager.BS_NOTHING;
+}
+
+function WormRailBuilder::AreRailTilesConnected(tilefrom, tileto)
+{
+	// Check some preconditions
+	if (!AITile.HasTransportType(tilefrom, AITile.TRANSPORT_RAIL)) return false;
+	if (!AITile.HasTransportType(tileto, AITile.TRANSPORT_RAIL)) return false;
+	if (!AICompany.IsMine(AITile.GetOwner(tilefrom))) return false;
+	if (!AICompany.IsMine(AITile.GetOwner(tileto))) return false;
+	if (AIRail.GetRailType(tilefrom) != AIRail.GetRailType(tileto)) return false;
+	// Determine the dircetion
+	local dirfrom = WormTiles.GetDirection(tilefrom, tileto);
+	local dirto = null;
+	// Some magic bitmasks
+	local acceptable = [22, 42, 37, 25];
+	// Determine the direction pointing backwards
+	if (dirfrom == 0 || dirfrom == 2) dirto = dirfrom + 1;
+	else dirto = dirfrom - 1;
+	if (AITunnel.IsTunnelTile(tilefrom)) {
+		// Check a tunnel
+		local otherend = AITunnel.GetOtherTunnelEnd(tilefrom);
+		if (WormTiles.GetDirection(otherend, tilefrom) != dirfrom) return false;
+	} else {
+		if (AIBridge.IsBridgeTile(tilefrom)) {
+			// Check a bridge
+			local otherend = AIBridge.GetOtherBridgeEnd(tilefrom);
+			if (WormTiles.GetDirection(otherend, tilefrom) != dirfrom) return false;
+		} else {
+			// Check rail tracks
+			local tracks = AIRail.GetRailTracks(tilefrom);
+			if ((tracks & acceptable[dirfrom]) == 0) return false;
+		}
+	}
+	// Do this check the other way around as well
+	if (AITunnel.IsTunnelTile(tileto)) {
+		local otherend = AITunnel.GetOtherTunnelEnd(tileto);
+		if (WormTiles.GetDirection(otherend, tileto) != dirto) return false;
+	} else {
+		if (AIBridge.IsBridgeTile(tileto)) {
+			local otherend = AIBridge.GetOtherBridgeEnd(tileto);
+			if (WormTiles.GetDirection(otherend, tileto) != dirto) return false;
+		} else {
+			local tracks = AIRail.GetRailTracks(tileto);
+			if ((tracks & acceptable[dirto]) == 0) return false;
+		}
+	}
+	return true;
+}
+
+function WormRailBuilder::DeleteRailStation(sta, rail_manager)
+{
+	if (sta == null || !AIStation.IsValidStation(sta)) return;
+	// Don't delete the station if there are trains using it
+	local vehiclelist = AIVehicleList_Station(sta);
+	if (vehiclelist.Count() > 0) {
+		AILog.Error(AIStation.GetName(sta) + " cannot be removed, it's still in use!");
+		return;
+	}
+	local place = AIStation.GetLocation(sta);
+	if (!AIRail.IsRailStationTile(place)) return;
+	// Get the positions of the station parts
+	local dir = AIRail.GetRailStationDirection(place);
+	local vector, rvector = null;
+	local twolane = false;
+	local depfront, stafront, depot, frontfront = null;
+	if (dir == AIRail.RAILTRACK_NE_SW) {
+		vector = AIMap.GetTileIndex(1, 0);
+		rvector = AIMap.GetTileIndex(0, 1);
+	} else {
+		vector = AIMap.GetTileIndex(0, 1);
+		rvector = AIMap.GetTileIndex(1, 0);
+	}
+	// Determine if it is a single or a double rail station
+	if (AIRail.IsRailStationTile(place + rvector)) {
+		local otherstation = AIStation.GetStationID(place + rvector);
+		if (AIStation.IsValidStation(otherstation) && otherstation == sta) twolane = true;
+	}
+	if (twolane) {
+		// Deleting a double rail station
+		// Get the front tile of the station
+		if (WormRailBuilder.AreRailTilesConnected(place, place - vector)) {
+			// The station is pointing upwards
+			stafront = place - vector;
+		} else {
+			// The station is pointing downwards
+			stafront = place;
+			while (AIRail.IsRailStationTile(stafront)) {
+				stafront += vector;
+			}
+		}
+		AITile.DemolishTile(place);
+		// Remove the rail line, including the station parts, and the other station if it is connected
+		WormRailBuilder.RemoveRailLine(stafront, rail_manager);
+	} else {
+		// Deleting a single rail station
+		if (WormRailBuilder.AreRailTilesConnected(place, place - vector)) {
+			// The station is pointing upwards
+			depfront = place - vector;
+			if (dir == AIRail.RAILTRACK_NE_SW) {
+				vector = AIMap.GetTileIndex(-1, 0);
+			} else {
+				vector = AIMap.GetTileIndex(0, -1);
+				rvector = AIMap.GetTileIndex(-1, 0);
+			}
+		} else {
+			// The station is pointing downwards
+			depfront = place;
+			while (AIRail.IsRailStationTile(depfront)) {
+				depfront += vector;
+			}
+			if (dir == AIRail.RAILTRACK_NE_SW) rvector = AIMap.GetTileIndex(0, -1);
+		}
+		// Remove the station parts
+		stafront = depfront + vector;
+		depot = depfront + rvector;
+		frontfront = stafront + vector;
+		AITile.DemolishTile(place);
+		AITile.DemolishTile(depfront);
+		AITile.DemolishTile(depot);
+		// Remove the rail line, including the other station if it is connected
+		WormRailBuilder.RemoveRailLine(stafront, rail_manager);
+		AIRail.RemoveRail(depfront, stafront, frontfront)
+	}
 }
 
