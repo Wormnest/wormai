@@ -61,6 +61,7 @@ require("planner.nut");
 /* Default delays */
 const SLEEPING_TIME = 100;						///< Default time to sleep between loops of our AI (NB: should be a multiple of 100).
 const DEFAULT_DELAY_BUILD_AIRPORT = 500; 		///< Default delay before building a new airport route.
+const DEFAULT_DELAY_BUILD_RAIL = 300; 			///< Default delay before building a new rail route.
 
 /// @{
 /** @name ERROR CODE constants */
@@ -90,6 +91,7 @@ class WormAI extends AIController {
 
 	ai_speed_factor = 1;						///< speed factor for our ai actions (1=fast..3=slow)
 	delay_build_airport_route = 0;
+	delay_build_rail_route = 0;
 	
 	use_air = false;							///< Whether we can use aircraft or not
 	use_trains = false;							///< Whether we can use trains or not
@@ -174,6 +176,7 @@ function WormAI::InitSettings()
 	}
 	
 	this.delay_build_airport_route = DEFAULT_DELAY_BUILD_AIRPORT * this.ai_speed_factor;
+	this.delay_build_rail_route = DEFAULT_DELAY_BUILD_RAIL * this.ai_speed_factor;
 	
 	/* Since autorenew can change the vehicle id it may cause trouble to have it turned on,
 	 * therefore we turn it off and will renew manually in the future. */
@@ -293,6 +296,7 @@ function WormAI::Start()
 
 	/* We need our local tickers, as GetTick() will skip ticks */
 	local old_ticker = 0;
+	local old_ticker_rail = 0;
 	local cur_ticker = 0;
 	/* The amount of time we may sleep between loops.
 	   Warning: don't change this value unless your understand the implications for all the delays! 
@@ -300,6 +304,7 @@ function WormAI::Start()
 	local sleepingtime = SLEEPING_TIME;
 	/* Factor to multiply the build delay with. */
 	local build_delay_factor = 1;
+	local rail_delay_factor = 1;
 	
 	local cur_year = 0;
 	local new_year = 0;
@@ -404,7 +409,21 @@ function WormAI::Start()
 			this.air_manager.HandleEvents();
 		}
 		if (this.use_trains) {
-			this.rail_manager.BuildRailway();
+			AILog.Info("Check rail ticker.");
+			if ((cur_ticker - old_ticker_rail > rail_delay_factor * this.delay_build_rail_route) || old_ticker_rail == 0) {
+				AILog.Info("  Check money...");
+				if (WormMoney.HasMoney(WormMoney.InflationCorrection(60000))) {
+					AILog.Info("    Try to build a railway...");
+					if (!this.rail_manager.BuildRailway()) {
+						rail_delay_factor++;
+						if (rail_delay_factor > 10)
+							rail_delay_factor = 10;
+					}
+					else
+						rail_delay_factor = 1;
+				}
+				old_ticker_rail = cur_ticker;
+			}
 		}
 
 		/* Make sure we do not create infinite loops */
