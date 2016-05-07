@@ -26,6 +26,8 @@ class WormRoute
 	SourceList = null;
 	DestList = null;
 	CargoList = null;
+	double = null;
+	distance_manhattan = null;
 	
 	/**
 	 * Constructor for WormRoute class.
@@ -40,17 +42,19 @@ class WormRoute
 	 */
 	function ResetRoute()
 	{
-		Cargo = 0;
-		SourceID = 0;
-		DestID = 0;
-		SourceIsTown = false;
-		DestIsTown = false;
-		SourceLocation = 0;
-		DestLocation = 0;
-		IsSubsidy = false;
+		Cargo = 0;							///< The cargo selected to be transported.
+		SourceID = 0;						///< ID of source town or industry
+		DestID = 0;							///< ID of destination town or industry
+		SourceIsTown = false;				///< Is the source a town or cargo producing industry
+		DestIsTown = false;					///< Is the destination a town or cargo receiving industry
+		SourceLocation = 0;					///< Location (tile) of source
+		DestLocation = 0;					///< Location (tile) of destionation
+		IsSubsidy = false;					///< Whether this route is built to get a subsidy or not
 		SourceList = null;
 		DestList = null;
 		CargoList = null;
+		double = null;						///< Are we going to use double rail for this route or not
+		distance_manhattan = null;			///< Manhattan distance between SourceLocation and DestLocation
 	}
 }
 
@@ -86,9 +90,18 @@ class WormPlanner
 	function GetRoute(planned_route);
 
 	/**
-	 *  Plan a rail route.
+	 * Plan a rail route.
+	 * @return True if we managed to find a route.
 	 */
 	function PlanRailRoute();
+
+	/**
+	 * Gets the CargoID associated with mail.
+	 * @note Taken from SimpleAI.
+	 * @return The CargoID of mail.
+	 */
+	static function GetMailCargo();
+
 }
 
 function WormPlanner::GetSubsidizedRoute(planned_route)
@@ -248,19 +261,43 @@ function WormPlanner::PlanRailRoute()
 	// Init route.
 	route.ResetRoute();
 	if (this.GetSubsidizedRoute(route)) {
-		AILog.Warning("-- Subsidy found");
+		//AILog.Warning("-- Subsidy found");
 	}
 	else {
-		AILog.Warning("-- Subsidy NOT found, try find a normal route");
+		//AILog.Warning("-- Subsidy NOT found, try find a normal route");
 		// Reset route info
 		route.ResetRoute();
 		// Find a normal route
 		if (this.GetRoute(route)) {
-			AILog.Warning("-- Route found");
+			//AILog.Warning("-- Route found");
 		}
 		else {
-			AILog.Warning("-- NO ROUTE found");
+			AILog.Warning("Rail route planner: -- we didn't find a usable route --");
+			return false;
 		}
 	}
+
+	/* Compute distance of the route we planned. */
+	route.distance_manhattan = AIMap.DistanceManhattan(route.SourceLocation, route.DestLocation);
+
+	/* Decide whether to use single or double rails. */
+	/// @todo replace number by a definied constant
+	if (route.distance_manhattan > 80) route.double = true;
+	else route.double = false;
+	
+	return true;
+}
+
+/**
+ * Gets the CargoID associated with mail.
+ * @return The CargoID of mail.
+ */
+function WormPlanner::GetMailCargo()
+{
+	local cargolist = AICargoList();
+	foreach (cargo, dummy in cargolist) {
+		if (AICargo.GetTownEffect(cargo) == AICargo.TE_MAIL) return cargo;
+	}
+	return null;
 }
 
