@@ -15,6 +15,9 @@
  */
 class WormMoney
 {
+	WM_SILENT = true;
+	WM_SHOWINFO = false;
+
 	/** @name Money related functions */
     /// @{
 	/**
@@ -27,9 +30,10 @@ class WormMoney
 	/**
 	 * Get the amount of money requested, loan if needed.
 	 * @param money The amount of money we need.
+	 * @param silent (false by default) Whether or not we should show info about failure to get money or getting a loan.
 	 * @return Boolean saying if we got the needed money or not.
 	 */
-	static function GetMoney(money);
+	static function GetMoney(money, silent = false);
 	
 	/**
 	 * Compute the amount of money corrected for inflation.
@@ -57,20 +61,23 @@ function WormMoney::HasMoney(money)
 	return false;
 }
 
-function WormMoney::GetMoney(money)
+function WormMoney::GetMoney(money, silent = false)
 {
 	if (!WormMoney.HasMoney(money)) {
-		AILog.Info("We don't have enough money and we also can't loan enough for our needs (" + money + ").");
-		AILog.Info("Bank balance: " + AICompany.GetBankBalance(AICompany.COMPANY_SELF) + 
-			", max loan: " + AICompany.GetMaxLoanAmount() +
-			", current loan: " + AICompany.GetLoanAmount());
+		if (!silent) {
+			AILog.Info("We don't have enough money and we also can't loan enough for our needs (" + money + ").");
+			AILog.Info("Bank balance: " + AICompany.GetBankBalance(AICompany.COMPANY_SELF) + 
+				", max loan: " + AICompany.GetMaxLoanAmount() +
+				", current loan: " + AICompany.GetLoanAmount());
+		}
 		return false;
 	}
 	if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) > money) return true;
 
 	local loan = money - AICompany.GetBankBalance(AICompany.COMPANY_SELF) + AICompany.GetLoanInterval() + AICompany.GetLoanAmount();
 	loan = loan - loan % AICompany.GetLoanInterval();
-	AILog.Info("Need a loan to get " + money + ": " + loan);
+	if (!silent)
+		AILog.Info("Need a loan to get " + money + ": " + loan);
 	return AICompany.SetLoanAmount(loan);
 }
 
