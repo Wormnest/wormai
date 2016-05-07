@@ -102,6 +102,14 @@ class WormPlanner
 	 */
 	static function GetMailCargo();
 
+	/**
+	 * Get the percentage of transported cargo from a given industry.
+	 * @param ind The IndustryID of the industry.
+	 * @param cargo The cargo to be checked.
+	 * @return The percentage transported, ranging from 0 to 100.
+	 */
+	static function GetLastMonthTransportedPercentage(ind, cargo);
+
 }
 
 function WormPlanner::GetSubsidizedRoute(planned_route)
@@ -132,7 +140,8 @@ function WormPlanner::GetSubsidizedRoute(planned_route)
 			planned_route.SourceLocation = AIIndustry.GetLocation(planned_route.SourceID);
 			// Skip this if there is already heavy competition there
 			/// @todo Instead of GetSetting we should define a value for ourselves...
-			//if (AIIndustry.GetLastMonthTransported(planned_route.SourceID, planned_route.cargo) > AIController.GetSetting("max_transported")) continue;
+			/// @todo define a var/const instead of the fixed value we now use...
+			if (AIIndustry.GetLastMonthTransported(planned_route.SourceID, planned_route.Cargo) > 50 /*AIController.GetSetting("max_transported")*/) continue;
 		}
 		planned_route.DestIsTown = (AISubsidy.GetDestinationType(sub) == AISubsidy.SPT_TOWN);
 		planned_route.DestID = AISubsidy.GetDestinationIndex(sub);
@@ -170,8 +179,8 @@ function WormPlanner::GetRoute(planned_route)
 			planned_route.SourceList.KeepAboveValue(0);
 			// Try to avoid excessive competition
 			/// @todo !!
-			//planned_route.SourceList.Valuate(cBuilder.GetLastMonthTransportedPercentage, icrg);
-			//planned_route.SourceList.KeepBelowValue(AIController.GetSetting("max_transported"));
+			planned_route.SourceList.Valuate(WormPlanner.GetLastMonthTransportedPercentage, icrg);
+			planned_route.SourceList.KeepBelowValue(50/*AIController.GetSetting("max_transported")*/);
 			planned_route.SourceIsTown = false;
 		} else {
 			// If the source is a town
@@ -288,10 +297,6 @@ function WormPlanner::PlanRailRoute()
 	return true;
 }
 
-/**
- * Gets the CargoID associated with mail.
- * @return The CargoID of mail.
- */
 function WormPlanner::GetMailCargo()
 {
 	local cargolist = AICargoList();
@@ -299,5 +304,10 @@ function WormPlanner::GetMailCargo()
 		if (AICargo.GetTownEffect(cargo) == AICargo.TE_MAIL) return cargo;
 	}
 	return null;
+}
+
+function WormPlanner::GetLastMonthTransportedPercentage(ind, cargo)
+{
+	return (100 * AIIndustry.GetLastMonthTransported(ind, cargo) / AIIndustry.GetLastMonthProduction(ind, cargo));
 }
 
