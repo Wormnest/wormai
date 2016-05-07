@@ -51,6 +51,13 @@ class WormMoney
 	 * @return 10000 pounds plus the expected station maintenance costs.
 	 */
 	function GetMinimumCashNeeded();
+
+	/**
+	 * Calculates how much cash will be on hand if the maximum loan is taken.
+	 * @return The maximum amount of money.
+	 * @note Taken from SimpleAI.
+	 */
+	function GetMaxBankBalance();
 	/// @}
 
 }
@@ -94,4 +101,12 @@ function WormMoney::GetMinimumCashNeeded()
 	local maintenance = WormMoney.InflationCorrection(stationlist.Count() * 50);
 	/// @todo Maybe also use InflationCorrection on GetLoanInterval or is that already corrected for inflation?
 	return maintenance + AICompany.GetLoanInterval();
+}
+
+function WormMoney::GetMaxBankBalance()
+{
+	local balance = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
+	local maxbalance = balance + AICompany.GetMaxLoanAmount() - AICompany.GetLoanAmount();
+	// overflow protection by krinn
+	return (maxbalance >= balance) ? maxbalance : balance;
 }
