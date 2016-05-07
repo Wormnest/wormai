@@ -129,7 +129,7 @@ function WormPlanner::GetSubsidizedRoute(planned_route)
 		planned_route.SourceID = AISubsidy.GetSourceIndex(sub); // ID of Town or Industry
 		
 		// Skip if we are already transporting this cargo from this source.
-		if (_rail_manager._serviced.HasItem(planned_route.SourceID * 256 + planned_route.Cargo)) continue;
+		if (_rail_manager.serviced.HasItem(planned_route.SourceID * 256 + planned_route.Cargo)) continue;
 		
 		// Some random chance not to choose this subsidy
 		//if (!AIBase.Chance(AIController.GetSetting("subsidy_chance"), 11) || (!root.use_roadvehs && !root.use_trains)) continue;
@@ -193,7 +193,7 @@ function WormPlanner::GetRoute(planned_route)
 		planned_route.SourceList.Valuate(AIBase.RandItem);
 		foreach (isrc, dummy2 in planned_route.SourceList) {
 			// Skip source if already serviced
-			if (_rail_manager._serviced.HasItem(isrc * 256 + icrg)) continue;
+			if (_rail_manager.serviced.HasItem(isrc * 256 + icrg)) continue;
 			// Skip if an airport exists there and it has no free capacity
 			/*
 			local noairportcapacity = false;

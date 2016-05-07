@@ -21,16 +21,22 @@ class WormRailManager
 	BS_REMOVING		= 2;
 	BS_ELECTRIFYING	= 3;
 
+	/** Reasons to send a vehicle to a depot. */
+	TD_SELL = 1;
+	TD_REPLACE = 2;
+	TD_ATTACH_WAGONS = 3;
+
 	/* Variables used by WormRailManager */
 	/* 1. Variables that will be saved in a savegame. (TODO) */
-	_routes = null;						///< An array containing all our routes
-	_groups = null;						///< The list of vehicle groups
-	_serviced = null;					///< Industry/town - cargo pairs already serviced
-	railbridges = null;				///< The list of rail bridges
-	_engine_blacklist = null;			///< The blacklist of train engines
+	routes = null;						///< An array containing all our routes
+	groups = null;						///< The list of vehicle groups
+	serviced = null;					///< Industry/town - cargo pairs already serviced
+	railbridges = null;					///< The list of rail bridges
+	engine_blacklist = null;			///< The blacklist of train engines
 	buildingstage = null;				///< The current building stage
-	_lastroute = null;					///< The date the last route was built
+	lastroute = null;					///< The date the last route was built
 	removelist = null;					///< List used to continue rail removal and electrification
+	todepotlist = null;					///< A list of vehicles heading for the depot
 
 	/* 2. Variables that will NOT be saved. */
 	_current_railtype = 0;				///< The railtype we are currently using.
@@ -39,11 +45,12 @@ class WormRailManager
 	/** Create an instance of WormRailManager and initialize our variables. */
 	constructor()
 	{
-		_routes = [];
-		_groups = AIList();
-		_serviced = AIList();
+		routes = [];
+		groups = AIList();
+		serviced = AIList();
 		railbridges = AITileList();
-		_engine_blacklist = AIList();
+		engine_blacklist = AIList();
+		todepotlist = AIList();
 		_current_railtype = AIRail.RAILTYPE_INVALID;
 		_planner = WormPlanner(this);
 		AILog.Info("[RailManager initialized]");
@@ -98,14 +105,29 @@ class WormRailManager
 	 */
 	function RegisterRoute(route_data, station_data, vehtype, group);
 
+	/**
+	 * Checks all routes. Empty routes are removed, new vehicles are added if needed, old vehicles are replaced,
+	 * vehicles are restarted if sitting in the depot for no reason, rails are electrified, short trains are lengthened.
+	 */
+	function CheckRoutes();
+
+	/**
+	 * Checks ungrouped vehicles. Under normal conditions all vehicles should be grouped.
+	 */
+	function CheckDefaultGroup();
+
+	/**
+	 * Adds a new vehicle to an existing route.
+	 * @param route The route to which the new vehicle will be added.
+	 * @param mainvehicle An already existing vehicle on the route to share orders with.
+	 * @param engine The EngineID of the new vehicle. In case of trains it is the EngineID of the locomotive.
+	 * @param wagon The EngineID of the train wagons.
+	 * @return True if the action succeeded.
+	 */
+	function AddVehicle(route, mainvehicle, engine, wagon);
+
  }
 
-/**
- * Set the name of a vehicle group.
- * @param group The GroupID of the group.
- * @param crg The cargo transported.
- * @param stasrc The source station.
- */
 function WormRailManager::SetGroupName(group, crg, stasrc)
 {
 	local groupname = AICargo.GetCargoLabel(crg) + " - " + AIStation.GetName(stasrc);
@@ -184,7 +206,7 @@ function WormRailManager::BuildRailway()
 	AILog.Info(AICargo.GetCargoLabel(_planner.route.Cargo) + " from " + srcname + " to " + dstname + subsidy);
 	
 	/* Choose wagon and train engine. */
-	local wagon = WormRailBuilder.ChooseWagon(_planner.route.Cargo, _engine_blacklist);
+	local wagon = WormRailBuilder.ChooseWagon(_planner.route.Cargo, engine_blacklist);
 	if (wagon == null) {
 		AILog.Warning("No suitable wagon available!");
 		return false;
@@ -203,7 +225,7 @@ function WormRailManager::BuildRailway()
 
 	/* Check if there is a suitable engine available. */
 	local engine = WormRailBuilder.ChooseTrainEngine(_planner.route.Cargo,
-		_planner.route.distance_manhattan, wagon, platform * 2 - 1, _engine_blacklist);
+		_planner.route.distance_manhattan, wagon, platform * 2 - 1, engine_blacklist);
 	if (engine == null) {
 		AILog.Warning("No suitable train engine available!");
 		return false;
@@ -363,7 +385,7 @@ function WormRailManager::BuildRailway()
 	
 	/* Create trains for this route. */
 	WormRailBuilder.BuildAndStartTrains(trains, 2 * platform - 2, engine, wagon, null, group,
-		_planner.route, station_data, _engine_blacklist);
+		_planner.route.Cargo, station_data, engine_blacklist);
 	/// @todo If building trains fails because of lack of money we should try again after a little wait...
 	/// @too BuildAndStartTrains should return a status code instead of True/False [OK, NOMONEY, BADTRAIN, ...]
 	
@@ -374,7 +396,7 @@ function WormRailManager::BuildRailway()
 	if (vehicles.Count() == 0 && vehtype == AIVehicle.VT_RAIL) {
 		AILog.Info("The new route may be empty because of blacklisting, retrying...")
 		// Choose wagon and locomotive
-		local wagon = WormRailBuilder.ChooseWagon(_planner.route.Cargo, _engine_blacklist);
+		local wagon = WormRailBuilder.ChooseWagon(_planner.route.Cargo, engine_blacklist);
 		if (wagon == null) {
 			AILog.Warning("No suitable wagon available!");
 			return false;
@@ -382,7 +404,7 @@ function WormRailManager::BuildRailway()
 			AILog.Info("Chosen wagon: " + AIEngine.GetName(wagon));
 		}
 		local engine = WormRailBuilder.ChooseTrainEngine(_planner.route.Cargo, _planner.route.distance_manhattan, 
-			wagon, platform * 2 - 1, _engine_blacklist);
+			wagon, platform * 2 - 1, engine_blacklist);
 		if (engine == null) {
 			AILog.Warning("No suitable engine available!");
 			return false;
@@ -398,7 +420,7 @@ function WormRailManager::BuildRailway()
 		/// @todo if we're short on money we should'nt try but wait longer before trying again.
 		AILog.Info("Trying again to build trains for this route.");
 		WormRailBuilder.BuildAndStartTrains(trains, 2 * platform - 2, engine, wagon, null, group,
-			_planner.route, station_data, _engine_blacklist);
+			_planner.route.Cargo, station_data, engine_blacklist);
 	}
 	AILog.Info("New route done!");
 	station_data = null;
@@ -442,9 +464,191 @@ function WormRailManager::RegisterRoute(route_data, station_data, vehtype, group
 			route.maxvehicles = 0;
 			break;
 	}
-	_routes.push(route);
-	_serviced.AddItem(route_data.SourceID * 256 + route_data.Cargo, 0);
-	_groups.AddItem(group, _routes.len() - 1);
-	_lastroute = AIDate.GetCurrentDate();
+	routes.push(route);
+	serviced.AddItem(route_data.SourceID * 256 + route_data.Cargo, 0);
+	groups.AddItem(group, routes.len() - 1);
+	lastroute = AIDate.GetCurrentDate();
 	return route;
 }
+
+function WormRailManager::CheckRoutes()
+{
+	foreach (idx, route in routes) {
+		AILog.Info(".... checking route " + idx + ", " + AIStation.GetName(route.stasrc) + " - " + AIStation.GetName(route.stadst));
+		local vehicles = AIVehicleList_Group(route.group);
+
+		/* Empty route */
+		/// @todo if vehicle count = 0 because we didn't have enough money to buy trains then
+		/// @todo we should (try to) add trains or wait until we have more money
+		/// @todo Maybe add a status to routes like [nomoneyfortrains, unprofitable, ...]
+		if (vehicles.Count() == 0) {
+			AILog.Info("Removing empty route: " + AIStation.GetName(route.stasrc) + " - " + AIStation.GetName(route.stadst));
+			route.vehtype = null;
+			groups.RemoveItem(route.group);
+			AIGroup.DeleteGroup(route.group);
+			serviced.RemoveItem(route.src * 256 + route.crg);
+			// Connected rails will automatically be removed
+			WormRailBuilder.DeleteRailStation(route.stasrc, this);
+			WormRailBuilder.DeleteRailStation(route.stadst, this);
+			break;
+		}
+
+		/* Electrifying rails */
+		if ((AIRail.TrainHasPowerOnRail(route.railtype, AIRail.GetCurrentRailType())) && (route.railtype != AIRail.GetCurrentRailType())) {
+			// Check if we can afford it
+			if (WormMoney.GetMaxBankBalance() > WormMoney.InflationCorrection(30000)) {
+				if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < WormMoney.InflationCorrection(30000)) {
+					WormMoney.GetMoney(WormMoney.InflationCorrection(30000), WormMoney.WM_SILENT);
+				}
+				AILog.Info("Electrifying rail line: " + AIStation.GetName(route.stasrc) + " - " + AIStation.GetName(route.stadst));
+				route.railtype = AIRail.GetCurrentRailType();
+				WormRailBuilder.ElectrifyRail(AIStation.GetLocation(route.stasrc), this);
+			}
+		}
+
+		/* Adding trains */
+		if (vehicles.Count() == 1 && route.maxvehicles == 2) {
+			if (AIVehicle.GetProfitThisYear(vehicles.Begin()) <= 0) break;
+			if (AIStation.GetCargoWaiting(route.stasrc, route.crg) > 150) {
+				local railtype = AIRail.GetCurrentRailType();
+				AIRail.SetCurrentRailType(route.railtype);
+				local wagon = WormRailBuilder.ChooseWagon(route.crg, engine_blacklist);
+				if (wagon == null) {
+					AIRail.SetCurrentRailType(railtype);
+					return false;
+				}
+				local platform = WormRailBuilder.GetRailStationPlatformLength(route.stasrc);
+				local engine = WormRailBuilder.ChooseTrainEngine(route.crg, AIMap.DistanceManhattan(AIStation.GetLocation(route.stasrc), 
+					AIStation.GetLocation(route.stadst)), wagon, platform * 2 - 1, engine_blacklist);
+				if (engine == null) {
+					AIRail.SetCurrentRailType(railtype);
+					return false;
+				}
+				// Check if we can afford it
+				if (WormMoney.GetMaxBankBalance() > (WormMoney.GetMinimumCashNeeded() + AIEngine.GetPrice(engine) +
+					4 * AIEngine.GetPrice(wagon))) {
+					if (WormRailManager.AddVehicle(route, vehicles.Begin(), engine, wagon)) {
+						AILog.Info("Added train to route: " + AIStation.GetName(route.stasrc) + " - " + AIStation.GetName(route.stadst));
+					}
+				}
+				AIRail.SetCurrentRailType(railtype);
+			}
+		}
+
+		/* Replacing old vehicles */
+		vehicles.Valuate(AIVehicle.GetAgeLeft);
+		vehicles.KeepBelowValue(0);
+		foreach (vehicle, dummy in vehicles) {
+			if (todepotlist.HasItem(vehicle)) continue;
+			local railtype = AIRail.GetCurrentRailType();
+			// Choose a new model
+			AIRail.SetCurrentRailType(route.railtype);
+			local wagon = WormRailBuilder.ChooseWagon(route.crg, engine_blacklist);
+			if (wagon == null) continue;
+			local platform = WormRailBuilder.GetRailStationPlatformLength(route.stasrc);
+			local engine = WormRailBuilder.ChooseTrainEngine(route.crg, AIMap.DistanceManhattan(AIStation.GetLocation(route.stasrc),
+				AIStation.GetLocation(route.stadst)), wagon, platform * 2 - 1, engine_blacklist);
+			AIRail.SetCurrentRailType(railtype);
+			if (engine == null) continue;
+			// Replace it only if we can afford it
+			if (WormMoney.GetMaxBankBalance() > (WormMoney.GetMinimumCashNeeded() + AIEngine.GetPrice(engine) +
+				5 * AIEngine.GetPrice(wagon))) {
+				AILog.Info(AIVehicle.GetName(vehicle) + " is getting old, sending it to the depot...");
+				if (!AIVehicle.SendVehicleToDepot(vehicle)) {
+					// Maybe the train only needs to be reversed to find a depot
+					AIVehicle.ReverseVehicle(vehicle);
+					AIController.Sleep(75);
+					if (!AIVehicle.SendVehicleToDepot(vehicle)) break;
+				}
+				todepotlist.AddItem(vehicle, TD_REPLACE);
+			}
+		}
+
+		/* Lengthening short trains */
+		vehicles = AIVehicleList_Group(route.group);
+		local platform = WormRailBuilder.GetRailStationPlatformLength(route.stasrc);
+		foreach (train, dummy in vehicles) {
+			if (todepotlist.HasItem(train)) continue;
+			// The train should fill its platform
+			if (AIVehicle.GetLength(train) < platform * 16 - 7) {
+				local railtype = AIRail.GetCurrentRailType();
+				AIRail.SetCurrentRailType(route.railtype);
+				local wagon = WormRailBuilder.ChooseWagon(route.crg, engine_blacklist);
+				if (wagon == null) break;
+				// Check if we can afford it
+				if (WormMoney.GetMaxBankBalance() > (WormMoney.GetMinimumCashNeeded() + 5 * AIEngine.GetPrice(wagon))) {
+					AILog.Info(AIVehicle.GetName(train) + " is short, sending it to the depot to attach more wagons...");
+					if (!AIVehicle.SendVehicleToDepot(train)) {
+						AIVehicle.ReverseVehicle(train);
+						AIController.Sleep(75);
+						if (!AIVehicle.SendVehicleToDepot(train)) break;
+					}
+					todepotlist.AddItem(train, TD_ATTACH_WAGONS);
+				}
+				AIRail.SetCurrentRailType(railtype);
+			}
+		}
+
+		/* Checking vehicles in depot */
+		vehicles = AIVehicleList_Group(route.group);
+		vehicles.Valuate(AIVehicle.IsStoppedInDepot);
+		vehicles.KeepValue(1);
+		foreach (vehicle, dummy in vehicles) {
+			// A vehicle has probably been sitting there for ages if its current year/last year profits are both 0, and it's at least 2 months old
+			if (AIVehicle.GetProfitThisYear(vehicle) != 0 || AIVehicle.GetProfitLastYear(vehicle) != 0 || AIVehicle.GetAge(vehicle) < 60) continue;
+			if (todepotlist.HasItem(vehicle)) {
+				todepotlist.RemoveItem(vehicle);
+				AIVehicle.StartStopVehicle(vehicle);
+			} else {
+				// Sell it if we have no idea how it got there
+				AILog.Warning("Sold " + AIVehicle.GetName(vehicle) + ", as it has been sitting in the depot for ages.");
+				AIVehicle.SellWagonChain(vehicle, 0);
+			}
+		}
+	}
+	// Check ugrouped vehicles as well. There should be none after all...
+	WormRailManager.CheckDefaultGroup();
+}
+
+function WormRailManager::CheckDefaultGroup()
+{
+	local vehicles = AIVehicleList_DefaultGroup(AIVehicle.VT_RAIL);
+	vehicles.Valuate(AIVehicle.IsStoppedInDepot);
+	vehicles.KeepValue(1);
+	foreach (vehicle, dummy in vehicles) {
+		// Check for vehicles sitting in the depot.
+		if (AIVehicle.GetProfitThisYear(vehicle) != 0 || AIVehicle.GetProfitLastYear(vehicle) != 0 || AIVehicle.GetAge(vehicle) < 60) continue;
+		if (todepotlist.HasItem(vehicle)) {
+			todepotlist.RemoveItem(vehicle);
+			AIVehicle.StartStopVehicle(vehicle);
+		} else {
+			AILog.Warning("Sold " + AIVehicle.GetName(vehicle) + ", as it has been sitting in the depot for ages.");
+			AIVehicle.SellWagonChain(vehicle, 0);
+		}
+	}
+}
+
+function WormRailManager::AddVehicle(route, mainvehicle, engine, wagon)
+{
+	// A WormStation instance is needed to add a new vehicle
+	local station_data = WormStation();
+	station_data.stasrc = route.stasrc;
+	station_data.stadst = route.stadst;
+	station_data.homedepot = route.homedepot;
+	
+	local trains = AIVehicleList();
+	trains.Valuate(AIVehicle.GetVehicleType);
+	trains.KeepValue(AIVehicle.VT_RAIL);
+	// Do not try to add one if we have already reached the train limit
+	if (trains.Count() + 1 > AIGameSettings.GetValue("vehicle.max_trains")) return false;
+	local length = WormRailBuilder.GetRailStationPlatformLength(station_data.stasrc) * 2 - 2;
+	if (WormRailBuilder.BuildAndStartTrains(1, length, engine, wagon, mainvehicle, route.group,
+		route.crg, station_data, engine_blacklist)) {
+		station_data = null;
+		return true;
+	} else {
+		station_data = null;
+		return false;
+	}
+}
+

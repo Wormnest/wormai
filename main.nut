@@ -375,6 +375,10 @@ function WormAI::Start()
 					this.air_manager.ManageAirRoutes();
 					this.air_manager.CheckForAirportsNeedingToBeUpgraded();
 				}
+				if (this.use_trains) {
+					AILog.Info("++ Check Train Routes ++");
+					this.rail_manager.CheckRoutes();
+				}
 			}
 
 			if (this.use_air) {
@@ -409,7 +413,6 @@ function WormAI::Start()
 			this.air_manager.HandleEvents();
 		}
 		if (this.use_trains) {
-			AILog.Info("Check rail ticker.");
 			if ((cur_ticker - old_ticker_rail > rail_delay_factor * this.delay_build_rail_route) || old_ticker_rail == 0) {
 				AILog.Info("  Check money...");
 				if (WormMoney.HasMoney(WormMoney.InflationCorrection(60000))) {
