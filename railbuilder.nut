@@ -205,12 +205,12 @@ class WormRailBuilder
 	 * @param wagon The EngineID of the wagons.
 	 * @param ordervehicle The vehicle to share orders with. Null, if there is no such vehicle.
 	 * @param group The vehicle group this train should be part of.
-	 * @param route_data Info about the route. Used here is Cargo. 
+	 * @param cargo The cargo to transport.
 	 * @param station_data A WormStation class object with info about the stations between which rail is being built.
 	 * @param engineblacklist The blacklist of engines to which bad engines will be added.
 	 * @return True if at least one train was built.
 	 */
-	function BuildAndStartTrains(number, length, engine, wagon, ordervehicle, group, route_data, station_data, engineblacklist);
+	function BuildAndStartTrains(number, length, engine, wagon, ordervehicle, group, cargo, station_data, engineblacklist);
 
 	/**
 	 * A workaround for refitting the mail wagon separately.
@@ -245,6 +245,22 @@ class WormRailBuilder
 	 * @param rail_manager The WormRailManager class object.
 	 */
 	function DeleteRailStation(sta, rail_manager);
+
+	/**
+	 * Upgrade a segment of normal rail to electrified rail from a given starting point.
+	 * Tiles which are reachable by a train from a given starting point are electrified,
+	 * including stations and depots. This function is not static.
+	 * @param start_tile The starting point from which rails are electrified.
+	 * @param rail_manager The WormRailManager class object.
+	 */
+	function ElectrifyRail(start_tile, rail_manager);
+
+	/**
+	 * Get the platform length of a station.
+	 * @param sta The StationID of the station.
+	 * @return The length of the station's platform in tiles.
+	 */
+	function GetRailStationPlatformLength(sta);
 
 }
 
@@ -1039,7 +1055,7 @@ function WormRailBuilder::CanBuildPassingLaneSection(centre, direction, reverse)
 	return true;
 }
 
-function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ordervehicle, group, route_data, station_data, engineblacklist)
+function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ordervehicle, group, cargo, station_data, engineblacklist)
 {
 	local src_place = AIStation.GetLocation(station_data.stasrc);
 	local dst_place = AIStation.GetLocation(station_data.stadst);
@@ -1057,7 +1073,7 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 		AILog.Error("The train engine did not get built: " + AIError.GetLastErrorString());
 		return false;
 	}
-	AIVehicle.RefitVehicle(trainengine, route_data.Cargo);
+	AIVehicle.RefitVehicle(trainengine, cargo);
 
 	// Check if we have the money to build at least one wagon
 	if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < AIEngine.GetPrice(wagon)) {
@@ -1090,7 +1106,7 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 	}
 	// Build a mail wagon
 	local mailwagontype = null, mailwagon = null;
-	if ((length > 3) && (AICargo.GetTownEffect(route_data.Cargo) == AICargo.TE_PASSENGERS)) {
+	if ((length > 3) && (AICargo.GetTownEffect(cargo) == AICargo.TE_PASSENGERS)) {
 		// Choose a wagon for mail
 		local mailcargo = WormPlanner.GetMailCargo();
 		mailwagontype = WormRailBuilder.ChooseWagon(mailcargo, engineblacklist);
@@ -1109,7 +1125,7 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 				} else {
 					if (!AIVehicle.RefitVehicle(mailwagon, mailcargo)) {
 						// If no mail wagon was found, and the other wagons needed to be refitted, refit the "mail wagon" as well
-						if (mailwagoncargo != route_data.Cargo) AIVehicle.RefitVehicle(mailwagon, route_data.Cargo);
+						if (mailwagoncargo != cargo) AIVehicle.RefitVehicle(mailwagon, cargo);
 					}
 				}
 			}
@@ -1137,7 +1153,7 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 	}
 	local price = AIEngine.GetPrice(engine) + cur_wagons * AIEngine.GetPrice(wagon);
 	// Refit the wagons if needed
-	if (AIEngine.GetCargoType(wagon) != route_data.Cargo) AIVehicle.RefitVehicle(firstwagon, route_data.Cargo);
+	if (AIEngine.GetCargoType(wagon) != cargo) AIVehicle.RefitVehicle(firstwagon, cargo);
 	// Attach the wagons to the engine
 	if (mailwagon != null) {
 		price += AIVehicle.GetCurrentValue(mailwagon);
@@ -1159,7 +1175,7 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 	if (ordervehicle == null) {
 		// Set the train's orders
 		local firstorderflag = null;
-		if (AICargo.GetTownEffect(route_data.Cargo) == AICargo.TE_PASSENGERS || AICargo.GetTownEffect(route_data.Cargo) == AICargo.TE_MAIL) {
+		if (AICargo.GetTownEffect(cargo) == AICargo.TE_PASSENGERS || AICargo.GetTownEffect(cargo) == AICargo.TE_MAIL) {
 			// Do not full load a passenger train
 			firstorderflag = AIOrder.OF_NON_STOP_INTERMEDIATE;
 		} else {
@@ -1376,3 +1392,59 @@ function WormRailBuilder::DeleteRailStation(sta, rail_manager)
 	}
 }
 
+/**
+ * Upgrade a segment of normal rail to electrified rail from a given starting point.
+ * Tiles which are reachable by a train from a given starting point are electrified,
+ * including stations and depots. This function is not static.
+ * @param start_tile The starting point from which rails are electrified.
+ */
+function WormRailBuilder::ElectrifyRail(start_tile, rail_manager)
+{
+	// The starting date is needed to avoid infinite loops
+	local startingdate = AIDate.GetCurrentDate();
+	rail_manager.buildingstage = rail_manager.BS_ELECTRIFYING;
+	// Get all four directions
+	local all_vectors = [AIMap.GetTileIndex(1, 0), AIMap.GetTileIndex(0, 1), AIMap.GetTileIndex(-1, 0), AIMap.GetTileIndex(0, -1)];
+	// If start_tile is not a valid tile we're probably loading a game
+	if (AIMap.IsValidTile(start_tile)) rail_manager.removelist = [start_tile];
+	local tile = null;
+	while (rail_manager.removelist.len() > 0) {
+		// Avoid infinite loops
+		if (AIDate.GetCurrentDate() - startingdate > 120) {
+			AILog.Error("It looks like I got into an infinite loop.");
+			rail_manager.removelist = [];
+			return;
+		}
+		tile = rail_manager.removelist.pop();
+		// Step further if it is a tunnel or a bridge
+		if (AITunnel.IsTunnelTile(tile)) tile = AITunnel.GetOtherTunnelEnd(tile);
+		if (AIBridge.IsBridgeTile(tile)) tile = AIBridge.GetOtherBridgeEnd(tile);
+		if (!AIRail.IsRailDepotTile(tile) && (AIRail.GetRailType(tile) != AIRail.GetCurrentRailType())) {
+			// Check the neighboring rail tiles, only tiles from the old railtype are considered
+			foreach (idx, vector in all_vectors) {
+				if (WormRailBuilder.AreRailTilesConnected(tile, tile + vector)) {
+					rail_manager.removelist.push(tile + vector);
+				}
+			}
+		}
+		AIRail.ConvertRailType(tile, tile, AIRail.GetCurrentRailType());
+	}
+	rail_manager.buildingstage = rail_manager.BS_NOTHING;
+}
+
+function WormRailBuilder::GetRailStationPlatformLength(sta)
+{
+	if (!AIStation.IsValidStation(sta)) return 0;
+	local place = AIStation.GetLocation(sta);
+	if (!AIRail.IsRailStationTile(place)) return 0;
+	local dir = AIRail.GetRailStationDirection(place);
+	local vector = null;
+	if (dir == AIRail.RAILTRACK_NE_SW) vector = AIMap.GetTileIndex(1, 0);
+	else vector = AIMap.GetTileIndex(0, 1);
+	local length = 0;
+	while (AIRail.IsRailStationTile(place) && AIStation.GetStationID(place) == sta) {
+		length++;
+		place += vector;
+	}
+	return length;
+}
