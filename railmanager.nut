@@ -23,9 +23,13 @@ class WormRailManager
 {
 	/* Variables used by WormRailManager */
 	/* 1. Variables that will be saved in a savegame. (TODO) */
+	_routes = null;									///< An array containing all our routes
+	_groups = null;									//?< The list of vehicle groups
 	_serviced = null;								///< Industry/town - cargo pairs already serviced
+	_railbridges = null;							///< The list of rail bridges
 	_engine_blacklist = null;						///< The blacklist of train engines
 	_buildingstage = null;							///< The current building stage
+	_lastroute = null;								///< The date the last route was built
 
 	/* 2. Variables that will NOT be saved. */
 	_current_railtype = 0;							///< The railtype we are currently using.
@@ -34,13 +38,26 @@ class WormRailManager
 	/** Create an instance of WormRailManager and initialize our variables. */
 	constructor()
 	{
+		_routes = [];
+		_groups = AIList();
 		_serviced = AIList();
+		_railbridges = AITileList();
 		_engine_blacklist = AIList();
 		_current_railtype = AIRail.RAILTYPE_INVALID;
 		_planner = WormPlanner(this);
 		AILog.Info("[RailManager initialized]");
 	}
 	
+	/**
+	 * Set the name of a vehicle group.
+	 * @param group The GroupID of the group.
+	 * @param crg The cargo transported.
+	 * @param stasrc The source station.
+	 * @note Taken from SimpleAI.
+	 * @todo Move to a different unit, should be accessible from other managers too.
+	 */
+	static function SetGroupName(group, crg, stasrc);
+
 	/**
 	 * Checks whether a given rectangle is within the influence of a given town.
 	 * @param tile The topmost tile of the rectangle.
@@ -70,6 +87,35 @@ class WormRailManager
 	 */
 	function BuildRailway();
 
+	/**
+	 * Register the new route into the database.
+	 * @param route_data A WormRoute class object containing info about the route.
+	 * @param station_data A WormStation class object containing info about the station.
+	 * @param vehtype The type of vehicle using this route. Currently always VT_RAIL.
+	 * @param group The vehicle group for the vehicles using this route.
+	 * @return The new route registered.
+	 */
+	function RegisterRoute(route_data, station_data, vehtype, group);
+
+ }
+
+/**
+ * Set the name of a vehicle group.
+ * @param group The GroupID of the group.
+ * @param crg The cargo transported.
+ * @param stasrc The source station.
+ */
+function WormRailManager::SetGroupName(group, crg, stasrc)
+{
+	local groupname = AICargo.GetCargoLabel(crg) + " - " + AIStation.GetName(stasrc);
+	if (groupname.len() > 30) groupname = groupname.slice(0, 30);
+	if (!AIGroup.SetName(group, groupname)) {
+		// Shorten the name if it is too long (Unicode character problems)
+		while (AIError.GetLastError() == AIError.ERR_PRECONDITION_STRING_TOO_LONG) {
+			groupname = groupname.slice(0, groupname.len() - 1);
+			AIGroup.SetName(group, groupname);
+		}
+	}
 }
 
 function WormRailManager::IsRectangleWithinTownInfluence(tile, town_id, width, height)
@@ -121,10 +167,10 @@ function WormRailManager::SetRailType()
 
 function WormRailManager::BuildRailway()
 {
-	_buildingstage = BS_NOTHING;
-
 	/* Plan which route with which cargo we are going to build. */
-	_planner.PlanRailRoute();
+	if (!_planner.PlanRailRoute()) return false;
+
+	_buildingstage = BS_NOTHING;
 
 	/* Show info about chosen route. */
 	local srcname, dstname = null;
@@ -145,25 +191,18 @@ function WormRailManager::BuildRailway()
 		AILog.Info("Chosen wagon: " + AIEngine.GetName(wagon));
 	}
 
-	local double = false; ///< @note Class var in SimpleAI but local here since it's not used anywhere else?
-	/* Decide whether to use single or double rails. */
-	local distance_manhattan = AIMap.DistanceManhattan(_planner.route.SourceLocation, _planner.route.DestLocation);
-	/// @todo replace number by a definied constant
-	if (distance_manhattan > 80) double = true;
-	else double = false;
-	if (!double) AILog.Info("Using single rail");
+	if (!_planner.route.double) AILog.Info("Using single rail");
 	else AILog.Info("Using double rail");
 	
 	/* Determine the size of the train station. */
 	local platform = null;
-	/// @todo replace number by a definied constant
-	if (double || distance_manhattan > 50) platform = 3;
+	/// @todo replace number by a definied constant or variable depending on date and other factors
+	if (_planner.route.double || _planner.route.distance_manhattan > 50) platform = 3;
 	else platform = 2;
 
 	/* Check if there is a suitable engine available. */
 	local engine = WormRailBuilder.ChooseTrainEngine(_planner.route.Cargo,
-		AIMap.DistanceManhattan(_planner.route.SourceLocation, _planner.route.DestLocation),
-		wagon, platform * 2 - 1, _engine_blacklist);
+		_planner.route.distance_manhattan, wagon, platform * 2 - 1, _engine_blacklist);
 	if (engine == null) {
 		AILog.Warning("No suitable train engine available!");
 		return false;
@@ -171,10 +210,10 @@ function WormRailManager::BuildRailway()
 		AILog.Info("Chosen train engine: " + AIEngine.GetName(engine));
 	}
 
-	local trains = null;
+	local trains = null;	// Number of trains to add to this route
 	local station_data = WormStation();
 
-	if (!double) {
+	if (!_planner.route.double) {
 
 		/* Single rail */
 
@@ -201,10 +240,9 @@ function WormRailManager::BuildRailway()
 			_buildingstage = BS_NOTHING;
 			return false;
 		}
-		station_data = null;
 
 		// Build the rail
-		if (WormRailBuilder.BuildRail(start, end)) {
+		if (WormRailBuilder.BuildRail(start, end, _railbridges)) {
 			AILog.Info("Rail built successfully!");
 		} else {
 /// @todo DeleteRailStation
@@ -288,7 +326,7 @@ function WormRailManager::BuildRailway()
 			}
 		}
 		// Build the rail between the source station and the first passing lane section
-		if (WormRailBuilder.BuildRail(ps1_entry, end)) {
+		if (WormRailBuilder.BuildRail(ps1_entry, end, _railbridges)) {
 			AILog.Info("Rail built successfully!");
 		} else {
 /// @todo DeleteRailStation, RemoveRailLine
@@ -300,7 +338,7 @@ function WormRailManager::BuildRailway()
 			return false;
 		}
 		// Build the rail between the two passing lane sections
-		if (WormRailBuilder.BuildRail(ps2_entry, ps1_exit)) {
+		if (WormRailBuilder.BuildRail(ps2_entry, ps1_exit, _railbridges)) {
 			AILog.Info("Rail built successfully!");
 		} else {
 /// @todo DeleteRailStation, RemoveRailLine
@@ -311,7 +349,7 @@ function WormRailManager::BuildRailway()
 			return false;
 		}
 		// Build the rail between the second passing lane section and the destination station
-		if (WormRailBuilder.BuildRail(start, ps2_exit)) {
+		if (WormRailBuilder.BuildRail(start, ps2_exit, _railbridges)) {
 			AILog.Info("Rail built successfully!");
 		} else {
 /// @todo DeleteRailStation
@@ -321,10 +359,98 @@ function WormRailManager::BuildRailway()
 			return false;
 		}
 	}
-	station_data = null;
 	_buildingstage = BS_NOTHING;
-	/// @todo set group name
-	/// @todo build and start trains
-	/// @todo register route
-	/// ...
+	
+	// For now always rail here
+	local vehtype = AIVehicle.VT_RAIL;
+
+	/* Set up a group for this rail route. */
+	local group = AIGroup.CreateGroup(vehtype);
+	this.SetGroupName(group, _planner.route.Cargo, station_data.stasrc);
+	
+	/* Create trains for this route. */
+	WormRailBuilder.BuildAndStartTrains(trains, 2 * platform - 2, engine, wagon, null, group,
+		_planner.route, station_data, _engine_blacklist);
+	/// @todo If building trains fails because of lack of money we should try again after a little wait...
+	/// @note This is probably something that is done in manager or RegisteRoute by SimpleAI. Check this!
+	
+	local new_route = WormRailManager.RegisterRoute(_planner.route, station_data, vehtype, group);
+	
+	// Retry if route was abandoned due to blacklisting
+	local vehicles = AIVehicleList_Group(group);
+	if (vehicles.Count() == 0 && vehtype == AIVehicle.VT_RAIL) {
+		AILog.Info("The new route may be empty because of blacklisting, retrying...")
+		// Choose wagon and locomotive
+		local wagon = WormRailBuilder.ChooseWagon(_planner.route.Cargo, _engine_blacklist);
+		if (wagon == null) {
+			AILog.Warning("No suitable wagon available!");
+			return false;
+		} else {
+			AILog.Info("Chosen wagon: " + AIEngine.GetName(wagon));
+		}
+		local engine = WormRailBuilder.ChooseTrainEngine(_planner.route.Cargo, _planner.route.distance_manhattan, 
+			wagon, platform * 2 - 1, _engine_blacklist);
+		if (engine == null) {
+			AILog.Warning("No suitable engine available!");
+			return false;
+		} else {
+			AILog.Info("Chosen engine: " + AIEngine.GetName(engine));
+		}
+		/* Wormnest: it seems easier to call BuildAndStartTrains again...
+		local manager = cManager(root);
+		manager.AddVehicle(new_route, null, engine, wagon);
+		if (_planner.route.double) manager.AddVehicle(new_route, null, engine, wagon);
+		*/
+		/// @todo check first if we are below max no. of trains...
+		/// @todo if we're short on money we should'nt try but wait longer before trying again.
+		AILog.Info("Trying again to build trains for this route.");
+		WormRailBuilder.BuildAndStartTrains(trains, 2 * platform - 2, engine, wagon, null, group,
+			_planner.route, station_data, _engine_blacklist);
+	}
+	AILog.Info("New route done!");
+	station_data = null;
+	
+	return true;
+}
+
+function WormRailManager::RegisterRoute(route_data, station_data, vehtype, group)
+{
+	/* Table with info about a completed route. */
+	local route = {
+		src = null
+		dst = null
+		stasrc = null
+		stadst = null
+		homedepot = null
+		group = null
+		crg = null
+		vehtype = null
+		railtype = null
+		maxvehicles = null
+	}
+	route.src = route_data.SourceID;
+	route.dst = route_data.DestID;
+	route.stasrc = station_data.stasrc;
+	route.stadst = station_data.stadst;
+	route.homedepot = station_data.homedepot;
+	route.group = group;
+	route.crg = route_data.Cargo;
+	route.vehtype = vehtype;
+	route.railtype = AIRail.GetCurrentRailType();
+	switch (vehtype) {
+		case AIVehicle.VT_ROAD:
+			route.maxvehicles = AIController.GetSetting("max_roadvehs");
+			break;
+		case AIVehicle.VT_RAIL:
+			route.maxvehicles = route_data.double ? 2 : 1;
+			break;
+		case AIVehicle.VT_AIR:
+			route.maxvehicles = 0;
+			break;
+	}
+	_routes.push(route);
+	_serviced.AddItem(route_data.SourceID * 256 + route_data.Cargo, 0);
+	_groups.AddItem(group, _routes.len() - 1);
+	_lastroute = AIDate.GetCurrentDate();
+	return route;
 }

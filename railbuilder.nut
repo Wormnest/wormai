@@ -150,18 +150,20 @@ class WormRailBuilder
 	 * Build a rail line between two given points.
 	 * @param head1 The starting points of the rail line.
 	 * @param head2 The ending points of the rail line.
+	 * @param railbridges The list of railbridges. If we need to build a bridge it will be added to this list.
 	 * @return True if the construction succeeded.
 	 */
-	function BuildRail(head1, head2);
+	function BuildRail(head1, head2, railbridges);
 
 	/**
 	 * Build a rail line between two given points.
 	 * @param head1 The starting points of the rail line.
 	 * @param head2 The ending points of the rail line.
+	 * @param railbridges The list of railbridges. If we need to build a bridge it will be added to this list.
 	 * @recursiondepth The recursion depth used to catch infinite recursions.
 	 * @return True if the construction succeeded.
 	 */
-	function InternalBuildRail(head1, head2, recursiondepth);
+	function InternalBuildRail(head1, head2, railbridges, recursiondepth);
 
 	/**
 	 * Retry building a rail track after it was interrupted. The last three pieces of track
@@ -193,6 +195,30 @@ class WormRailBuilder
 	 * @return True if a passing lane section can be built.
 	 */
 	function CanBuildPassingLaneSection(centre, direction, reverse);
+
+	/**
+	 * Build and start trains for the current route.
+	 * @param number The number of trains to be built.
+	 * @param length The number of wagons to be attached to the train.
+	 * @param engine The EngineID of the locomotive.
+	 * @param wagon The EngineID of the wagons.
+	 * @param ordervehicle The vehicle to share orders with. Null, if there is no such vehicle.
+	 * @param group The vehicle group this train should be part of.
+	 * @param route_data Info about the route. Used here is Cargo. 
+	 * @param station_data A WormStation class object with info about the stations between which rail is being built.
+	 * @param engineblacklist The blacklist of engines to which bad engines will be added.
+	 * @return True if at least one train was built.
+	 */
+	function BuildAndStartTrains(number, length, engine, wagon, ordervehicle, group, route_data, station_data, engineblacklist);
+
+	/**
+	 * A workaround for refitting the mail wagon separately.
+	 * @param mailwagon The mail wagon to be refitted.
+	 * @param firstwagon The wagon to which the mail wagon is attached.
+	 * @param trainengine The locomotive of the train, used to move the wagons.
+	 * @param crg The cargo which the mail wagon will be refitted to.
+	 */
+	function MailWagonWorkaround(mailwagon, firstwagon, trainengine, crg);
 
 }
 
@@ -698,13 +724,13 @@ function WormRailBuilder::CanBuildDoubleRailStation(tile, direction, station_dat
 	return true;
 }
 
-function WormRailBuilder::BuildRail(head1, head2)
+function WormRailBuilder::BuildRail(head1, head2, railbridges)
 {
 	local recursiondepth = 0;
-	return WormRailBuilder.InternalBuildRail(head1, head2, recursiondepth);
+	return WormRailBuilder.InternalBuildRail(head1, head2, railbridges, recursiondepth);
 }
 
-function WormRailBuilder::InternalBuildRail(head1, head2, recursiondepth)
+function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursiondepth)
 {
 	local pathfinder = WormRailPathFinder();
 	// Set some pathfinder penalties
@@ -765,7 +791,7 @@ function WormRailBuilder::InternalBuildRail(head1, head2, recursiondepth)
 						else return true;
 					} else {
 						// Register the new bridge
-						root.railbridges.AddTile(path.GetTile());
+						railbridges.AddTile(path.GetTile());
 					}
 				}
 				// Step these variables after a tunnel or bridge was built
@@ -985,5 +1011,165 @@ function WormRailBuilder::CanBuildPassingLaneSection(centre, direction, reverse)
 	}
 	test = null;
 	return true;
+}
+
+function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ordervehicle, group, route_data, station_data, engineblacklist)
+{
+	local src_place = AIStation.GetLocation(station_data.stasrc);
+	local dst_place = AIStation.GetLocation(station_data.stadst);
+	// Check if we can afford building a train
+	if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < AIEngine.GetPrice(engine)) {
+		if (!WormMoney.GetMoney(AIEngine.GetPrice(engine), WormMoney.WM_SILENT)) {
+			AILog.Warning("I don't have enough money to build the train.");
+			return false;
+		}
+	}
+	// Build and refit the train engine if needed
+	local trainengine = AIVehicle.BuildVehicle(station_data.homedepot, engine);
+	if (!AIVehicle.IsValidVehicle(trainengine)) {
+		// safety, suggestion by krinn
+		AILog.Error("The train engine did not get built: " + AIError.GetLastErrorString());
+		return false;
+	}
+	AIVehicle.RefitVehicle(trainengine, route_data.Cargo);
+
+	// Check if we have the money to build at least one wagon
+	if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < AIEngine.GetPrice(wagon)) {
+		if (!WormMoney.GetMoney(AIEngine.GetPrice(wagon), WormMoney.WM_SILENT)) {
+			AILog.Warning("I don't have enough money to build the train.");
+			AIVehicle.SellVehicle(trainengine);
+			return false;
+		}
+	}
+	local firstwagon = AIVehicle.BuildVehicle(station_data.homedepot, wagon);
+	// Blacklist the wagon if it is too long
+	if (AIVehicle.GetLength(firstwagon) > 8) {
+		engineblacklist.AddItem(wagon, 0);
+		AILog.Warning(AIEngine.GetName(wagon) + " was blacklisted for being too long.");
+		AIVehicle.SellVehicle(trainengine);
+		AIVehicle.SellVehicle(firstwagon);
+		return false;
+	}
+	// Try whether the engine is compatibile with the wagon
+	{
+		local testmode = AITestMode();
+		if (!AIVehicle.MoveWagonChain(firstwagon, 0, trainengine, 0)) {
+			engineblacklist.AddItem(engine, 0);
+			AILog.Warning(AIEngine.GetName(engine) + " was blacklisted for not being compatibile with " + AIEngine.GetName(wagon) + ".");
+			local execmode = AIExecMode();
+			AIVehicle.SellVehicle(trainengine);
+			AIVehicle.SellVehicle(firstwagon);
+			return false;
+		}
+	}
+	// Build a mail wagon
+	local mailwagontype = null, mailwagon = null;
+	if ((length > 3) && (AICargo.GetTownEffect(route_data.Cargo) == AICargo.TE_PASSENGERS)) {
+		// Choose a wagon for mail
+		local mailcargo = WormPlanner.GetMailCargo();
+		mailwagontype = WormRailBuilder.ChooseWagon(mailcargo, engineblacklist);
+		if (mailwagontype == null) mailwagontype = wagon;
+		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < AIEngine.GetPrice(mailwagontype)) {
+			WormMoney.GetMoney(AIEngine.GetPrice(mailwagontype));
+		}
+		mailwagon = AIVehicle.BuildVehicle(station_data.homedepot, mailwagontype);
+		if (mailwagon != null) {
+			// Try to refit the mail wagon if needed
+			local mailwagoncargo = AIEngine.GetCargoType(AIVehicle.GetEngineType(mailwagon));
+			if (AICargo.GetTownEffect(mailwagoncargo) != AICargo.TE_MAIL) {
+				if (mailwagontype == wagon) {
+					// Some workaround if the mail wagon type is the same as the wagon type
+					WormRailBuilder.MailWagonWorkaround(mailwagon, firstwagon, trainengine, mailcargo);
+				} else {
+					if (!AIVehicle.RefitVehicle(mailwagon, mailcargo)) {
+						// If no mail wagon was found, and the other wagons needed to be refitted, refit the "mail wagon" as well
+						if (mailwagoncargo != route_data.Cargo) AIVehicle.RefitVehicle(mailwagon, route_data.Cargo);
+					}
+				}
+			}
+		}
+	}
+	local wagon_length = AIVehicle.GetLength(firstwagon);
+	local mailwagon_length = 0;
+	if (mailwagon != null) {
+		if (mailwagontype == wagon) {
+			wagon_length /= 2;
+			mailwagon_length = wagon_length;
+		} else {
+			mailwagon_length = AIVehicle.GetLength(mailwagon);
+		}
+	}
+	local cur_wagons = 1;
+	local platform_length = length / 2 + 1;
+	while (AIVehicle.GetLength(trainengine) + (cur_wagons + 1) * wagon_length + mailwagon_length <= platform_length * 16) {
+		//AILog.Info("Current length: " + (AIVehicle.GetLength(trainengine) + (cur_wagons + 1) * wagon_length + mailwagon_length));
+		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < AIEngine.GetPrice(wagon)) {
+			WormMoney.GetMoney(AIEngine.GetPrice(wagon));
+		}
+		if (!AIVehicle.BuildVehicle(station_data.homedepot, wagon)) break;
+		cur_wagons++;
+	}
+	local price = AIEngine.GetPrice(engine) + cur_wagons * AIEngine.GetPrice(wagon);
+	// Refit the wagons if needed
+	if (AIEngine.GetCargoType(wagon) != route_data.Cargo) AIVehicle.RefitVehicle(firstwagon, route_data.Cargo);
+	// Attach the wagons to the engine
+	if (mailwagon != null) {
+		price += AIVehicle.GetCurrentValue(mailwagon);
+		if (wagon != mailwagontype && !AIVehicle.MoveWagonChain(mailwagon, 0, trainengine, 0) ||
+		    wagon == mailwagontype && !AIVehicle.MoveWagon(firstwagon, 1, trainengine, 0)) {
+			engineblacklist.AddItem(engine, 0);
+			AILog.Warning(AIEngine.GetName(engine) + " was blacklisted for not being compatibile with " + AIEngine.GetName(mailwagontype) + ".");
+			AIVehicle.SellVehicle(trainengine);
+			AIVehicle.SellWagonChain(firstwagon, 0);
+			AIVehicle.SellVehicle(mailwagon);
+			return false;
+		}
+	}
+	if (!AIVehicle.MoveWagonChain(firstwagon, 0, trainengine, 0)) {
+		AILog.Error("Could not attach the wagons.");
+		AIVehicle.SellWagonChain(trainengine, 0);
+		AIVehicle.SellWagonChain(firstwagon, 0);
+	}
+	if (ordervehicle == null) {
+		// Set the train's orders
+		local firstorderflag = null;
+		if (AICargo.GetTownEffect(route_data.Cargo) == AICargo.TE_PASSENGERS || AICargo.GetTownEffect(route_data.Cargo) == AICargo.TE_MAIL) {
+			// Do not full load a passenger train
+			firstorderflag = AIOrder.OF_NON_STOP_INTERMEDIATE;
+		} else {
+			firstorderflag = AIOrder.OF_FULL_LOAD_ANY + AIOrder.OF_NON_STOP_INTERMEDIATE;
+		}
+		AIOrder.AppendOrder(trainengine, src_place, firstorderflag);
+		AIOrder.AppendOrder(trainengine, dst_place, AIOrder.OF_NON_STOP_INTERMEDIATE);
+	} else {
+		AIOrder.ShareOrders(trainengine, ordervehicle);
+	}
+	AIVehicle.StartStopVehicle(trainengine);
+	AIGroup.MoveVehicle(group, trainengine);
+	// Build the second train if needed
+	if (number > 1) {
+		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < price) {
+			WormMoney.GetMoney(price);
+		}
+		local nexttrain = AIVehicle.CloneVehicle(station_data.homedepot, trainengine, true);
+		AIVehicle.StartStopVehicle(nexttrain);
+	}
+	return true;
+}
+
+/**
+ * A workaround for refitting the mail wagon separately.
+ * @param mailwagon The mail wagon to be refitted.
+ * @param firstwagon The wagon to which the mail wagon is attached.
+ * @param trainengine The locomotive of the train, used to move the wagons.
+ * @param crg The cargo which the mail wagon will be refitted to.
+ */
+function WormRailBuilder::MailWagonWorkaround(mailwagon, firstwagon, trainengine, crg)
+{
+	AIVehicle.MoveWagon(firstwagon, 0, trainengine, 0);
+	AIVehicle.RefitVehicle(mailwagon, crg);
+	AIVehicle.MoveWagon(trainengine, 1, mailwagon, 0);
+	AIVehicle.MoveWagon(mailwagon, 0, trainengine, 0);
+	AIVehicle.MoveWagon(trainengine, 1, firstwagon, 0);
 }
 
