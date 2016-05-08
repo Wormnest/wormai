@@ -1669,6 +1669,9 @@ function WormAirManager::ManageVehicleRenewal()
 {
 	AILog.Info("- Check for vehicles that are old.")
 	local list = AIVehicleList();
+	/* We check only aircraft here. */
+	list.Valuate(AIVehicle.GetVehicleType);
+	list.KeepValue(AIVehicle.VT_AIR);
 	list.Valuate(AIVehicle.GetAgeLeft);
 	/* Keep vehicles whose age is below the limit we set. */
 	list.KeepBelowValue(VEHICLE_AGE_LEFT_LIMIT);
@@ -1731,13 +1734,17 @@ function WormAirManager::ManageAirRoutes()
 	
 	CheckAirportsWithoutVehicles();
 	
+	/* We check only aircraft here. */
+	list.Valuate(AIVehicle.GetVehicleType);
+	list.KeepValue(AIVehicle.VT_AIR);
+	
 	list.Valuate(AIVehicle.GetAge);
 	/* Give the plane at least 2 full years to make a difference, thus check for 3 years old. */
 	list.KeepAboveValue(365 * 3);
 	list.Valuate(AIVehicle.GetProfitLastYear);
 
 	/* Decide on the best low profit limit at this moment. */
-	if (Vehicle.GetVehicleLimit(AIVehicle.VT_AIR) > this.route_1.Count()) {
+	if ((Vehicle.GetVehicleLimit(AIVehicle.VT_AIR)*9/10) > this.route_1.Count()) {
 		/* Since we can still add more planes keep all planes that make at least some profit. */
 		/// @todo When maintenance costs are on we should set low profit limit too at least
 		/// the yearly costs.
@@ -1760,6 +1767,9 @@ function WormAirManager::ManageAirRoutes()
 			// We need to get the vehicle list again because our other list has removed
 			// vehicles younger than 3 years, we want the absolute high profit of all vehicles
 			local highest = AIVehicleList();
+			/* We check only aircraft here. */
+			highest.Valuate(AIVehicle.GetVehicleType);
+			highest.KeepValue(AIVehicle.VT_AIR);
 			highest.Valuate(AIVehicle.GetProfitLastYear);
 			highest.KeepTop(1);
 			local v = highest.Begin();
