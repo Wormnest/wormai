@@ -15,8 +15,8 @@
  */
 class WormMoney
 {
-	WM_SILENT = true;
-	WM_SHOWINFO = false;
+	static WM_SILENT = true;
+	static WM_SHOWINFO = false;
 
 	/** @name Money related functions */
     /// @{

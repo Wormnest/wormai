@@ -16,15 +16,15 @@
 class WormRailManager
 {
 	/** Building stages, needed to recover a savegame. */
-	BS_NOTHING		= 0;
-	BS_BUILDING		= 1;
-	BS_REMOVING		= 2;
-	BS_ELECTRIFYING	= 3;
+	static BS_NOTHING		= 0;
+	static BS_BUILDING		= 1;
+	static BS_REMOVING		= 2;
+	static BS_ELECTRIFYING	= 3;
 
 	/** Reasons to send a vehicle to a depot. */
-	TD_SELL = 1;
-	TD_REPLACE = 2;
-	TD_ATTACH_WAGONS = 3;
+	static TD_SELL = 1;
+	static TD_REPLACE = 2;
+	static TD_ATTACH_WAGONS = 3;
 
 	/* Variables used by WormRailManager */
 	/* 1. Variables that will be saved in a savegame. (TODO) */
