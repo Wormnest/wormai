@@ -138,6 +138,15 @@ class WormAirManager
 	 */
 	function ReplaceAirportTileInfo(old_town_idx, old_tile, new_tile, other_end_of_route_tile);
 	/**
+	 * Determines whether an airport at a given tile is allowed by the town authorities
+	 * because of the noise level
+	 * @param tile The tile where the aiport would be built.
+	 * @param airport_type The type of the airport.
+	 * @return True if the construction would be allowed. If the noise setting is off, it defaults to true.
+	 * @note Taken from SimpleAI.
+	 */
+	function IsWithinNoiseLimit(tile, airport_type);
+	/**
 	 * Checks all airports to see if they should be upgraded.
 	 * If they can it tries to upgrade the airport. If it fails after removing the old airport
 	 * it will first try to replace it with another airport at another spot. If that also fails
@@ -945,6 +954,25 @@ function WormAirManager::SendAllVehiclesOfStationToDepot(station_id, sell_reason
 }
 
 /**
+ * Determines whether an airport at a given tile is allowed by the town authorities
+ * because of the noise level
+ * @param tile The tile where the aiport would be built.
+ * @param airport_type The type of the airport.
+ * @return True if the construction would be allowed. If the noise setting is off, it defaults to true.
+ * @note Taken from SimpleAI.
+ */
+function WormAirManager::IsWithinNoiseLimit(tile, airport_type)
+{
+	/** @todo Maybe we should account for wanting to remove an old smaller airport first
+	  * which presumably would decrease the noise level.
+	  */
+	if (!AIGameSettings.GetValue("economy.station_noise_level")) return true;
+	local allowed = AITown.GetAllowedNoise(AIAirport.GetNearestTown(tile, airport_type));
+	local increase = AIAirport.GetNoiseLevelIncrease(tile, airport_type);
+	return (increase <= allowed);
+}
+ 
+ /**
  * Checks all airports to see if they should be upgraded.
  * If they can it tries to upgrade the airport. If it fails after removing the old airport
  * it will first try to replace it with another airport at another spot. If that also fails
@@ -971,7 +999,8 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 		if (tile_other_st > -1) {
 			st_id_other = AIStation.GetStationID(tile_other_st);
 		}
-		if ((airport_type != optimal_airport) && AIStation.IsValidStation(station_id)) {
+		if ((airport_type != optimal_airport) && AIStation.IsValidStation(station_id) &&
+			this.IsWithinNoiseLimit(station_tile, optimal_airport)) {
 			if (!AIStation.IsValidStation(st_id_other)) {
 				/* Make sure this station isn't closed because we may have to send
 					aircraft there in case of upgrade failure. */
