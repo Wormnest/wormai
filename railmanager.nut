@@ -473,6 +473,9 @@ function WormRailManager::RegisterRoute(route_data, station_data, vehtype, group
 
 function WormRailManager::CheckRoutes()
 {
+	/* Since routes are used in a loop as index we can not remove them inside this loop.
+	 * Thus we store routes to be removed in a temp array. */
+	local remove_routes = [];
 	foreach (idx, route in routes) {
 		AILog.Info(".... checking route " + idx + ", " + AIStation.GetName(route.stasrc) + " - " + AIStation.GetName(route.stadst));
 		local vehicles = AIVehicleList_Group(route.group);
@@ -490,7 +493,9 @@ function WormRailManager::CheckRoutes()
 			// Connected rails will automatically be removed
 			WormRailBuilder.DeleteRailStation(route.stasrc, this);
 			WormRailBuilder.DeleteRailStation(route.stadst, this);
-			break;
+			/* route index that should be removed after finishing the foreach loop */
+			remove_routes.append(idx);
+			continue;
 		}
 
 		/* Electrifying rails */
@@ -508,7 +513,7 @@ function WormRailManager::CheckRoutes()
 
 		/* Adding trains */
 		if (vehicles.Count() == 1 && route.maxvehicles == 2) {
-			if (AIVehicle.GetProfitThisYear(vehicles.Begin()) <= 0) break;
+			if (AIVehicle.GetProfitThisYear(vehicles.Begin()) <= 0) continue;
 			if (AIStation.GetCargoWaiting(route.stasrc, route.crg) > 150) {
 				local railtype = AIRail.GetCurrentRailType();
 				AIRail.SetCurrentRailType(route.railtype);
@@ -604,6 +609,17 @@ function WormRailManager::CheckRoutes()
 				AILog.Warning("Sold " + AIVehicle.GetName(vehicle) + ", as it has been sitting in the depot for ages.");
 				AIVehicle.SellWagonChain(vehicle, 0);
 			}
+		}
+	}
+	/* Were there any routes removed? */
+	if (remove_routes.len() > 0) {
+		foreach (removed_count, route_idx in remove_routes) {
+			/* Remove unused routes from our array. */
+			/* Because removing items changes the indexes we need to take that into account too. */
+			/* This assumes that the lowest numbered array indexes will be removed first. */
+			AILog.Info("DEBUG: Removed route " + route_idx + " (orignal idx), " + (route_idx-removed_count) +
+				" (computed idx)");
+			routes.remove(route_idx-removed_count);
 		}
 	}
 	// Check ugrouped vehicles as well. There should be none after all...
