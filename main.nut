@@ -378,6 +378,8 @@ function WormAI::Start()
 				if (this.use_trains) {
 					AILog.Info("++ Check Train Routes ++");
 					this.rail_manager.CheckRoutes();
+					AILog.Info("++ Check Train Profits ++");
+					this.rail_manager.CheckTrainProfits();
 				}
 			}
 

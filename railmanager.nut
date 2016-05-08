@@ -126,7 +126,30 @@ class WormRailManager
 	 */
 	function AddVehicle(route, mainvehicle, engine, wagon);
 
- }
+	/**
+	 * Replaces an old vehicle with a newer model if it is already in the depot.
+	 * @param vehicle The vehicle to be replaced.
+	 */
+	function ReplaceVehicle(vehicle);
+	
+	/**
+	 * Handle a vehicle that is stopped in depot for selling, replacement or attaching wagons. 
+	 * @param vehicle The vehicle stopped in depot.
+	 */
+	function HandleVehicleInDepot(vehicle);
+
+	/**
+	 * Check train profits and send unprofitable ones to depot to be sold. 
+	 */
+	function CheckTrainProfits();
+
+	/**
+	 * Check train profits and send unprofitable ones to depot to be sold. 
+	 * @param vehicle The vehicle that should be sent to depot to be sold.
+	 */
+	function SendTrainToDepotForSelling(vehicle);
+
+}
 
 function WormRailManager::SetGroupName(group, crg, stasrc)
 {
@@ -559,11 +582,14 @@ function WormRailManager::CheckRoutes()
 			if (WormMoney.GetMaxBankBalance() > (WormMoney.GetMinimumCashNeeded() + AIEngine.GetPrice(engine) +
 				5 * AIEngine.GetPrice(wagon))) {
 				AILog.Info(AIVehicle.GetName(vehicle) + " is getting old, sending it to the depot...");
-				if (!AIVehicle.SendVehicleToDepot(vehicle)) {
-					// Maybe the train only needs to be reversed to find a depot
-					AIVehicle.ReverseVehicle(vehicle);
-					AIController.Sleep(75);
-					if (!AIVehicle.SendVehicleToDepot(vehicle)) break;
+				/* Make sure it's not stopped in depot yet for some reason. */
+				if (!(AIVehicle.GetState(vehicle) == AIVehicle.VS_IN_DEPOT)) {
+					if (!AIVehicle.SendVehicleToDepot(vehicle)) {
+						// Maybe the train only needs to be reversed to find a depot
+						AIVehicle.ReverseVehicle(vehicle);
+						AIController.Sleep(75);
+						if (!AIVehicle.SendVehicleToDepot(vehicle)) break;
+					}
 				}
 				todepotlist.AddItem(vehicle, TD_REPLACE);
 			}
@@ -600,6 +626,7 @@ function WormRailManager::CheckRoutes()
 		vehicles.KeepValue(1);
 		foreach (vehicle, dummy in vehicles) {
 			// A vehicle has probably been sitting there for ages if its current year/last year profits are both 0, and it's at least 2 months old
+			/*
 			if (AIVehicle.GetProfitThisYear(vehicle) != 0 || AIVehicle.GetProfitLastYear(vehicle) != 0 || AIVehicle.GetAge(vehicle) < 60) continue;
 			if (todepotlist.HasItem(vehicle)) {
 				todepotlist.RemoveItem(vehicle);
@@ -609,6 +636,9 @@ function WormRailManager::CheckRoutes()
 				AILog.Warning("Sold " + AIVehicle.GetName(vehicle) + ", as it has been sitting in the depot for ages.");
 				AIVehicle.SellWagonChain(vehicle, 0);
 			}
+			*/
+			/* We handle it different than SimpleAI for now: */
+			HandleVehicleInDepot(vehicle);
 		}
 	}
 	/* Were there any routes removed? */
@@ -668,3 +698,205 @@ function WormRailManager::AddVehicle(route, mainvehicle, engine, wagon)
 	}
 }
 
+function WormRailManager::ReplaceVehicle(vehicle)
+{
+	local group = AIVehicle.GetGroupID(vehicle);
+	local route = routes[groups.GetValue(group)];
+	local engine = null;
+	local wagon = null;
+	local railtype = AIRail.GetCurrentRailType();
+	local vehtype = AIVehicle.GetVehicleType(vehicle);
+
+	// Although we currently only use this for rail we leave it in, we might need it later...
+	switch (vehtype) {
+		case AIVehicle.VT_RAIL:
+			AIRail.SetCurrentRailType(route.railtype);
+			wagon = WormRailBuilder.ChooseWagon(route.crg, engine_blacklist);
+			if (wagon != null) {
+				local platform = WormRailBuilder.GetRailStationPlatformLength(route.stasrc);
+				engine = WormRailBuilder.ChooseTrainEngine(route.crg, AIMap.DistanceManhattan(AIStation.GetLocation(route.stasrc),
+					AIStation.GetLocation(route.stadst)), wagon, platform * 2 - 1, engine_blacklist);
+			}
+			break;
+		case AIVehicle.VT_ROAD:
+			AILog.Error("Replacing road vehicle NOT IMPLEMENTED!");
+			//engine = cBuilder.ChooseRoadVeh(route.crg);
+			break;
+		case AIVehicle.VT_AIR:
+			AILog.Error("Replacing airplane NOT IMPLEMENTED!");
+			//local srctype = AIAirport.GetAirportType(AIStation.GetLocation(route.stasrc));
+			//local dsttype = AIAirport.GetAirportType(AIStation.GetLocation(route.stadst));
+			//local is_small = cBuilder.IsSmallAirport(srctype) || cBuilder.IsSmallAirport(dsttype);
+			//engine = cBuilder.ChoosePlane(route.crg, is_small, AIOrder.GetOrderDistance(AIVehicle.VT_AIR, AIStation.GetLocation(route.stasrc), AIStation.GetLocation(route.stadst)));
+			break;
+	}
+	local vehicles = AIVehicleList_Group(group);
+	local ordervehicle = null;
+	// Choose a vehicle to share orders with
+	foreach (nextveh, dummy in vehicles) {
+		ordervehicle = nextveh;
+		// Don't share orders with the vehicle which will be sold
+		if (nextveh != vehicle)	break;
+	}
+	if (ordervehicle == vehicle) ordervehicle = null;
+	if (AIVehicle.GetVehicleType(vehicle) == AIVehicle.VT_RAIL) {
+		if (engine != null && wagon != null && (WormMoney.GetMaxBankBalance() > AIEngine.GetPrice(engine) +
+			5 * AIEngine.GetPrice(wagon))) {
+			// Sell the train
+			AIVehicle.SellWagonChain(vehicle, 0);
+			WormRailManager.AddVehicle(route, ordervehicle, engine, wagon);
+		} else {
+			// Restart the train if we cannot afford to replace it
+			AIVehicle.StartStopVehicle(vehicle);
+		}
+		// Restore the previous railtype
+		AIRail.SetCurrentRailType(railtype);
+	} else {
+		AILog.Error("Adding road/air vehicle NOT IMPLEMENTED!");
+		if (engine != null && (WormMoney.GetMaxBankBalance() > AIEngine.GetPrice(engine))) {
+			AIVehicle.SellVehicle(vehicle);
+			//cManager.AddVehicle(route, ordervehicle, engine, null);
+		} else {
+			AIVehicle.StartStopVehicle(vehicle);
+		}
+	}
+	todepotlist.RemoveItem(vehicle);
+}
+
+function WormRailManager::HandleVehicleInDepot(vehicle)
+{
+	if (todepotlist.HasItem(vehicle)) {
+		switch (todepotlist.GetValue(vehicle)) {
+			case WormRailManager.TD_SELL:
+				// Sell a vehicle because it is old or unprofitable
+				AILog.Info("Sold " + AIVehicle.GetName(vehicle) + ".");
+				if (AIVehicle.GetVehicleType(vehicle) == AIVehicle.VT_RAIL) {
+					AIVehicle.SellWagonChain(vehicle, 0);
+				} else {
+					AIVehicle.SellVehicle(vehicle);
+				}
+				todepotlist.RemoveItem(vehicle);
+				break;
+			case WormRailManager.TD_REPLACE:
+				// Replace an old vehicle with a newer model
+				WormRailManager.ReplaceVehicle(vehicle);
+				break;
+			case WormRailManager.TD_ATTACH_WAGONS:
+				// Attach more wagons to an existing train, if we didn't have enough money to buy all wagons beforehand
+				WormRailBuilder.AttachMoreWagons(vehicle, this);
+				AIVehicle.StartStopVehicle(vehicle);
+				todepotlist.RemoveItem(vehicle);
+				break;
+		}
+	} else {
+		// The vehicle is not in todepotlist
+		AILog.Info("I don't know why " + AIVehicle.GetName(vehicle) + " was sent to the depot, restarting it...");
+		AIVehicle.StartStopVehicle(vehicle);
+	}
+}
+
+function WormRailManager::CheckTrainProfits()
+{
+	/// @todo possible duplicate code with profit checking in air manager. Maybe combine in 1 function?
+	local list = AIVehicleList();
+	local low_profit_limit = 0;
+	/* We check only trains here. */
+	list.Valuate(AIVehicle.GetVehicleType);
+	list.KeepValue(AIVehicle.VT_RAIL);
+	local veh_count = list.Count();
+	
+	list.Valuate(AIVehicle.GetAge);
+	/* Give the plane at least 2 full years to make a difference, thus check for 3 years old. */
+	list.KeepAboveValue(365 * 3);
+	list.Valuate(AIVehicle.GetProfitLastYear);
+
+	/* Decide on the best low profit limit at this moment. */
+	/* Define a few changing points for acceptable profits:
+		1. When we don't have a lot of vehicles accept everything 0 or above.
+		2. When we have a reasonable amount of vehicles increase it to...
+		3. When we are close to or we have reached our max vehicle limit increase it even more...
+	*/
+	local veh_limit = Vehicle.GetVehicleLimit(AIVehicle.VT_RAIL);
+	if (veh_count < (veh_limit*5/10)) {
+		/* Since we can still add more planes keep all planes that make at least some profit. */
+		/// @todo When maintenance costs are on we should set low profit limit too at least
+		/// the yearly costs.
+		low_profit_limit = 0;
+		list.KeepBelowValue(low_profit_limit);
+	}
+	else if (veh_count < (veh_limit*9/10)) {
+		/* Since we can still add more planes keep all planes that make at least some profit. */
+		/// @todo When maintenance costs are on we should set low profit limit too at least
+		/// the yearly costs.
+		low_profit_limit = WormMoney.InflationCorrection(5000); // was 10000, should maybe depend on the date etc too
+		list.KeepBelowValue(low_profit_limit);
+	}
+	else {
+		//  extensive computation for low profit limit.
+		local list_count = 0;
+		local list_copy = AIList();
+		// Set default low yearly profit
+		low_profit_limit = WormMoney.InflationCorrection(10000);
+		list_count = list.Count();
+		// We need a copy of list before cutting off low_profit
+		list_copy.AddList(list);
+		list.KeepBelowValue(low_profit_limit);
+		if (list.Count() == 0) {
+			// All profits are above our current low_profit_limit
+			// Get vehicle with last years highest profit
+			// We need to get the vehicle list again because our other list has removed
+			// vehicles younger than 3 years, we want the absolute high profit of all vehicles
+			local highest = AIVehicleList();
+			/* We check only trains here. */
+			highest.Valuate(AIVehicle.GetVehicleType);
+			highest.KeepValue(AIVehicle.VT_RAIL);
+			highest.Valuate(AIVehicle.GetProfitLastYear);
+			highest.KeepTop(1);
+			local v = highest.Begin();
+			local high_profit = highest.GetValue(v);
+			// get profits below 20% of that
+			low_profit_limit = high_profit * 3 / 10; // TESTING: 30%
+			// Copy the list_copy back to list which at this point is (should be) empty.
+			list.AddList(list_copy);
+			// Apparently need to use Valuate again on profit for it to work
+			list.Valuate(AIVehicle.GetProfitLastYear);
+			list.KeepBelowValue(low_profit_limit);
+			// DEBUG:
+			//foreach (i,v in list) {
+			//	AILog.Info("Vehicle " + i + " has profit: " + v);
+			//}
+			AILog.Warning("Computed low_profit_limit: " + low_profit_limit + " (highest profit: " +
+				high_profit + "), number below limit: " + list.Count());
+		}
+		else if (list_count == 0) {
+			AILog.Info("All trains younger than 3 years: recomputing low_profit_limit not needed.");
+		}
+		else {
+			AILog.Warning("There are " + list.Count() + " trains below last years bad yearly profit limit.");
+		}
+	}
+
+	/// @todo Don't sell all trans from the same route all at once, try selling 1 per year?
+	for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
+		/* Profit last year and this year bad? Let's sell the vehicle */
+		WormRailManager.SendTrainToDepotForSelling(i);
+		//SendToDepotForSelling(i, VEH_LOW_PROFIT);
+		/* Sell vehicle provided it's in depot. If not we will get it a next time.
+		   This line can also be removed probably since we handle selling once a 
+		   month anyway. */
+		//SellVehicleInDepot(i);
+	}
+
+}
+
+function WormRailManager::SendTrainToDepotForSelling(vehicle)
+{
+	AILog.Info(AIVehicle.GetName(vehicle) + " is unprofitable, sending it to the depot...");
+	if (!AIVehicle.SendVehicleToDepot(vehicle)) {
+		// Maybe the vehicle needs to be reversed to find a depot
+		AIVehicle.ReverseVehicle(vehicle);
+		AIController.Sleep(75);
+		if (!AIVehicle.SendVehicleToDepot(vehicle)) return;
+	}
+	todepotlist.AddItem(vehicle, WormRailManager.TD_SELL);
+}
