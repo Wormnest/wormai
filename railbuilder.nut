@@ -262,6 +262,13 @@ class WormRailBuilder
 	 */
 	function GetRailStationPlatformLength(sta);
 
+	/**
+	 * Attach more wagons to a train after it has been sent to the depot.
+	 * @param vehicle The VehicleID of the train.
+	 * @param rail_manager The WormRailManager class object.
+	 */
+	function AttachMoreWagons(vehicle, rail_manager);
+
 }
 
 /**
@@ -1448,3 +1455,50 @@ function WormRailBuilder::GetRailStationPlatformLength(sta)
 	}
 	return length;
 }
+
+function WormRailBuilder::AttachMoreWagons(vehicle, rail_manager)
+{
+	// Get information about the train's group
+	local group = AIVehicle.GetGroupID(vehicle);
+	local route = rail_manager.routes[rail_manager.groups.GetValue(group)];
+	local railtype = AIRail.GetCurrentRailType();
+	AIRail.SetCurrentRailType(route.railtype);
+	local depot = AIVehicle.GetLocation(vehicle);
+	// Choose a wagon
+	local wagon = WormRailBuilder.ChooseWagon(route.crg, rail_manager.engine_blacklist);
+	if (wagon == null) return;
+	// Build the first wagon
+	if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < AIEngine.GetPrice(wagon)) {
+		if (!WormMoney.GetMoney(AIEngine.GetPrice(wagon), WormMoney.WM_SILENT)) {
+			AILog.Warning("I don't have enough money to attach more wagons.");
+			return;
+		}
+	}
+	local firstwagon = AIVehicle.BuildVehicle(depot, wagon);
+	// Blacklist the wagon if it is too long
+	if (AIVehicle.GetLength(firstwagon) > 8) {
+		rail_manager.engine_blacklist.AddItem(wagon, 0);
+		AILog.Warning(AIEngine.GetName(wagon) + " was blacklisted for being too long.");
+		AIVehicle.SellVehicle(firstwagon);
+		return;
+	}
+	// Attach additional wagons
+	local wagon_length = AIVehicle.GetLength(firstwagon);
+	local cur_wagons = 1;
+	local platform_length = WormRailBuilder.GetRailStationPlatformLength(route.stasrc);
+	while (AIVehicle.GetLength(vehicle) + (cur_wagons + 1) * wagon_length <= platform_length * 16) {
+		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < AIEngine.GetPrice(wagon)) {
+			WormMoney.GetMoney(AIEngine.GetPrice(wagon), WormMoney.WM_SILENT);
+		}
+		if (!AIVehicle.BuildVehicle(depot, wagon)) break;
+		cur_wagons++;
+	}
+	// Refit the wagons if needed
+	if (AIEngine.GetCargoType(wagon) != route.crg) AIVehicle.RefitVehicle(firstwagon, route.crg);
+	// Attach the wagons to the engine
+	AIVehicle.MoveWagonChain(firstwagon, 0, vehicle, AIVehicle.GetNumWagons(vehicle) - 1);
+	AILog.Info("Added more wagons to " + AIVehicle.GetName(vehicle) + ".");
+	// Restore the previous railtype
+	AIRail.SetCurrentRailType(railtype);
+}
+
