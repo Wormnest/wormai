@@ -61,6 +61,9 @@ class WormAirManager
 	acceptance_limit = 0;				///< Starting limit for passenger acceptance for airport finding.
 	passenger_cargo_id = -1;
 	no_aircraft_warning_shown = false;	///< Whether we have shown the no available aircraft warning
+	route_without_aircraft = false;		///< True if we have built airports but failed to buy airplanes due to lack of money.
+	incomplete_route_tile1 = 0;			///< Tile of first airport of incomplete air route without aircraft.
+	incomplete_route_tile2 = 0;			///< Tile of second airport of incomplete air route without aircraft.
 
 
 	/** Create an instance of WormAirManager and initialize our variables. */
@@ -705,7 +708,8 @@ function WormAirManager::GetAiportTileOtherEndOfRoute(town_id, station_tile)
 	// Keep only those with our station tile
 	route1.KeepValue(station_tile);
 	if (route1.Count() == 0) {
-		AILog.Warning("  No routes found that contain this station!");
+		if (!route_without_aircraft)
+			AILog.Warning("  No routes found that contain this station!");
 		return -1;
 	}
 
@@ -1112,114 +1116,134 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
  */
 function WormAirManager::BuildAirportRoute()
 {
-	if (!WormMoney.HasMoney(WormMoney.InflationCorrection(MINIMUM_BALANCE_BUILD_AIRPORT)))
-		return ERROR_NOT_ENOUGH_MONEY;
-	
-	// No sense building airports if we already have the max (or more because amount can be changed in game)
-	local max_vehicles = Vehicle.GetVehicleLimit(AIVehicle.VT_AIR);
-	if (max_vehicles <= this.route_1.Count()) {
-		AILog.Info("We are not going to look for a new airport route. We already have the maximum number of aircraft.");
-		return ERROR_MAX_AIRCRAFT;
-	}
-	
-	if (engine_usefulness.Count() == 0) {
-		/* First look if there are any aircraft that we can use. */
-		EvaluateAircraft(false);
+	local tile_1 = 0;
+	local tile_2 = 0;
+	if (!(route_without_aircraft)) {
+		if (!WormMoney.HasMoney(WormMoney.InflationCorrection(MINIMUM_BALANCE_BUILD_AIRPORT)))
+			return ERROR_NOT_ENOUGH_MONEY;
+		
+		// No sense building airports if we already have the max (or more because amount can be changed in game)
+		local max_vehicles = Vehicle.GetVehicleLimit(AIVehicle.VT_AIR);
+		if (max_vehicles <= this.route_1.Count()) {
+			AILog.Info("We are not going to look for a new airport route. We already have the maximum number of aircraft.");
+			return ERROR_MAX_AIRCRAFT;
+		}
+		
 		if (engine_usefulness.Count() == 0) {
-			/* Most likely no aircraft found for the range we wanted of before any aircraft are introduced. */
-			AILog.Warning("There are no aircraft available at the moment that we can use.");
-			/* Don't spam this warning in the debug log. */
-			no_aircraft_warning_shown = true;
-			return ERROR_BUILD_AIRCRAFT_INVALID;
-		}
-	}
-
-	// Check for our maximum allowed airports (max only set by our own script, not OpenTTD)
-	local airport_count = this.towns_used.Count();
-	if ((max_vehicles * 2 / AIRPORT_LIMIT_FACTOR) <= airport_count) {
-		AILog.Info("Not building more airports. We already have a reasonable amount for the current aircraft limit.");
-		return ERROR_MAX_AIRPORTS;
-	}
-
-	// See for capacity of different airport types:
-	// Airport capacity test: http://www.tt-forums.net/viewtopic.php?f=2&t=47279
-	local airport_type = GetOptimalAvailableAirportType();
-	if (airport_type == null) {
-		AILog.Warning("No suitable airport type available that we know how to use.");
-		return ERROR_NO_SUITABLE_AIRPORT;
-	}
-
-	/* Get enough money to work with. Since building on rough terrain costs more we add in overhead costs. */
-	if (!WormMoney.GetMoney(AIAirport.GetPrice(airport_type)*2 + WormMoney.InflationCorrection(BUILD_OVERHEAD + AIRCRAFT_LOW_PRICE))) {
-		// Can't get enough money
-		return ERROR_NOT_ENOUGH_MONEY;
-	}
-
-	/* Show some info about what we are doing */
-	AILog.Info(Helper.GetCurrentDateString() + " Trying to build an airport route");
-
-	local tile_1 = this.FindSuitableAirportSpot(airport_type, 0);
-	if (tile_1 < 0) {
-		if ((this.towns_used.Count() == 0) && (tile_1 == ERROR_FIND_AIRPORT_ACCEPTANCE)) {
-			// We don't have any airports yet so try again at a lower acceptance limit
-			while(tile_1 == ERROR_FIND_AIRPORT_ACCEPTANCE) {
-				tile_1 = this.FindSuitableAirportSpot(airport_type, 0);
+			/* First look if there are any aircraft that we can use. */
+			EvaluateAircraft(false);
+			if (engine_usefulness.Count() == 0) {
+				/* Most likely no aircraft found for the range we wanted of before any aircraft are introduced. */
+				AILog.Warning("There are no aircraft available at the moment that we can use.");
+				/* Don't spam this warning in the debug log. */
+				no_aircraft_warning_shown = true;
+				return ERROR_BUILD_AIRCRAFT_INVALID;
 			}
-			if (tile_1 < 0) return ERROR_FIND_AIRPORT1;
 		}
-		else {
-			return ERROR_FIND_AIRPORT1;
+
+		// Check for our maximum allowed airports (max only set by our own script, not OpenTTD)
+		local airport_count = this.towns_used.Count();
+		if ((max_vehicles * 2 / AIRPORT_LIMIT_FACTOR) <= airport_count) {
+			AILog.Info("Not building more airports. We already have a reasonable amount for the current aircraft limit.");
+			return ERROR_MAX_AIRPORTS;
 		}
-	}
-	local tile_2 = this.FindSuitableAirportSpot(airport_type, tile_1);
-	if (tile_2 < 0) {
-		// Check for 1, not 0, here since if we get here we have at least 1 airport.
-		if ((this.towns_used.Count() == 1) && (tile_2 == ERROR_FIND_AIRPORT_ACCEPTANCE)) {
-			// We don't have any airports yet so try again at a lower acceptance limit
-			while(tile_2 == ERROR_FIND_AIRPORT_ACCEPTANCE) {
-				tile_2 = this.FindSuitableAirportSpot(airport_type, 0);
+
+		// See for capacity of different airport types:
+		// Airport capacity test: http://www.tt-forums.net/viewtopic.php?f=2&t=47279
+		local airport_type = GetOptimalAvailableAirportType();
+		if (airport_type == null) {
+			AILog.Warning("No suitable airport type available that we know how to use.");
+			return ERROR_NO_SUITABLE_AIRPORT;
+		}
+
+		/* Get enough money to work with. Since building on rough terrain costs more we add in overhead costs. */
+		if (!WormMoney.GetMoney(AIAirport.GetPrice(airport_type)*2 + WormMoney.InflationCorrection(BUILD_OVERHEAD + AIRCRAFT_LOW_PRICE))) {
+			// Can't get enough money
+			return ERROR_NOT_ENOUGH_MONEY;
+		}
+
+		/* Show some info about what we are doing */
+		AILog.Info(Helper.GetCurrentDateString() + " Trying to build an airport route");
+
+		tile_1 = this.FindSuitableAirportSpot(airport_type, 0);
+		if (tile_1 < 0) {
+			if ((this.towns_used.Count() == 0) && (tile_1 == ERROR_FIND_AIRPORT_ACCEPTANCE)) {
+				// We don't have any airports yet so try again at a lower acceptance limit
+				while(tile_1 == ERROR_FIND_AIRPORT_ACCEPTANCE) {
+					tile_1 = this.FindSuitableAirportSpot(airport_type, 0);
+				}
+				if (tile_1 < 0) return ERROR_FIND_AIRPORT1;
 			}
-			if (tile_2 < 0) {
+			else {
+				return ERROR_FIND_AIRPORT1;
+			}
+		}
+		tile_2 = this.FindSuitableAirportSpot(airport_type, tile_1);
+		if (tile_2 < 0) {
+			// Check for 1, not 0, here since if we get here we have at least 1 airport.
+			if ((this.towns_used.Count() == 1) && (tile_2 == ERROR_FIND_AIRPORT_ACCEPTANCE)) {
+				// We don't have any airports yet so try again at a lower acceptance limit
+				while(tile_2 == ERROR_FIND_AIRPORT_ACCEPTANCE) {
+					tile_2 = this.FindSuitableAirportSpot(airport_type, 0);
+				}
+				if (tile_2 < 0) {
+					this.towns_used.RemoveValue(tile_1);
+					return ERROR_FIND_AIRPORT2;
+				}
+			}
+			else {
 				this.towns_used.RemoveValue(tile_1);
 				return ERROR_FIND_AIRPORT2;
 			}
 		}
-		else {
+
+		/* In certain cases building an airport still fails for unknown reason. */
+		/* Build the airports for real */
+		if (!AIAirport.BuildAirport(tile_1, airport_type, AIStation.STATION_NEW)) {
+			AILog.Warning(AIError.GetLastErrorString());
+			AILog.Error("Although the testing told us we could build an airport, it still failed at tile " +
+			  WormStrings.WriteTile(tile_1) + ".");
 			this.towns_used.RemoveValue(tile_1);
-			return ERROR_FIND_AIRPORT2;
+			this.towns_used.RemoveValue(tile_2);
+			return ERROR_BUILD_AIRPORT1;
+		}
+		if (!AIAirport.BuildAirport(tile_2, airport_type, AIStation.STATION_NEW)) {
+			AILog.Warning(AIError.GetLastErrorString());
+			AILog.Error("Although the testing told us we could build an airport, it still failed at tile " +
+			  WormStrings.WriteTile(tile_2) + ".");
+			this.RemoveAirport(tile_1);
+			this.towns_used.RemoveValue(tile_1);
+			this.towns_used.RemoveValue(tile_2);
+			return ERROR_BUILD_AIRPORT1;
 		}
 	}
-
-	/* In certain cases building an airport still fails for unknown reason. */
-	/* Build the airports for real */
-	if (!AIAirport.BuildAirport(tile_1, airport_type, AIStation.STATION_NEW)) {
-		AILog.Warning(AIError.GetLastErrorString());
-		AILog.Error("Although the testing told us we could build an airport, it still failed at tile " +
-		  WormStrings.WriteTile(tile_1) + ".");
-		this.towns_used.RemoveValue(tile_1);
-		this.towns_used.RemoveValue(tile_2);
-		return ERROR_BUILD_AIRPORT1;
-	}
-	if (!AIAirport.BuildAirport(tile_2, airport_type, AIStation.STATION_NEW)) {
-		AILog.Warning(AIError.GetLastErrorString());
-		AILog.Error("Although the testing told us we could build an airport, it still failed at tile " +
-		  WormStrings.WriteTile(tile_2) + ".");
-		this.RemoveAirport(tile_1);
-		this.towns_used.RemoveValue(tile_1);
-		this.towns_used.RemoveValue(tile_2);
-		return ERROR_BUILD_AIRPORT1;
+	else {
+		/* We have an unfinished route without airplanes. */
+		tile_1 = incomplete_route_tile1;
+		tile_2 = incomplete_route_tile2;
+		route_without_aircraft = false;
+		AILog.Info("Trying to add aircraft to incomplete route without any airplanes.");
 	}
 
 	local ret = this.BuildAircraft(tile_1, tile_2, tile_1);
 	if (ret < 0) {
-		// For some reason removing an airport in here sometimes fails, sleeping a little
-		// helps for the cases we have seen.
-		AIController.Sleep(1);
-		this.RemoveAirport(tile_1);
-		this.RemoveAirport(tile_2);
-		this.towns_used.RemoveValue(tile_1);
-		this.towns_used.RemoveValue(tile_2);
-		AILog.Info("Cancelled route because we couldn't build an aircraft.");
+		if (!(ret == ERROR_NOT_ENOUGH_MONEY)) {
+			// For some reason removing an airport in here sometimes fails, sleeping a little
+			// helps for the cases we have seen.
+			AIController.Sleep(1);
+			this.RemoveAirport(tile_1);
+			this.RemoveAirport(tile_2);
+			this.towns_used.RemoveValue(tile_1);
+			this.towns_used.RemoveValue(tile_2);
+			AILog.Info("Cancelled route because we couldn't build an aircraft.");
+		}
+		else {
+			/* No money to add airplanes to this new route: Try to add them later. */
+			route_without_aircraft = true;
+			incomplete_route_tile1 = tile_1;
+			incomplete_route_tile2 = tile_2;
+			AILog.Warning("We built airports but don't have enough money yet to buy airplanes.");
+		}
 	}
 	else {
 		local balance = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
@@ -1297,7 +1321,7 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 	
 	/* Balance below a certain minimum? Wait until we buy more planes. */
 	if (balance < WormMoney.InflationCorrection(MINIMUM_BALANCE_AIRCRAFT)) {
-		AILog.Warning("We are low on money (" + balance + "). We are not going to buy an aircraft right now.");
+		AILog.Warning("We are low on money (" + balance + "). We are not going to buy an airplane right now.");
 		return ERROR_NOT_ENOUGH_MONEY;
 	}
 	
@@ -1712,15 +1736,21 @@ function WormAirManager::CheckAirportsWithoutVehicles()
 		if (veh_list.Count() == 0) {
 			/* This can happen when on a route with 1 plane the plane crashes.
 				or when after building 2 airports it fails to build an aircraft
-				due to lack of money or whatever and then removing one of the airports fails
+				due to unknown reasons and then removing one of the airports fails
 				due to unknown reasons. A fix that seems to help so far is doing a Sleep(1)
 				before removing the airports but just to be sure we check here anyway.
 				In that case tile_1 and 2 will be 0 although there still is a station. */
-			AILog.Warning("Airport " + AIStation.GetName(st) + " (" + st + ") has no vehicles using it.");
-			AILog.Info("Removing airport");
 			local st_tile = AIStation.GetLocation(st);
-			this.RemoveAirport(st_tile);
-			this.towns_used.RemoveValue(st_tile);
+			/* Don't remove a route that's waiting for airplanes until we have enough money. */
+			if ((!route_without_aircraft) || ((st_tile != incomplete_route_tile1) && (st_tile != incomplete_route_tile2))) {
+				AILog.Warning("Airport " + AIStation.GetName(st) + " (" + st + ") has no vehicles using it.");
+				AILog.Info("Removing airport");
+				this.RemoveAirport(st_tile);
+				this.towns_used.RemoveValue(st_tile);
+			}
+			else {
+				AILog.Info("Not removing airport " + AIStation.GetName(st) + ". We are waiting for money to buy airplanes.");
+			}
 		}
 	}
 }
@@ -1832,6 +1862,11 @@ function WormAirManager::ManageAirRoutes()
 		return ERROR_MAX_AIRCRAFT;
 	}
 
+	/* Don't check if routes need extra airplanes when there's an unfinished route without planes. */
+	if (route_without_aircraft) {
+		return ALL_OK;
+	}	
+
 	list = AIStationList(AIStation.STATION_AIRPORT);
 	list.Valuate(AIStation.GetCargoWaiting, this.passenger_cargo_id);
 	list.KeepAboveValue(AIRPORT_CARGO_WAITING_LOW_LIMIT);
@@ -1840,9 +1875,11 @@ function WormAirManager::ManageAirRoutes()
 		local list2 = AIVehicleList_Station(i);
 		/* No vehicles going to this station, abort and sell */
 		if (list2.Count() == 0) {
-			/* Should not happen anymore since we called CheckAirportsWithoutVehicles earlier.*/
-			AILog.Error("Error: Unexpectedly no vehicles are going to station " + 
-				 AIStation.GetName(i) + "!");
+			if (!route_without_aircraft) {
+				/* Should not happen anymore since we called CheckAirportsWithoutVehicles earlier.*/
+				AILog.Error("Error: Unexpectedly no vehicles are going to station " + 
+					 AIStation.GetName(i) + "!");
+			}
 			continue;
 		};
 
