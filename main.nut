@@ -51,6 +51,7 @@ import("pathfinder.rail", "RailPathFinder", 1);
 // Get our required classes.
 require("money.nut");
 require("strings.nut");
+require("math.nut");
 require("tiles.nut");
 require("valuators.nut");
 require("airmanager.nut");
@@ -275,7 +276,7 @@ function WormAI::CanBuildTrains()
 /* This is our SuperLib.Log acceptable log levels functions for debugging, returning always true.
  * Only to be used when we want to debug inside SuperLib.
  */
-function WormAI.SuperLib_Log_IsLevelAccepted_Function(log_level)
+function WormAI::SuperLib_Log_IsLevelAccepted_Function(log_level)
 {
 	// Set to TRUE when we need to debug into SuperLib. Needs to be adapted when we decide to move
 	// all logging to SuperLib.Log.
