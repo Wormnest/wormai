@@ -326,8 +326,8 @@ function WormAI::Start()
 	local cur_month = 0;
 	local new_month = 0;
 	
-	/// FOR DEBUGGING ONLY *******************
-	Log.SetIsLevelAcceptedFunction(WormAI.SuperLib_Log_IsLevelAccepted_Function);
+	/// FOR DEBUGGING ONLY
+	//Log.SetIsLevelAcceptedFunction(WormAI.SuperLib_Log_IsLevelAccepted_Function);
 
 	/* Let's go on forever */
 	while (true) {
