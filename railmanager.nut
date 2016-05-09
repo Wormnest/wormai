@@ -276,7 +276,7 @@ function WormRailManager::BuildRailway()
 			return false;
 		}
 		// Build the destination station
-		if (WormRailBuilder.BuildSingleRailStation(false, platform, _planner.route, station_data), this) {
+		if (WormRailBuilder.BuildSingleRailStation(false, platform, _planner.route, station_data, this)) {
 			start = [station_data.frontfront, station_data.stafront];
 			AILog.Info("New station successfully built: " + AIStation.GetName(station_data.stadst));
 		} else {
