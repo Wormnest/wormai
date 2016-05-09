@@ -1471,7 +1471,7 @@ function WormAirManager::FindSuitableAirportSpot(airport_type, center_tile)
 		/* Take into account that towns grow larger over time. A constant value of 15 may not be
 		 * enough for large towns to get outside the building. Inspired by AIAI which uses 100 insted of 75.
 		 */
-		local range = Helper.Sqrt(AITown.GetPopulation(town)/75) + 15;
+		local range = WormMath.Sqrt(AITown.GetPopulation(town)/75) + 15;
 
 		/* Safely add a square rectangle taking care of border tiles. */
 		WormTiles.SafeAddSquare(list, tile, range);
