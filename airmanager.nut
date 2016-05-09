@@ -1448,6 +1448,7 @@ function WormAirManager::FindSuitableAirportSpot(airport_type, center_tile)
 	/* Keep the best 20, if we can't find 2 stations in there, just leave it anyway */
 	/* Original value was 10. We increase it to 20 to make it more likely we will find
 	   a town in case there are a lot of unsuitable locations. */
+	/// @todo Add a blacklist of towns we already tried before but keep them on the blacklist only a certain time.
 	town_list.KeepTop(20);
 	town_list.Valuate(AIBase.RandItem);
 	
@@ -1465,10 +1466,15 @@ function WormAirManager::FindSuitableAirportSpot(airport_type, center_tile)
 
 		local tile = AITown.GetLocation(town);
 
-		/* Create a 30x30 grid around the core of the town and see if we can find a spot for an airport .*/
+		/* Create a grid around the core of the town and see if we can find a spot for an airport .*/
 		local list = AITileList();
+		/* Take into account that towns grow larger over time. A constant value of 15 may not be
+		 * enough for large towns to get outside the building. Inspired by AIAI which uses 100 insted of 75.
+		 */
+		local range = Helper.Sqrt(AITown.GetPopulation(town)/75) + 15;
+
 		/* Safely add a square rectangle taking care of border tiles. */
-		WormTiles.SafeAddSquare(list, tile, 15);
+		WormTiles.SafeAddSquare(list, tile, range);
 		/* Remove all tiles where an airport can't be built and finally keep the best value. */
 		list.Valuate(AITile.IsBuildableRectangle, airport_x, airport_y);
 		list.KeepValue(1);
