@@ -311,7 +311,7 @@ function WormRailManager::BuildRailway()
 
 
 		// Build the source station
-		if (WormRailBuilder.BuildDoubleRailStation(true, _planner.route, station_data, rail_manager)) {
+		if (WormRailBuilder.BuildDoubleRailStation(true, _planner.route, station_data, this)) {
 			end = [station_data.morefront, station_data.frontfront];
 			buildingstage = BS_BUILDING;
 			AILog.Info("New station successfully built: " + AIStation.GetName(station_data.stasrc));
@@ -321,7 +321,7 @@ function WormRailManager::BuildRailway()
 		}
 
 		// Build the destination station
-		if (WormRailBuilder.BuildDoubleRailStation(false, _planner.route, station_data, rail_manager)) {
+		if (WormRailBuilder.BuildDoubleRailStation(false, _planner.route, station_data, this)) {
 			start = [station_data.morefront, station_data.frontfront];
 			AILog.Info("New station successfully built: " + AIStation.GetName(station_data.stadst));
 		} else {
@@ -332,7 +332,7 @@ function WormRailManager::BuildRailway()
 		}
 
 		// Build the first passing lane section
-		temp_ps = WormRailBuilder.BuildPassingLaneSection(true, station_data, rail_manager);
+		temp_ps = WormRailBuilder.BuildPassingLaneSection(true, station_data, this);
 		if (temp_ps == null) {
 			AILog.Warning("Could not build first passing lane section");
 			WormRailBuilder.DeleteRailStation(station_data.stasrc, this);
@@ -349,7 +349,7 @@ function WormRailManager::BuildRailway()
 			}
 		}
 		// Build the second passing lane section
-		temp_ps = WormRailBuilder.BuildPassingLaneSection(false, station_data, rail_manager);
+		temp_ps = WormRailBuilder.BuildPassingLaneSection(false, station_data, this);
 		if (temp_ps == null) {
 			AILog.Warning("Could not build second passing lane section");
 			WormRailBuilder.DeleteRailStation(station_data.stasrc, this);
