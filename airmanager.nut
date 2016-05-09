@@ -64,6 +64,7 @@ class WormAirManager
 	route_without_aircraft = false;		///< True if we have built airports but failed to buy airplanes due to lack of money.
 	incomplete_route_tile1 = 0;			///< Tile of first airport of incomplete air route without aircraft.
 	incomplete_route_tile2 = 0;			///< Tile of second airport of incomplete air route without aircraft.
+	towns_blacklist = null;				///< List of towns where we already tried to build an airport.
 
 
 	/** Create an instance of WormAirManager and initialize our variables. */
@@ -72,6 +73,7 @@ class WormAirManager
 		this.distance_of_route = {};
 		this.vehicle_to_depot = {};
 		this.towns_used = AIList();
+		this.towns_blacklist = AIList();
 		this.route_1 = AIList();
 		this.route_2 = AIList();
 		this.engine_usefulness = AIList();
@@ -283,6 +285,10 @@ class WormAirManager
 	 * Check for airports that don't have any vehicles anymore and delete them.
 	 */
 	function CheckAirportsWithoutVehicles();
+	/**
+	 * Remove towns from the blacklist where blacklisting has expired.
+	 */
+	function UpdateBlacklist();
 	/**
 	 * Manage air routes:
 	 * ------------------
@@ -1221,8 +1227,14 @@ function WormAirManager::BuildAirportRoute()
 		/* We have an unfinished route without airplanes. */
 		tile_1 = incomplete_route_tile1;
 		tile_2 = incomplete_route_tile2;
-		route_without_aircraft = false;
 		AILog.Info("Trying to add aircraft to incomplete route without any airplanes.");
+		/* See if we can get more loan...*/
+		if (!WormMoney.GetMoney(WormMoney.InflationCorrection(BUILD_OVERHEAD + AIRCRAFT_LOW_PRICE), WormMoney.WM_SILENT)) {
+			AILog.Info("We still don't have enough money.");
+			// Can't get enough money
+			return ERROR_NOT_ENOUGH_MONEY;
+		}
+		route_without_aircraft = false;
 	}
 
 	local ret = this.BuildAircraft(tile_1, tile_2, tile_1);
@@ -1464,15 +1476,16 @@ function WormAirManager::FindSuitableAirportSpot(airport_type, center_tile)
 	airport_rad = AIAirport.GetAirportCoverageRadius(airport_type);
 
 	local town_list = AITownList();
-	/* Remove all the towns we already used */
+	/* Remove all the towns that already have an airport. */
 	town_list.RemoveList(this.towns_used);
+	/* Remove all the towns where we already tried to build an airport. */
+	town_list.RemoveList(this.towns_blacklist);
 
 	town_list.Valuate(AITown.GetPopulation);
 	town_list.KeepAboveValue(AIController.GetSetting("min_town_size"));
 	/* Keep the best 20, if we can't find 2 stations in there, just leave it anyway */
 	/* Original value was 10. We increase it to 20 to make it more likely we will find
 	   a town in case there are a lot of unsuitable locations. */
-	/// @todo Add a blacklist of towns we already tried before but keep them on the blacklist only a certain time.
 	town_list.KeepTop(20);
 	town_list.Valuate(AIBase.RandItem);
 	
@@ -1527,7 +1540,12 @@ function WormAirManager::FindSuitableAirportSpot(airport_type, center_tile)
 		} */
 
 		/* Couldn't find a suitable place for this town, skip to the next */
-		if (list.Count() == 0) continue;
+		if (list.Count() == 0) {
+			/* Add town to blacklist for a while. */
+			towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+500);
+			continue;
+		}
+
 		/* Walk all the tiles and see if we can build the airport at all */
 		{
 			local test = AITestMode();
@@ -1541,7 +1559,11 @@ function WormAirManager::FindSuitableAirportSpot(airport_type, center_tile)
 			}
 
 			/* Did we find a place to build the airport on? */
-			if (good_tile == 0) continue;
+			if (good_tile == 0) {
+				/* Add town to blacklist for a while. */
+				towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+500);
+				continue;
+			}
 		}
 
 		AILog.Info("Found a good spot for an airport in " + AITown.GetName(town) + " (id: "+ town + 
@@ -1747,6 +1769,8 @@ function WormAirManager::CheckAirportsWithoutVehicles()
 				AILog.Info("Removing airport");
 				this.RemoveAirport(st_tile);
 				this.towns_used.RemoveValue(st_tile);
+				/* Add town to blacklist for a while. */
+				towns_blacklist.AddItem(this.GetTownFromStationTile(st_tile), AIDate.GetCurrentDate()+1500);
 			}
 			else {
 				AILog.Info("Not removing airport " + AIStation.GetName(st) + ". We are waiting for money to buy airplanes.");
@@ -1937,6 +1961,23 @@ function WormAirManager::ManageAirRoutes()
 		return ret;
 	}
 	AILog.Info(Helper.GetCurrentDateString() + " Finished managing air routes.");
+}
+
+/**
+ * Remove towns from the blacklist where blacklisting has expired.
+ */
+function WormAirManager::UpdateBlacklist()
+{
+	local cur_date = AIDate.GetCurrentDate();
+	for (local town = towns_blacklist.Begin(); !towns_blacklist.IsEnd(); town = towns_blacklist.Next()) {
+		local expires = towns_blacklist.GetValue(town);
+		if (expires < cur_date) {
+			towns_blacklist.RemoveItem(town);
+			AILog.Info("Removed town " + AITown.GetName(town) + " from blacklist.");
+		}
+//		else
+//			AILog.Info("Town " + AITown.GetName(town) + " is blacklisted until " + Helper.GetDateString(expires) + ".");
+	}
 }
 
 /**
