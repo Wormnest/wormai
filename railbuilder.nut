@@ -638,8 +638,8 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, route_data, station_
 	// Handle it if the construction was interrupted for any reason
 	if (!success) {
 		AILog.Warning("Station construction was interrupted.");
-		WormRailBuilder.RemoveRailLine(statile, rail_manager);
-		WormRailBuilder.RemoveRailLine(front2, rail_manager);
+		WormRailBuilder.RemoveRailLine(station_data.statile, rail_manager);
+		WormRailBuilder.RemoveRailLine(station_data.front2, rail_manager);
 		return false;
 	}
 	// Register the station
