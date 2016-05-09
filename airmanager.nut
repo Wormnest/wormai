@@ -1026,10 +1026,22 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 			/* Need to check if it succeeds. */
 			if (upgrade_result == Result.SUCCESS) {
 				/* Need to get the station id of the upgraded station. */
-				AILog.Warning("Upgrading airport " + AIStation.GetName(station_id) + " succeeded!");
 				/* Check if old station_id is still valid */
 				if (AIStation.IsValidStation(station_id)) {
 					UpdateAirportTileInfo(t, station_id, station_tile);
+					/* It is possible that upgrading failed for whatever reason but that we then
+					 * managed to rebuild the original airport type. In that case upgrade result
+					 * will give SUCCESS too but upgrading obviously failed then so check for that.
+					 */
+					station_tile = towns_used.GetValue(t);
+					airport_type = AIAirport.GetAirportType(station_tile);
+					if (airport_type == optimal_airport)
+						AILog.Warning("Upgrading airport " + AIStation.GetName(station_id) + " succeeded!");
+					else {
+						AILog.Warning("Upgrading airport " + AIStation.GetName(station_id) + " failed!");
+						AILog.Warning("However we managed to build a replacement airport of an older type.");
+						/// @todo register this case and wait a while before trying to upgrade again!
+					}
 				}
 				else {
 					AILog.Error("We're out of luck: station id is no longer valid!");
