@@ -106,11 +106,12 @@ class WormRailBuilder
 	 * Builder class variables set: stasrc, stadst, homedepot
 	 * @param is_source True if we are building the source station.
 	 * @param platform_length The length of the new station's platform. (2 or 3)
-	 * @param route A WormRoute class object containing info about the route.
+	 * @param route_data A WormRoute class object containing info about the route.
 	 * @param station_data A WormStation class object containing info about the station.
+	 * @param rail_manager The WormRailManager class object.
 	 * @return True if the construction succeeded.
 	 */
-	function BuildSingleRailStation(is_source, platform_length, route, station_data);
+	function BuildSingleRailStation(is_source, platform_length, route_data, station_data, rail_manager);
 
 	/**
 	 * Check whether a single rail station can be built at the given position.
@@ -129,11 +130,12 @@ class WormRailBuilder
 	 *   statile, deptile, stafront, depfront, frontfront, front1, front2, lane2, morefront
 	 * Builder class variables set: stasrc, stadst, homedepot
 	 * @param is_source True if we are building the source station.
-	 * @param route A WormRoute class object containing info about the route.
+	 * @param route_data A WormRoute class object containing info about the route.
 	 * @param station_data A WormStation class object containing info about the station.
+	 * @param rail_manager The WormRailManager class object.
 	 * @return True if the construction succeeded.
 	 */
-	function BuildDoubleRailStation(is_source, route, station_data);
+	function BuildDoubleRailStation(is_source, route_data, station_data, rail_manager);
 
 	/**
 	 * Determine whether a double rail station can be built at a given place.
@@ -184,9 +186,10 @@ class WormRailBuilder
 	 * Builder class variables used: stasrc, stadst
 	 * @param near_source True if we're building the first passing lane section. (the one closer to the source station)
 	 * @param station_data A WormStation class object with info about the stations between which rail is being built.
+	 * @param rail_manager The WormRailManager class object.
 	 * @return True if the construction succeeded.
 	 */
-	function BuildPassingLaneSection(near_source, station_data);
+	function BuildPassingLaneSection(near_source, station_data, rail_manager);
 
 	/**
 	 * Determine whether a passing lane section can be built at a given position.
@@ -271,13 +274,6 @@ class WormRailBuilder
 
 }
 
-/**
- * Get a TileList around a town.
- * @param town_id The TownID of the given town.
- * @param width The width of the proposed station.
- * @param height The height of the proposed station.
- * @return A TileList containing tiles around a town.
- */
 function WormRailBuilder::GetTilesAroundTown(town_id, width, height)
 {
 	local tiles = AITileList();
@@ -328,15 +324,6 @@ function WormRailBuilder::ChooseWagon(cargo, blacklist)
 	return wagonlist.Begin();
 }
 
-/**
- * Choose a train locomotive.
- * @param cargo The cargo to carry.
- * @param distance The distance to be traveled.
- * @param wagon The EngineID of the wagons to be pulled.
- * @param num_wagons The number of wagons to be pulled.
- * @param blacklist A list of engines that cannot be used.
- * @return The EngineID of the chosen locomotive, null if no suitable locomotive was found.
- */
 function WormRailBuilder::ChooseTrainEngine(cargo, distance, wagon, num_wagons, blacklist)
 {
 	local enginelist = AIEngineList(AIVehicle.VT_RAIL);
@@ -371,15 +358,6 @@ function WormRailBuilder::ChooseTrainEngine(cargo, distance, wagon, num_wagons, 
 	return enginelist.Begin();
 }
 
-/**
- * A valuator function for scoring train locomotives.
- * @param engine The engine to be scored.
- * @param weight The weight to be pulled.
- * @param max_speed The maximum speed allowed.
- * @param money The amount of money the company has.
- * @return The score of the engine.
- * @todo the money parameter seems not to be used.
- */
 function WormRailBuilder::TrainEngineValuator(engine, weight, max_speed, money)
 {
 	local value = 0;
@@ -406,50 +384,39 @@ function WormRailBuilder::TrainEngineValuator(engine, weight, max_speed, money)
 	return value.tointeger();
 }
 
-/**
- * Build a single (one-lane) rail station at a town or an industry.
- * Builder class variables used: crg, src, dst, srcplace, dstplace, srcistown, dstistown,
- *   statile, stafront, depfront, frontfront, statop, stationdir
- * Builder class variables set: stasrc, stadst, homedepot
- * @param is_source True if we are building the source station.
- * @param platform_length The length of the new station's platform. (2 or 3)
- * @param route A WormRoute class object containing info about the route.
- * @param station_data A WormStation class object containing info about the station.
- * @return True if the construction succeeded.
- */
-function WormRailBuilder::BuildSingleRailStation(is_source, platform_length, route, station_data)
+function WormRailBuilder::BuildSingleRailStation(is_source, platform_length, route_data, station_data, rail_manager)
 {
 	local dir, tilelist, otherplace, isneartown = null;
 	local rad = AIStation.GetCoverageRadius(AIStation.STATION_TRAIN);
 	// Determine the direction of the station, and get tile lists
 	if (is_source) {
-		dir = WormTiles.GetDirection(route.SourceLocation, route.DestLocation);
-		if (route.SourceIsTown) {
-			tilelist = WormRailBuilder.GetTilesAroundTown(route.SourceID, 1, 1);
+		dir = WormTiles.GetDirection(route_data.SourceLocation, route_data.DestLocation);
+		if (route_data.SourceIsTown) {
+			tilelist = WormRailBuilder.GetTilesAroundTown(route_data.SourceID, 1, 1);
 			isneartown = true;
 		} else {
-			tilelist = AITileList_IndustryProducing(route.SourceID, rad);
+			tilelist = AITileList_IndustryProducing(route_data.SourceID, rad);
 			isneartown = false;
 		}
-		otherplace = route.DestLocation;
+		otherplace = route_data.DestLocation;
 	} else {
-		dir = WormTiles.GetDirection(route.DestLocation, route.SourceLocation);
-		if (route.DestIsTown) {
-			tilelist = WormRailBuilder.GetTilesAroundTown(route.DestID, 1, 1);
+		dir = WormTiles.GetDirection(route_data.DestLocation, route_data.SourceLocation);
+		if (route_data.DestIsTown) {
+			tilelist = WormRailBuilder.GetTilesAroundTown(route_data.DestID, 1, 1);
 			isneartown = true;
 		} else {
-			tilelist = AITileList_IndustryAccepting(route.DestID, rad);
-			tilelist.Valuate(AITile.GetCargoAcceptance, route.Cargo, 1, 1, rad);
+			tilelist = AITileList_IndustryAccepting(route_data.DestID, rad);
+			tilelist.Valuate(AITile.GetCargoAcceptance, route_data.Cargo, 1, 1, rad);
 			tilelist.RemoveBelowValue(8);
 			isneartown = false;
 		}
-		otherplace = route.SourceLocation;
+		otherplace = route_data.SourceLocation;
 	}
 	tilelist.Valuate(AITile.IsBuildable);
 	tilelist.KeepValue(1);
 	// Sort the tile list
 	if (isneartown) {
-		tilelist.Valuate(AITile.GetCargoAcceptance, route.Cargo, 1, 1, rad);
+		tilelist.Valuate(AITile.GetCargoAcceptance, route_data.Cargo, 1, 1, rad);
 		tilelist.KeepAboveValue(10);
 	} else {
 		tilelist.Valuate(AIMap.DistanceManhattan, otherplace);
@@ -467,10 +434,10 @@ function WormRailBuilder::BuildSingleRailStation(is_source, platform_length, rou
 
 	// Build the station itself
 	/*** @todo possibly support for building newgrf stations like SimpleAI does
-	if (AIController.GetSetting("newgrf_stations") == 1 && !route.SourceIsTown && !route.DestIsTown) {
+	if (AIController.GetSetting("newgrf_stations") == 1 && !route_data.SourceIsTown && !route_data.DestIsTown) {
 		// Build a NewGRF rail station
 		success = success && AIRail.BuildNewGRFRailStation(statop, stationdir, 1, platform_length, AIStation.STATION_NEW,
-							route.Cargo, AIIndustry.GetIndustryType(route.SourceID), AIIndustry.GetIndustryType(route.DestID), AIMap.DistanceManhattan(route.SourceLocation, route.DestLocation), is_source);
+							route_data.Cargo, AIIndustry.GetIndustryType(route_data.SourceID), AIIndustry.GetIndustryType(route_data.DestID), AIMap.DistanceManhattan(route_data.SourceLocation, route_data.DestLocation), is_source);
 	} else { */
 		// Build a standard railway station
 		success = success && AIRail.BuildRailStation(station_data.statop, station_data.stationdir, 1, platform_length, AIStation.STATION_NEW);
@@ -495,8 +462,7 @@ function WormRailBuilder::BuildSingleRailStation(is_source, platform_length, rou
 	if (!success) {
 		// If we couldn't build the station for any reason
 		AILog.Warning("Station construction was interrupted.")
-/// @todo RemoveRailLine
-//		cBuilder.RemoveRailLine(station_data.statile);
+		WormRailBuilder.RemoveRailLine(station_data.statile, rail_manager);
 		return false;
 	}
 
@@ -581,40 +547,40 @@ function WormRailBuilder::CanBuildSingleRailStation(tile, direction, platform_le
 	return true;
 }
 
-function WormRailBuilder::BuildDoubleRailStation(is_source, route, station_data)
+function WormRailBuilder::BuildDoubleRailStation(is_source, route_data, station_data, rail_manager)
 {
 	local dir, tilelist, otherplace, isneartown = null;
 	local rad = AIStation.GetCoverageRadius(AIStation.STATION_TRAIN);
 	// Get the tile list
 	if (is_source) {
-		dir = WormTiles.GetDirection(route.SourceLocation, route.DestLocation);
-		if (route.SourceIsTown) {
-			tilelist = WormRailBuilder.GetTilesAroundTown(route.SourceID, 2, 2);
+		dir = WormTiles.GetDirection(route_data.SourceLocation, route_data.DestLocation);
+		if (route_data.SourceIsTown) {
+			tilelist = WormRailBuilder.GetTilesAroundTown(route_data.SourceID, 2, 2);
 			isneartown = true;
 		} else {
-			tilelist = AITileList_IndustryProducing(route.SourceID, rad);
+			tilelist = AITileList_IndustryProducing(route_data.SourceID, rad);
 			isneartown = false;
 		}
-		otherplace = route.DestLocation;
+		otherplace = route_data.DestLocation;
 	} else {
-		dir = WormTiles.GetDirection(route.DestLocation, route.SourceLocation);
-		if (route.DestIsTown) {
-			tilelist = WormRailBuilder.GetTilesAroundTown(route.DestID, 2, 2);
+		dir = WormTiles.GetDirection(route_data.DestLocation, route_data.SourceLocation);
+		if (route_data.DestIsTown) {
+			tilelist = WormRailBuilder.GetTilesAroundTown(route_data.DestID, 2, 2);
 			isneartown = true;
 		} else {
-			tilelist = AITileList_IndustryAccepting(route.DestID, rad);
-			tilelist.Valuate(AITile.GetCargoAcceptance, route.Cargo, 1, 1, rad);
+			tilelist = AITileList_IndustryAccepting(route_data.DestID, rad);
+			tilelist.Valuate(AITile.GetCargoAcceptance, route_data.Cargo, 1, 1, rad);
 			tilelist.RemoveBelowValue(8);
 			isneartown = false;
 		}
-		otherplace = route.SourceLocation;
+		otherplace = route_data.SourceLocation;
 	}
 	tilelist.Valuate(AITile.IsBuildable);
 	tilelist.KeepValue(1);
 
 	// Sort the tile list
 	if (isneartown) {
-		tilelist.Valuate(AITile.GetCargoAcceptance, route.Cargo, 1, 1, rad);
+		tilelist.Valuate(AITile.GetCargoAcceptance, route_data.Cargo, 1, 1, rad);
 		tilelist.KeepAboveValue(10);
 	} else {
 		tilelist.Valuate(AIMap.DistanceManhattan, otherplace);
@@ -632,10 +598,10 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, route, station_data)
 	if (!success) return false;
 
 	// Build the station itself
-	if (AIController.GetSetting("newgrf_stations") == 1 && !route.SourceIsTown && !route.DestIsTown) {
+	if (AIController.GetSetting("newgrf_stations") == 1 && !route_data.SourceIsTown && !route_data.DestIsTown) {
 		// Build a NewGRF rail station
 		success = success && AIRail.BuildNewGRFRailStation(station_data.statop, station_data.stationdir, 2, 3, AIStation.STATION_NEW,
-							route.Cargo, AIIndustry.GetIndustryType(route.SourceID), AIIndustry.GetIndustryType(route.DestID), AIMap.DistanceManhattan(route.SourceLocation, route.DestLocation), is_source);
+							route_data.Cargo, AIIndustry.GetIndustryType(route_data.SourceID), AIIndustry.GetIndustryType(route_data.DestID), AIMap.DistanceManhattan(route_data.SourceLocation, route_data.DestLocation), is_source);
 	} else {
 		// Build a standard rail station
 		success = success && AIRail.BuildRailStation(station_data.statop, station_data.stationdir, 2, 3, AIStation.STATION_NEW);
@@ -663,9 +629,8 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, route, station_data)
 	// Handle it if the construction was interrupted for any reason
 	if (!success) {
 		AILog.Warning("Station construction was interrupted.");
-/// @todo RemoveRailLine
-//		cBuilder.RemoveRailLine(statile);
-//		cBuilder.RemoveRailLine(front2);
+		WormRailBuilder.RemoveRailLine(statile, rail_manager);
+		WormRailBuilder.RemoveRailLine(front2, rail_manager);
 		return false;
 	}
 	// Register the station
@@ -927,7 +892,7 @@ function WormRailBuilder::RetryRail(prevprev, pp1, pp2, pp3, head1, railbridges,
 	else return false;
 }
 
-function WormRailBuilder::BuildPassingLaneSection(near_source, station_data)
+function WormRailBuilder::BuildPassingLaneSection(near_source, station_data, rail_manager)
 {
 	local dir, tilelist, centre;
 	local src_x, src_y, dst_x, dst_y, ps_x, ps_y;
@@ -1006,8 +971,7 @@ function WormRailBuilder::BuildPassingLaneSection(near_source, station_data)
 	success = success && AIRail.BuildSignal(centre + 3*vector, centre + 2*vector, signaltype);
 	if (!success) {
 		AILog.Warning("Passing lane construction was interrupted.");
-/// @todo RemoveRailLine
-//		cBuilder.RemoveRailLine(end[0][1]);
+		WormRailBuilder.RemoveRailLine(end[0][1], rail_manager);
 		return null;
 	}
 	return end;
@@ -1206,13 +1170,6 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 	return true;
 }
 
-/**
- * A workaround for refitting the mail wagon separately.
- * @param mailwagon The mail wagon to be refitted.
- * @param firstwagon The wagon to which the mail wagon is attached.
- * @param trainengine The locomotive of the train, used to move the wagons.
- * @param crg The cargo which the mail wagon will be refitted to.
- */
 function WormRailBuilder::MailWagonWorkaround(mailwagon, firstwagon, trainengine, crg)
 {
 	AIVehicle.MoveWagon(firstwagon, 0, trainengine, 0);
@@ -1399,12 +1356,6 @@ function WormRailBuilder::DeleteRailStation(sta, rail_manager)
 	}
 }
 
-/**
- * Upgrade a segment of normal rail to electrified rail from a given starting point.
- * Tiles which are reachable by a train from a given starting point are electrified,
- * including stations and depots. This function is not static.
- * @param start_tile The starting point from which rails are electrified.
- */
 function WormRailBuilder::ElectrifyRail(start_tile, rail_manager)
 {
 	// The starting date is needed to avoid infinite loops
