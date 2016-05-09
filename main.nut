@@ -149,6 +149,10 @@ class WormAI extends AIController {
 	 * Welcome says hello to the user and prints out the current AI gamesettings.
 	 */
 	function Welcome();
+	/* This is our SuperLib.Log acceptable log levels functions for debugging, returning always true.
+	 * Only to be used when we want to debug inside SuperLib.
+	 */
+	function SuperLib_Log_IsLevelAccepted_Function(log_level);
 	/**
 	 * Checks if we can build an aircraft and if not outputs a string with the reason.
 	 * @return true if we can build an aircraft, otherwise false.
@@ -268,6 +272,16 @@ function WormAI::CanBuildTrains()
 	return false;
 }
 
+/* This is our SuperLib.Log acceptable log levels functions for debugging, returning always true.
+ * Only to be used when we want to debug inside SuperLib.
+ */
+function WormAI.SuperLib_Log_IsLevelAccepted_Function(log_level)
+{
+	// Set to TRUE when we need to debug into SuperLib. Needs to be adapted when we decide to move
+	// all logging to SuperLib.Log.
+	return true;
+}
+
 /**
  * Start the main loop of WormAI.
  */
@@ -310,6 +324,9 @@ function WormAI::Start()
 	local new_year = 0;
 	local cur_month = 0;
 	local new_month = 0;
+	
+	/// FOR DEBUGGING ONLY *******************
+	Log.SetIsLevelAcceptedFunction(WormAI.SuperLib_Log_IsLevelAccepted_Function);
 
 	/* Let's go on forever */
 	while (true) {
