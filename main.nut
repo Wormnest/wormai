@@ -392,6 +392,8 @@ function WormAI::Start()
 					/* Manage the routes once in a while */
 					this.air_manager.ManageAirRoutes();
 					this.air_manager.CheckForAirportsNeedingToBeUpgraded();
+					/* Update the list of blacklisted towns for airport consideration. */
+					this.air_manager.UpdateBlacklist();
 				}
 				if (this.use_trains) {
 					AILog.Info("++ Check Train Routes ++");
