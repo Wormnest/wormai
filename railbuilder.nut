@@ -343,7 +343,8 @@ function WormRailBuilder::ChooseTrainEngine(cargo, distance, wagon, num_wagons, 
 	local money = 0;
 	local cargo_weight_factor = 0.5;
 	if (AICargo.HasCargoClass(cargo, AICargo.CC_PASSENGERS)) cargo_weight_factor = 0.05;
-	if (AICargo.HasCargoClass(cargo, AICargo.CC_BULK) || AICargo.HasCargoClass(cargo, AICargo.CC_LIQUID)) cargo_weight_factor = 1;
+	if (AICargo.HasCargoClass(cargo, AICargo.CC_BULK) || AICargo.HasCargoClass(cargo, AICargo.CC_LIQUID))
+		cargo_weight_factor = 1;
 	local weight = num_wagons * (AIEngine.GetWeight(wagon) + AIEngine.GetCapacity(wagon) * cargo_weight_factor);
 	local max_speed = AIEngine.GetMaxSpeed(wagon);
 	if (max_speed == 0) max_speed = 500;
@@ -366,14 +367,16 @@ function WormRailBuilder::TrainEngineValuator(engine, weight, max_speed, money)
 	//local power = AIEngine.GetPower(engine).tofloat();
 	//value += (power > hp_break) ? (160 + 240 * power / (3 * hp_break)) : (240 * power / hp_break);
 	local hp_per_tonne = AIEngine.GetPower(engine).tofloat() / weight_with_engine.tofloat();
-	local power_points = (hp_per_tonne > 4.0) ? ((hp_per_tonne > 16.0) ? (620 + 10 * hp_per_tonne / 4.0) : (420 + 60 * hp_per_tonne / 4.0)) : (-480 + 960 * hp_per_tonne / 4.0);
+	local power_points = (hp_per_tonne > 4.0) ? ((hp_per_tonne > 16.0) ? (620 + 10 * hp_per_tonne / 4.0) :
+		(420 + 60 * hp_per_tonne / 4.0)) : (-480 + 960 * hp_per_tonne / 4.0);
 	value += power_points;
 	local speed = AIEngine.GetMaxSpeed(engine);
 	local speed_points = (speed > max_speed) ? (360 * max_speed / 112.0) : (360 * speed / 112.0)
 	value += speed_points;
 	local runningcost_limit = (6000 / Money.GetInflationRate()).tointeger();
 	local runningcost = AIEngine.GetRunningCost(engine).tofloat();
-	local runningcost_penalty = (runningcost > runningcost_limit) ? ((runningcost > 3 * runningcost_limit) ? (runningcost / 20.0 - 550.0) : (runningcost / 40.0 - 100.0)) : (runningcost / 120.0)
+	local runningcost_penalty = (runningcost > runningcost_limit) ? ((runningcost > 3 * runningcost_limit) ?
+		(runningcost / 20.0 - 550.0) : (runningcost / 40.0 - 100.0)) : (runningcost / 120.0)
 	value -= runningcost_penalty;
 	/*AILog.Info(AIEngine.GetName(engine) + " : " + value);
 	AILog.Info("     power points: " + power_points);
@@ -437,10 +440,12 @@ function WormRailBuilder::BuildSingleRailStation(is_source, platform_length, rou
 	if (AIController.GetSetting("newgrf_stations") == 1 && !route_data.SourceIsTown && !route_data.DestIsTown) {
 		// Build a NewGRF rail station
 		success = success && AIRail.BuildNewGRFRailStation(statop, stationdir, 1, platform_length, AIStation.STATION_NEW,
-							route_data.Cargo, AIIndustry.GetIndustryType(route_data.SourceID), AIIndustry.GetIndustryType(route_data.DestID), AIMap.DistanceManhattan(route_data.SourceLocation, route_data.DestLocation), is_source);
+			route_data.Cargo, AIIndustry.GetIndustryType(route_data.SourceID), AIIndustry.GetIndustryType(route_data.DestID),
+			AIMap.DistanceManhattan(route_data.SourceLocation, route_data.DestLocation), is_source);
 	} else { */
 		// Build a standard railway station
-		success = success && AIRail.BuildRailStation(station_data.statop, station_data.stationdir, 1, platform_length, AIStation.STATION_NEW);
+		success = success && AIRail.BuildRailStation(station_data.statop, station_data.stationdir, 1,
+			platform_length, AIStation.STATION_NEW);
 	/*}*/
 	if (!success) {
 		AILog.Error("Station could not be built: " + AIError.GetLastErrorString());
@@ -526,7 +531,8 @@ function WormRailBuilder::CanBuildSingleRailStation(tile, direction, platform_le
 
 	// Check if the station can be built
 	local test = AITestMode();
-	if (!AIRail.BuildRailStation(station_data.statop, station_data.stationdir, 1, platform_length, AIStation.STATION_NEW)) return false;
+	if (!AIRail.BuildRailStation(station_data.statop, station_data.stationdir, 1, platform_length,
+		AIStation.STATION_NEW)) return false;
 	if (!AIRail.BuildRailDepot(station_data.deptile, station_data.depfront)) return false;
 	if (!AITile.IsBuildable(station_data.depfront)) return false;
 	if (!AIRail.BuildRail(station_data.statile, station_data.depfront, station_data.stafront)) return false;
@@ -600,11 +606,14 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, route_data, station_
 	// Build the station itself
 	if (AIController.GetSetting("newgrf_stations") == 1 && !route_data.SourceIsTown && !route_data.DestIsTown) {
 		// Build a NewGRF rail station
-		success = success && AIRail.BuildNewGRFRailStation(station_data.statop, station_data.stationdir, 2, 3, AIStation.STATION_NEW,
-							route_data.Cargo, AIIndustry.GetIndustryType(route_data.SourceID), AIIndustry.GetIndustryType(route_data.DestID), AIMap.DistanceManhattan(route_data.SourceLocation, route_data.DestLocation), is_source);
+		success = success && AIRail.BuildNewGRFRailStation(station_data.statop, station_data.stationdir, 2, 3,
+			AIStation.STATION_NEW, route_data.Cargo, AIIndustry.GetIndustryType(route_data.SourceID),
+			AIIndustry.GetIndustryType(route_data.DestID), AIMap.DistanceManhattan(route_data.SourceLocation,
+			route_data.DestLocation), is_source);
 	} else {
 		// Build a standard rail station
-		success = success && AIRail.BuildRailStation(station_data.statop, station_data.stationdir, 2, 3, AIStation.STATION_NEW);
+		success = success && AIRail.BuildRailStation(station_data.statop, station_data.stationdir, 2, 3,
+			AIStation.STATION_NEW);
 	}
 	if (!success) {
 		AILog.Error("Station could not be built: " + AIError.GetLastErrorString());
@@ -691,7 +700,8 @@ function WormRailBuilder::CanBuildDoubleRailStation(tile, direction, station_dat
 	station_data.deptile = station_data.depfront + vector;
 
 	// Try the second place for the depot if the first one is not suitable
-	if (!AIRail.BuildRailDepot(station_data.deptile, station_data.depfront)) station_data.deptile = station_data.depfront - rvector;
+	if (!AIRail.BuildRailDepot(station_data.deptile, station_data.depfront))
+		station_data.deptile = station_data.depfront - rvector;
 	station_data.frontfront = station_data.stafront + vector;
 	station_data.morefront = station_data.frontfront + vector;
 
@@ -1068,7 +1078,8 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 		local testmode = AITestMode();
 		if (!AIVehicle.MoveWagonChain(firstwagon, 0, trainengine, 0)) {
 			engineblacklist.AddItem(engine, 0);
-			AILog.Warning(AIEngine.GetName(engine) + " was blacklisted for not being compatibile with " + AIEngine.GetName(wagon) + ".");
+			AILog.Warning(AIEngine.GetName(engine) + " was blacklisted for not being compatibile with " +
+				AIEngine.GetName(wagon) + ".");
 			local execmode = AIExecMode();
 			AIVehicle.SellVehicle(trainengine);
 			AIVehicle.SellVehicle(firstwagon);
@@ -1131,7 +1142,8 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 		if (wagon != mailwagontype && !AIVehicle.MoveWagonChain(mailwagon, 0, trainengine, 0) ||
 		    wagon == mailwagontype && !AIVehicle.MoveWagon(firstwagon, 1, trainengine, 0)) {
 			engineblacklist.AddItem(engine, 0);
-			AILog.Warning(AIEngine.GetName(engine) + " was blacklisted for not being compatibile with " + AIEngine.GetName(mailwagontype) + ".");
+			AILog.Warning(AIEngine.GetName(engine) + " was blacklisted for not being compatibile with " +
+				AIEngine.GetName(mailwagontype) + ".");
 			AIVehicle.SellVehicle(trainengine);
 			AIVehicle.SellWagonChain(firstwagon, 0);
 			AIVehicle.SellVehicle(mailwagon);
@@ -1188,7 +1200,8 @@ function WormRailBuilder::RemoveRailLine(start_tile, rail_manager)
 	local startingdate = AIDate.GetCurrentDate();
 	rail_manager.buildingstage = rail_manager.BS_REMOVING;
 	// Get the four directions
-	local all_vectors = [AIMap.GetTileIndex(1, 0), AIMap.GetTileIndex(0, 1), AIMap.GetTileIndex(-1, 0), AIMap.GetTileIndex(0, -1)];
+	local all_vectors = [AIMap.GetTileIndex(1, 0), AIMap.GetTileIndex(0, 1), AIMap.GetTileIndex(-1, 0),
+		AIMap.GetTileIndex(0, -1)];
 	if (AIMap.IsValidTile(start_tile)) rail_manager.removelist = [start_tile];
 	local tile = null;
 	while (rail_manager.removelist.len() > 0) {
@@ -1362,7 +1375,8 @@ function WormRailBuilder::ElectrifyRail(start_tile, rail_manager)
 	local startingdate = AIDate.GetCurrentDate();
 	rail_manager.buildingstage = rail_manager.BS_ELECTRIFYING;
 	// Get all four directions
-	local all_vectors = [AIMap.GetTileIndex(1, 0), AIMap.GetTileIndex(0, 1), AIMap.GetTileIndex(-1, 0), AIMap.GetTileIndex(0, -1)];
+	local all_vectors = [AIMap.GetTileIndex(1, 0), AIMap.GetTileIndex(0, 1), AIMap.GetTileIndex(-1, 0),
+		AIMap.GetTileIndex(0, -1)];
 	// If start_tile is not a valid tile we're probably loading a game
 	if (AIMap.IsValidTile(start_tile)) rail_manager.removelist = [start_tile];
 	local tile = null;
