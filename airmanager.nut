@@ -1624,11 +1624,13 @@ function WormAirManager::SendToDepotForSelling(vehicle,sell_reason)
 		{
 			AILog.Warning(AIError.GetLastErrorString());
 			AILog.Warning("Failed to send vehicle " + AIVehicle.GetName(vehicle) + " to depot!");
+			// Maybe the vehicle needs to be reversed to find a depot
+			AIVehicle.ReverseVehicle(vehicle);
+			AIController.Sleep(75);
+			if (!AIVehicle.SendVehicleToDepot(vehicle)) return;
 		}
-		else {
-			/* Add it to our list of vehicles that were sent to depot. */
-			vehicle_to_depot.rawset(vehicle, true);
-		}
+		/* Add it to our list of vehicles that were sent to depot. */
+		vehicle_to_depot.rawset(vehicle, true);
 	}
 }
 
@@ -1816,7 +1818,9 @@ function WormAirManager::ManageAirRoutes()
 	list.Valuate(AIVehicle.GetProfitLastYear);
 
 	/* Decide on the best low profit limit at this moment. */
-	if ((Vehicle.GetVehicleLimit(AIVehicle.VT_AIR)*9/10) > this.route_1.Count()) {
+	/// @todo Do this on a per group basis (each route a group).
+	/// @todo That way we can decide to not check a group wich was created less than x years ago.
+	if ((Vehicle.GetVehicleLimit(AIVehicle.VT_AIR)*95/100) > this.route_1.Count()) {
 		/* Since we can still add more planes keep all planes that make at least some profit. */
 		/// @todo When maintenance costs are on we should set low profit limit too at least
 		/// the yearly costs.
