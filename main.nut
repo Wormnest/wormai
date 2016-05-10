@@ -438,9 +438,8 @@ function WormAI::Start()
 		}
 		if (this.use_trains) {
 			if ((cur_ticker - old_ticker_rail > rail_delay_factor * this.delay_build_rail_route) || old_ticker_rail == 0) {
-				AILog.Info("  Check money...");
 				if (WormMoney.HasMoney(WormMoney.InflationCorrection(60000))) {
-					AILog.Info("    Try to build a railway...");
+					AILog.Info("Try to build a railway...");
 					if (!this.rail_manager.BuildRailway()) {
 						rail_delay_factor++;
 						if (rail_delay_factor > 10)
@@ -448,6 +447,9 @@ function WormAI::Start()
 					}
 					else
 						rail_delay_factor = 1;
+				}
+				else {
+					AILog.Info("Waiting for more money to build a train route...");
 				}
 				old_ticker_rail = cur_ticker;
 			}
