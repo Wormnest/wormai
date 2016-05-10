@@ -72,11 +72,13 @@ class WormPlanner
 
 	route = null;				///< Details about the route we planned.
 	_rail_manager = null;
+	_last_sub_tried = -1;		///< Last subsidy we tried.
 	
 	constructor (rail_manager)
 	{
 		route = WormRoute();
 		_rail_manager = rail_manager;
+		_last_sub_tried = -1;
 	}
 
 	/**
@@ -89,8 +91,7 @@ class WormPlanner
 
 	/**
 	 * Find a cargo, a source and a destination to build a new service.
-	 * Builder class variables set: crglist, crg, srclist, src, dstlist, dst,
-	 *   srcistown, dstistown, srcplace, dstplace
+	 * @param planned_route A WormRoute class that will receive details about the planned route.
 	 * @return True if a potential connection was found.
 	 */
 	function GetRoute(planned_route);
@@ -125,11 +126,18 @@ function WormPlanner::GetSubsidizedRoute(planned_route)
 	// Exclude subsidies which have already been awarded to someone
 	subs.Valuate(AISubsidy.IsAwarded);
 	subs.KeepValue(0);
+	// Exclude subsidies that will expire soon since pathfinding can take a while...
+	subs.Valuate(AISubsidy.GetExpireDate);
+	subs.KeepAboveValue(AIDate.GetCurrentDate()+100); // Should expire at least 100 days after today
+	/// @todo Check if this gets sorted furthest or nearest expire date first.
+	/// I think the highest value (thus furthest expire date) comes fist
 	if (subs.Count() == 0) return false;
-	subs.Valuate(AIBase.RandItem);
+	//subs.Valuate(AIBase.RandItem);
 	// WormAI: We don't want random but optimal profit
 	// @todo Think of another sorting algorithm for optimal profit.
 	foreach (sub, dummy in subs) {
+		// Don't try the same subsidy again and again...
+		if (sub == _last_sub_tried) continue;
 		planned_route.Cargo = AISubsidy.GetCargoType(sub);
 		planned_route.SourceIsTown = (AISubsidy.GetSourceType(sub) == AISubsidy.SPT_TOWN);
 		planned_route.SourceID = AISubsidy.GetSourceIndex(sub); // ID of Town or Industry
