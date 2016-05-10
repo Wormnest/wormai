@@ -1044,7 +1044,7 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 	if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < AIEngine.GetPrice(engine)) {
 		if (!WormMoney.GetMoney(AIEngine.GetPrice(engine), WormMoney.WM_SILENT)) {
 			AILog.Warning("I don't have enough money to build the train.");
-			return false;
+			return ERROR_NOT_ENOUGH_MONEY;
 		}
 	}
 	// Build and refit the train engine if needed
@@ -1052,7 +1052,7 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 	if (!AIVehicle.IsValidVehicle(trainengine)) {
 		// safety, suggestion by krinn
 		AILog.Error("The train engine did not get built: " + AIError.GetLastErrorString());
-		return false;
+		return ERROR_BUILD_TRAIN;
 	}
 	AIVehicle.RefitVehicle(trainengine, cargo);
 
@@ -1061,7 +1061,7 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 		if (!WormMoney.GetMoney(AIEngine.GetPrice(wagon), WormMoney.WM_SILENT)) {
 			AILog.Warning("I don't have enough money to build the train.");
 			AIVehicle.SellVehicle(trainengine);
-			return false;
+			return ERROR_NOT_ENOUGH_MONEY;
 		}
 	}
 	local firstwagon = AIVehicle.BuildVehicle(station_data.homedepot, wagon);
@@ -1071,7 +1071,7 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 		AILog.Warning(AIEngine.GetName(wagon) + " was blacklisted for being too long.");
 		AIVehicle.SellVehicle(trainengine);
 		AIVehicle.SellVehicle(firstwagon);
-		return false;
+		return ERROR_BUILD_TRAIN_BLACKLISTED;
 	}
 	// Try whether the engine is compatibile with the wagon
 	{
@@ -1083,7 +1083,7 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 			local execmode = AIExecMode();
 			AIVehicle.SellVehicle(trainengine);
 			AIVehicle.SellVehicle(firstwagon);
-			return false;
+			return ERROR_BUILD_TRAIN_BLACKLISTED;
 		}
 	}
 	// Build a mail wagon
@@ -1147,13 +1147,14 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 			AIVehicle.SellVehicle(trainengine);
 			AIVehicle.SellWagonChain(firstwagon, 0);
 			AIVehicle.SellVehicle(mailwagon);
-			return false;
+			return ERROR_BUILD_TRAIN_BLACKLISTED;
 		}
 	}
 	if (!AIVehicle.MoveWagonChain(firstwagon, 0, trainengine, 0)) {
 		AILog.Error("Could not attach the wagons.");
 		AIVehicle.SellWagonChain(trainengine, 0);
 		AIVehicle.SellWagonChain(firstwagon, 0);
+		return ERROR_BUILD_TRAIN;
 	}
 	if (ordervehicle == null) {
 		// Set the train's orders
@@ -1179,7 +1180,7 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 		local nexttrain = AIVehicle.CloneVehicle(station_data.homedepot, trainengine, true);
 		AIVehicle.StartStopVehicle(nexttrain);
 	}
-	return true;
+	return ALL_OK;
 }
 
 function WormRailBuilder::MailWagonWorkaround(mailwagon, firstwagon, trainengine, crg)
