@@ -63,6 +63,12 @@ class WormRoute
  */
 class WormPlanner
 {
+	static MIN_RAIL_ROUTE_LENGTH = 40;
+	static MAX_RAIL_ROUTE_LENGTH = 200;
+	static MIN_POPULATION_FOR_GOODS = 1500;
+	static MIN_POPULATION_FOR_FOOD = 100;
+	static MIN_TOWN_EFFECT_PRODUCTION = 40;
+	static MAX_TRANSPORTED = 60;
 
 	route = null;				///< Details about the route we planned.
 	_rail_manager = null;
@@ -141,7 +147,7 @@ function WormPlanner::GetSubsidizedRoute(planned_route)
 			// Skip this if there is already heavy competition there
 			/// @todo Instead of GetSetting we should define a value for ourselves...
 			/// @todo define a var/const instead of the fixed value we now use...
-			if (AIIndustry.GetLastMonthTransported(planned_route.SourceID, planned_route.Cargo) > 50 /*AIController.GetSetting("max_transported")*/) continue;
+			if (AIIndustry.GetLastMonthTransported(planned_route.SourceID, planned_route.Cargo) > MAX_TRANSPORTED /*AIController.GetSetting("max_transported")*/) continue;
 		}
 		planned_route.DestIsTown = (AISubsidy.GetDestinationType(sub) == AISubsidy.SPT_TOWN);
 		planned_route.DestID = AISubsidy.GetDestinationIndex(sub);
@@ -152,8 +158,9 @@ function WormPlanner::GetSubsidizedRoute(planned_route)
 		}
 		// Check the distance
 		// @todo Change the values here to constants!
-		if (AIMap.DistanceManhattan(planned_route.SourceLocation, planned_route.DestLocation) > 200) continue;
-		if (AIMap.DistanceManhattan(planned_route.SourceLocation, planned_route.DestLocation) < 40) continue;
+		if (AIMap.DistanceManhattan(planned_route.SourceLocation, planned_route.DestLocation) > MAX_RAIL_ROUTE_LENGTH) continue;
+		if (AIMap.DistanceManhattan(planned_route.SourceLocation, planned_route.DestLocation) < MIN_RAIL_ROUTE_LENGTH) continue;
+		_last_sub_tried = sub;
 		return true;
 	}
 	return false;
@@ -180,14 +187,13 @@ function WormPlanner::GetRoute(planned_route)
 			// Try to avoid excessive competition
 			/// @todo !!
 			planned_route.SourceList.Valuate(WormPlanner.GetLastMonthTransportedPercentage, icrg);
-			planned_route.SourceList.KeepBelowValue(50/*AIController.GetSetting("max_transported")*/);
+			planned_route.SourceList.KeepBelowValue(MAX_TRANSPORTED/*AIController.GetSetting("max_transported")*/);
 			planned_route.SourceIsTown = false;
 		} else {
 			// If the source is a town
 			planned_route.SourceList = AITownList();
 			planned_route.SourceList.Valuate(AITown.GetLastMonthProduction, icrg);
-			/// @todo adapt this value (40) move it to a constant or var
-			planned_route.SourceList.KeepAboveValue(40);
+			planned_route.SourceList.KeepAboveValue(MIN_TOWN_EFFECT_PRODUCTION);
 			planned_route.SourceIsTown = true;
 		}
 		planned_route.SourceList.Valuate(AIBase.RandItem);
@@ -220,23 +226,23 @@ function WormPlanner::GetRoute(planned_route)
 				switch (AICargo.GetTownEffect(icrg)) {
 					case AICargo.TE_FOOD:
 						planned_route.DestList.Valuate(AITown.GetPopulation);
-						planned_route.DestList.KeepAboveValue(100);
+						planned_route.DestList.KeepAboveValue(MIN_POPULATION_FOR_FOOD);
 						break;
 					case AICargo.TE_GOODS:
 						planned_route.DestList.Valuate(AITown.GetPopulation);
-						planned_route.DestList.KeepAboveValue(1500);
+						planned_route.DestList.KeepAboveValue(MIN_POPULATION_FOR_GOODS);
 						break;
 					default:
 						planned_route.DestList.Valuate(AITown.GetLastMonthProduction, icrg);
-						planned_route.DestList.KeepAboveValue(40); ///@todo change to const
+						planned_route.DestList.KeepAboveValue(MIN_TOWN_EFFECT_PRODUCTION);
 						break;
 				}
 				planned_route.DestIsTown = true;
 				planned_route.DestList.Valuate(AITown.GetDistanceManhattanToTile, planned_route.SourceLocation);
 			}
 			// Check the distance of the source and the destination
-			planned_route.DestList.KeepBelowValue(200);
-			planned_route.DestList.KeepAboveValue(40);
+			planned_route.DestList.KeepBelowValue(MAX_RAIL_ROUTE_LENGTH);
+			planned_route.DestList.KeepAboveValue(MIN_RAIL_ROUTE_LENGTH);
 			if (AICargo.GetTownEffect(icrg) == AICargo.TE_MAIL) planned_route.DestList.KeepBelowValue(110);
 
 			planned_route.DestList.Valuate(AIBase.RandItem);
