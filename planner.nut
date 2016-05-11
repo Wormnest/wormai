@@ -165,9 +165,9 @@ function WormPlanner::GetSubsidizedRoute(planned_route)
 			planned_route.DestLocation = AIIndustry.GetLocation(planned_route.DestID);
 		}
 		// Check the distance
-		// @todo Change the values here to constants!
-		if (AIMap.DistanceManhattan(planned_route.SourceLocation, planned_route.DestLocation) > MAX_RAIL_ROUTE_LENGTH) continue;
-		if (AIMap.DistanceManhattan(planned_route.SourceLocation, planned_route.DestLocation) < MIN_RAIL_ROUTE_LENGTH) continue;
+		planned_route.distance_manhattan = AIMap.DistanceManhattan(planned_route.SourceLocation, planned_route.DestLocation);
+		if (planned_route.distance_manhattan > MAX_RAIL_ROUTE_LENGTH) continue;
+		if (planned_route.distance_manhattan < MIN_RAIL_ROUTE_LENGTH) continue;
 		_last_sub_tried = sub;
 		return true;
 	}
