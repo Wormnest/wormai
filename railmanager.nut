@@ -35,19 +35,20 @@ class WormRailManager
 	engine_blacklist = null;			///< The blacklist of train engines
 	buildingstage = null;				///< The current building stage
 	lastroute = null;					///< The date the last route was built
-	removelist = null;					///< List used to continue rail removal and electrification
+	removelist = null;					///< An array used to continue rail removal and electrification
 	todepotlist = null;					///< A list of vehicles heading for the depot
+	route_without_trains = -1;			///< Group number or -1 of unfinished route that needs trains added
+	last_route = null;					///< route info table of last completed route. Needed if we still need to buy trains for this route.
 
 	/* 2. Variables that will NOT be saved. */
 	_current_railtype = 0;				///< The railtype we are currently using.
 	_planner = null;					///< The route planner class object.
-	route_without_trains = -1;			///< Group number or -1 of unfinished route that needs trains added
-	last_route = null;					///< route info table of last completed route. Needed if we still need to buy trains for this route.
 
 	/** Create an instance of WormRailManager and initialize our variables. */
 	constructor()
 	{
 		routes = [];
+		removelist = [];
 		groups = AIList();
 		serviced = AIList();
 		railbridges = AITileList();
@@ -169,6 +170,21 @@ class WormRailManager
 	 */
 	function SendTrainToDepotForSelling(vehicle);
 
+
+	/**
+	 * Save all data that WormRailManager needs in table. 
+	 * @param table The table to store the data in.
+	 * @pre table should be non null.
+	 */
+	function SaveData(table);
+
+	/**
+	 * Load all data that WormRailManager from the table.
+	 * @param table The table that has all the data.
+	 * @param worm_save_version WormAI save data version.
+	 * @pre table should be non null.
+	 */
+	function LoadData(table, worm_save_version);
 }
 
 function WormRailManager::SetGroupName(group, crg, stasrc)
@@ -1018,4 +1034,73 @@ function WormRailManager::SendTrainToDepotForSelling(vehicle)
 	}
 	AILog.Info("[DEBUG] and add it to the depot list.");
 	todepotlist.AddItem(vehicle, WormRailManager.TD_SELL);
+}
+
+function WormRailManager::SaveData(table)
+{
+	/* 1. Save all lists. */
+	/* No need to check for null lists here since ListToTableEntry does that already. */
+	WormUtils.ListToTableEntry(table, "todepotlist", this.todepotlist);
+	WormUtils.ListToTableEntry(table, "serviced", this.serviced);
+	WormUtils.ListToTableEntry(table, "groups", this.groups);
+	WormUtils.ListToTableEntry(table, "railbridges", this.railbridges);
+	WormUtils.ListToTableEntry(table, "engineblacklist", this.engine_blacklist); /// @todo Should we save this?
+	/* 2. Save arrays. */
+	table.rawset("routes", routes);
+	/* 3. Save other info. */
+	table.rawset("lastroute", last_route);
+	table.rawset("route_without_trains", route_without_trains);
+	table.rawset("buildingstage", buildingstage);
+	local toremove = {
+		vehtype = null,
+		stasrc = null,
+		stadst = null,
+		list = null
+	};
+	switch (buildingstage) {
+		case BS_BUILDING:
+			/** @todo save building state!
+			if (builder != null) {
+				toremove.vehtype = builder.vehtype;
+				toremove.stasrc = builder.stasrc;
+				toremove.stadst = builder.stadst;
+				toremove.list = [builder.ps1_entry[1], builder.ps2_entry[1]];
+			} else {
+				AILog.Error("Invalid save state, probably the game is being saved right after loading");
+				table.buildingstage = BS_NOTHING;
+			}
+			*/
+			AIInfo.Warning("Saving building stage not yet implemented!")
+			break;
+		case BS_REMOVING:
+		case BS_ELECTRIFYING:
+			table.toremove.list = removelist;
+			break;
+	}
+	table.rawset("toremove", toremove);
+
+	/// @todo EventQueue, bridgesupgraded?, inauguration?, bs_building building stage
+}
+
+function WormRailManager::LoadData(table, worm_save_version)
+{
+	/* Load data from savegame. */
+	if ("lastroute" in table) last_route = table.lastroute;
+	else last_route = 0;
+	if ("route_without_trains" in table) route_without_trains = table.route_without_trains;
+	else route_without_trains = 0;
+	if ("routes" in table) routes = table.routes;
+	/* Arrays that need to be converted to AIList. */
+	WormUtils.TableEntryToList(table, "todepotlist", this.todepotlist);
+	WormUtils.TableEntryToList(table, "serviced", this.serviced);
+	WormUtils.TableEntryToList(table, "groups", this.groups);
+	WormUtils.TableEntryToList(table, "railbridges", this.railbridges);
+	WormUtils.TableEntryToList(table, "engineblacklist", this.engine_blacklist); /// @todo Should we load this?
+
+	if ("buildingstage" in table) buildingstage = table.buildingstage;
+	else buildingstage = BS_NOTHING;
+	if (buildingstage != BS_NOTHING) {
+		toremove = table.toremove;
+	}
+
 }
