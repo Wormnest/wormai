@@ -1456,9 +1456,11 @@ function WormRailBuilder::AttachMoreWagons(vehicle, rail_manager)
 	local wagon_length = AIVehicle.GetLength(firstwagon);
 	local cur_wagons = 1;
 	local platform_length = WormRailBuilder.GetRailStationPlatformLength(route.stasrc);
-	while (AIVehicle.GetLength(vehicle) + (cur_wagons + 1) * wagon_length <= platform_length * 16) {
-		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < AIEngine.GetPrice(wagon)) {
-			WormMoney.GetMoney(AIEngine.GetPrice(wagon), WormMoney.WM_SILENT);
+	local train_length = platform_length * 16;
+	local wagon_price = AIEngine.GetPrice(wagon);
+	while (AIVehicle.GetLength(vehicle) + (cur_wagons + 1) * wagon_length <= train_length) {
+		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < wagon_price) {
+			WormMoney.GetMoney(wagon_price, WormMoney.WM_SILENT);
 		}
 		if (!AIVehicle.BuildVehicle(depot, wagon)) break;
 		cur_wagons++;
