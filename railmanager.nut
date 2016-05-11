@@ -1070,7 +1070,7 @@ function WormRailManager::SaveData(table)
 				table.buildingstage = BS_NOTHING;
 			}
 			*/
-			AIInfo.Warning("Saving building stage not yet implemented!")
+			AILog.Warning("Saving building stage not yet implemented!")
 			break;
 		case BS_REMOVING:
 		case BS_ELECTRIFYING:
