@@ -309,6 +309,9 @@ function WormRailManager::BuildRailway()
 		/* Check to make sure we can build a platform that long. */
 		/// @todo Check max length of trains and max station spread
 	}
+	// Don't make the trains too long when starting. Lengthen them later when there's more cargo waiting.
+	local starting_train_size = platform_length;
+	if (starting_train_size > 3) train_size = 3;
 
 	/* Check if there is a suitable engine available. */
 	local engine = WormRailBuilder.ChooseTrainEngine(_planner.route.Cargo,
@@ -471,7 +474,7 @@ function WormRailManager::BuildRailway()
 	this.SetGroupName(group, _planner.route.Cargo, station_data.stasrc);
 	
 	/* Create trains for this route. */
-	local build_result = WormRailBuilder.BuildAndStartTrains(trains, 2 * platform_length - 2, engine, wagon, null, group,
+	local build_result = WormRailBuilder.BuildAndStartTrains(trains, 2 * starting_train_size - 2, engine, wagon, null, group,
 		_planner.route.Cargo, station_data, engine_blacklist);
 	
 	last_route = WormRailManager.RegisterRoute(_planner.route, station_data, vehtype, group);
@@ -504,7 +507,7 @@ function WormRailManager::BuildRailway()
 			*/
 			/// @todo check first if we are below max no. of trains...
 			AILog.Info("Trying again to build trains for this route.");
-			build_result = WormRailBuilder.BuildAndStartTrains(trains, 2 * platform_length - 2, engine, wagon, null, group,
+			build_result = WormRailBuilder.BuildAndStartTrains(trains, 2 * starting_train_size - 2, engine, wagon, null, group,
 				_planner.route.Cargo, station_data, engine_blacklist);
 		}
 		if (build_result == ERROR_NOT_ENOUGH_MONEY) {
