@@ -680,8 +680,13 @@ function WormRailManager::CheckRoutes()
 		vehicles = AIVehicleList_Group(route.group);
 		local platform = WormRailBuilder.GetRailStationPlatformLength(route.stasrc);
 		local train_len_limit = platform * 16 -7; // Move computation out of the loop.
+		local cargo_waiting = AIStation.GetCargoWaiting(route.stasrc, route.crg);
 		foreach (train, dummy in vehicles) {
 			if (todepotlist.HasItem(train)) continue;
+			// Don't lengthen train that doesn't make a profit
+			if (AIVehicle.GetProfitThisYear(train) <= 0) continue;
+			// Only lengthen if there is a reasonable amount of cargo waiting
+			if (cargo_waiting < 150) continue;
 			// The train should fill its platform
 			if (AIVehicle.GetLength(train) < train_len_limit) {
 				local railtype = AIRail.GetCurrentRailType();
