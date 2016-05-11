@@ -1769,10 +1769,12 @@ function WormAirManager::CheckAirportsWithoutVehicles()
 			if ((!route_without_aircraft) || ((st_tile != incomplete_route_tile1) && (st_tile != incomplete_route_tile2))) {
 				AILog.Warning("Airport " + AIStation.GetName(st) + " (" + st + ") has no vehicles using it.");
 				AILog.Info("Removing airport");
+				local st_town = this.GetTownFromStationTile(st_tile);
 				this.RemoveAirport(st_tile);
 				this.towns_used.RemoveValue(st_tile);
 				/* Add town to blacklist for a while. */
-				towns_blacklist.AddItem(this.GetTownFromStationTile(st_tile), AIDate.GetCurrentDate()+1500);
+				if (st_town != null)
+					towns_blacklist.AddItem(st_town, AIDate.GetCurrentDate()+1500);
 			}
 			else {
 				AILog.Info("Not removing airport " + AIStation.GetName(st) + ". We are waiting for money to buy airplanes.");
