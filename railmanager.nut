@@ -311,7 +311,7 @@ function WormRailManager::BuildRailway()
 	}
 	// Don't make the trains too long when starting. Lengthen them later when there's more cargo waiting.
 	local starting_train_size = platform_length;
-	if (starting_train_size > 3) train_size = 3;
+	if (starting_train_size > 3) starting_train_size = 3;
 
 	/* Check if there is a suitable engine available. */
 	local engine = WormRailBuilder.ChooseTrainEngine(_planner.route.Cargo,
