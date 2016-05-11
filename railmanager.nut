@@ -289,14 +289,30 @@ function WormRailManager::BuildRailway()
 	else AILog.Info("Using double rail");
 	
 	/* Determine the size of the train station. */
-	local platform = null;
+	local platform_length = null;
 	/// @todo replace number by a definied constant or variable depending on date and other factors
-	if (_planner.route.double || _planner.route.distance_manhattan > 50) platform = 3;
-	else platform = 2;
+	if (_planner.route.double || _planner.route.distance_manhattan > 50) platform_length = 3;
+	else platform_length = 2;
+	if (AICompany.GetLoanAmount() == 0) {
+		local cur_money = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
+		if (cur_money > WormMoney.InflationCorrection(500000))
+			platform_length++;
+		if (cur_money > WormMoney.InflationCorrection(2000000))
+			platform_length++;
+//		if (cur_money > WormMoney.InflationCorrection(5000000))
+//			platform_length++;
+//		if (cur_money > WormMoney.InflationCorrection(10000000))
+//			platform_length++;
+//		if (cur_money > WormMoney.InflationCorrection(20000000))
+//			platform_length++;
+		AILog.Warning("[DEBUG] Selected platform length: " + platform_length);
+		/* Check to make sure we can build a platform that long. */
+		/// @todo Check max length of trains and max station spread
+	}
 
 	/* Check if there is a suitable engine available. */
 	local engine = WormRailBuilder.ChooseTrainEngine(_planner.route.Cargo,
-		_planner.route.distance_manhattan, wagon, platform * 2 - 1, engine_blacklist);
+		_planner.route.distance_manhattan, wagon, platform_length * 2 - 1, engine_blacklist);
 	if (engine == null) {
 		AILog.Warning("No suitable train engine available!");
 		return false;
@@ -315,7 +331,7 @@ function WormRailManager::BuildRailway()
 		local start, end = null;
 
 		// Build the source station
-		if (WormRailBuilder.BuildSingleRailStation(true, platform, _planner.route, station_data, this)) {
+		if (WormRailBuilder.BuildSingleRailStation(true, platform_length, _planner.route, station_data, this)) {
 			end = [station_data.frontfront, station_data.stafront];
 			buildingstage = BS_BUILDING;
 			AILog.Info("New station successfully built: " + AIStation.GetName(station_data.stasrc));
@@ -324,7 +340,7 @@ function WormRailManager::BuildRailway()
 			return false;
 		}
 		// Build the destination station
-		if (WormRailBuilder.BuildSingleRailStation(false, platform, _planner.route, station_data, this)) {
+		if (WormRailBuilder.BuildSingleRailStation(false, platform_length, _planner.route, station_data, this)) {
 			start = [station_data.frontfront, station_data.stafront];
 			AILog.Info("New station successfully built: " + AIStation.GetName(station_data.stadst));
 		} else {
@@ -359,7 +375,7 @@ function WormRailManager::BuildRailway()
 
 
 		// Build the source station
-		if (WormRailBuilder.BuildDoubleRailStation(true, _planner.route, station_data, this)) {
+		if (WormRailBuilder.BuildDoubleRailStation(true, platform_length, _planner.route, station_data, this)) {
 			end = [station_data.morefront, station_data.frontfront];
 			buildingstage = BS_BUILDING;
 			AILog.Info("New station successfully built: " + AIStation.GetName(station_data.stasrc));
@@ -369,7 +385,7 @@ function WormRailManager::BuildRailway()
 		}
 
 		// Build the destination station
-		if (WormRailBuilder.BuildDoubleRailStation(false, _planner.route, station_data, this)) {
+		if (WormRailBuilder.BuildDoubleRailStation(false, platform_length, _planner.route, station_data, this)) {
 			start = [station_data.morefront, station_data.frontfront];
 			AILog.Info("New station successfully built: " + AIStation.GetName(station_data.stadst));
 		} else {
@@ -455,7 +471,7 @@ function WormRailManager::BuildRailway()
 	this.SetGroupName(group, _planner.route.Cargo, station_data.stasrc);
 	
 	/* Create trains for this route. */
-	local build_result = WormRailBuilder.BuildAndStartTrains(trains, 2 * platform - 2, engine, wagon, null, group,
+	local build_result = WormRailBuilder.BuildAndStartTrains(trains, 2 * platform_length - 2, engine, wagon, null, group,
 		_planner.route.Cargo, station_data, engine_blacklist);
 	
 	last_route = WormRailManager.RegisterRoute(_planner.route, station_data, vehtype, group);
@@ -474,7 +490,7 @@ function WormRailManager::BuildRailway()
 				AILog.Info("Chosen wagon: " + AIEngine.GetName(wagon));
 			}
 			local engine = WormRailBuilder.ChooseTrainEngine(_planner.route.Cargo, _planner.route.distance_manhattan, 
-				wagon, platform * 2 - 1, engine_blacklist);
+				wagon, platform_length * 2 - 1, engine_blacklist);
 			if (engine == null) {
 				AILog.Warning("No suitable engine available!");
 				return false;
@@ -488,7 +504,7 @@ function WormRailManager::BuildRailway()
 			*/
 			/// @todo check first if we are below max no. of trains...
 			AILog.Info("Trying again to build trains for this route.");
-			build_result = WormRailBuilder.BuildAndStartTrains(trains, 2 * platform - 2, engine, wagon, null, group,
+			build_result = WormRailBuilder.BuildAndStartTrains(trains, 2 * platform_length - 2, engine, wagon, null, group,
 				_planner.route.Cargo, station_data, engine_blacklist);
 		}
 		if (build_result == ERROR_NOT_ENOUGH_MONEY) {
