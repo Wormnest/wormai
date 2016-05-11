@@ -535,7 +535,8 @@ function WormRailManager::RegisterRoute(route_data, station_data, vehtype, group
 			route.maxvehicles = AIController.GetSetting("max_roadvehs");
 			break;
 		case AIVehicle.VT_RAIL:
-			route.maxvehicles = route_data.double ? 2 : 1;
+			route.maxvehicles = route_data.double ? (route_data.distance_manhattan > 150 ? 4 :
+				(route_data.distance_manhattan > 100 ? 3 : 2)) : 1;
 			break;
 		case AIVehicle.VT_AIR:
 			route.maxvehicles = 0;
@@ -749,7 +750,10 @@ function WormRailManager::CheckDefaultGroup()
 
 function WormRailManager::CheckAddTrainToGroup(route, vehicle_count, first_vehicle)
 {
-	if (vehicle_count == 1 && route.maxvehicles == 2 && (!AIVehicle.IsStoppedInDepot(first_vehicle))) {
+	if (vehicle_count == 1 && AIVehicle.IsStoppedInDepot(first_vehicle))
+		return false;
+
+	if (vehicle_count < route.maxvehicles) {
 		if (AIVehicle.GetProfitThisYear(first_vehicle) <= 0) return false;
 		if (AIStation.GetCargoWaiting(route.stasrc, route.crg) > 150)
 			return SelectAndAddTrain(route);
