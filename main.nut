@@ -49,6 +49,7 @@ import("AILib.List", "ExtendedList", AILIBLIST_VERSION);
 import("pathfinder.rail", "RailPathFinder", 1); 
 
 // Get our required classes.
+require("utils.nut");
 require("money.nut");
 require("strings.nut");
 require("math.nut");
@@ -100,6 +101,7 @@ class WormAI extends AIController {
 	use_trains = false;							///< Whether we can use trains or not
 
 	loaded_from_save = false;
+	save_version = 0;
 	aircraft_disabled_shown = 0;		///< Has the aircraft disabled in game settings message been shown (1) or not (0).
 	aircraft_max0_shown = 0;			///< Has the max aircraft is 0 in game settings message been shown.
 	trains_disabled_shown = 0;			///< Has the trains disabled in game settings message been shown (1) or not (0).
@@ -476,21 +478,31 @@ function WormAI::Save()
 */
     /* Save the data */
     local table = {
-		townsused = null,
-		route1 = null,
-		route2 = null,
+//		townsused = null,
+//		route1 = null,
+//		route2 = null,
 	};
 	/// @todo This should be moved to a AirManager.SaveData function.
-	local t = ExtendedList();
-	local r1 = ExtendedList();
-	local r2 = ExtendedList();
-	t.AddList(this.air_manager.towns_used);
-	table.townsused = t.toarray();
-	r1.AddList(this.air_manager.route_1);
-	table.route1 = r1.toarray();
-	r2.AddList(this.air_manager.route_2);
-	table.route2 = r2.toarray();
+//	local t = ExtendedList();
+//	local r1 = ExtendedList();
+//	local r2 = ExtendedList();
+//	t.AddList(this.air_manager.towns_used);
+//	table.townsused = t.toarray();
+//	r1.AddList(this.air_manager.route_1);
+//	table.route1 = r1.toarray();
+//	r2.AddList(this.air_manager.route_2);
+//	table.route2 = r2.toarray();
+
+	/* General data */
+	table.rawset("worm_save_version", 2);	// Version of save data
+	/* Air manager data */
+	WormUtils.ListToTableEntry(table, "townsused", this.air_manager.towns_used);
+	WormUtils.ListToTableEntry(table, "route1", this.air_manager.route_1);
+	WormUtils.ListToTableEntry(table, "route2", this.air_manager.route_2);
 	
+	/* Rail manager data */
+	rail_manager.SaveData(table);
+
     /* Debugging info 
     DebugListTownsUsed();
     DebugListRouteInfo();
@@ -526,21 +538,40 @@ function WormAI::Load(version, data)
 	/// @todo load data in temp values then later unpack it because
 	/// load has limited time available
 	/// @todo This should call air_manager.LoadData for air related SaveGame data.
-	if ("townsused" in data) {
-		local t = ExtendedList();
-		t.AddFromArray(data.townsused)
-		this.air_manager.towns_used.AddList(t);
+//	if ("townsused" in data) {
+//		local t = ExtendedList();
+//		t.AddFromArray(data.townsused)
+//		this.air_manager.towns_used.AddList(t);
+//	}
+//	if ("route1" in data) {
+//		local r = ExtendedList();
+//		r.AddFromArray(data.route1)
+//		this.air_manager.route_1.AddList(r);
+//	}
+//	if ("route2" in data) {
+//		local r = ExtendedList();
+//		r.AddFromArray(data.route2)
+//		this.air_manager.route_2.AddList(r);
+//	}
+	if (data.rawin("worm_save_version")) {
+		this.save_version = data.rawget("worm_save_version");
+		AILog.Info("WormAI save data version " + this.save_version);
 	}
-	if ("route1" in data) {
-		local r = ExtendedList();
-		r.AddFromArray(data.route1)
-		this.air_manager.route_1.AddList(r);
+	else {
+		if (version < 5)
+			AILog.Info("WormAI save data version 1.");
+		else
+			AILog.Warning("Probably a savegame from another AI.");
 	}
-	if ("route2" in data) {
-		local r = ExtendedList();
-		r.AddFromArray(data.route2)
-		this.air_manager.route_2.AddList(r);
+	WormUtils.TableEntryToList(data, "townsused", this.air_manager.towns_used);
+	WormUtils.TableEntryToList(data, "route1", this.air_manager.route_1);
+	WormUtils.TableEntryToList(data, "route2", this.air_manager.route_2);
+
+	if (this.save_version > 1) {
+		/* Rail manager data */
+		rail_manager.LoadData(data, this.save_version);
 	}
+
 	loaded_from_save = true;
 
     /* Debugging info */
