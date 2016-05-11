@@ -679,10 +679,11 @@ function WormRailManager::CheckRoutes()
 		/* Lengthening short trains */
 		vehicles = AIVehicleList_Group(route.group);
 		local platform = WormRailBuilder.GetRailStationPlatformLength(route.stasrc);
+		local train_len_limit = platform * 16 -7; // Move computation out of the loop.
 		foreach (train, dummy in vehicles) {
 			if (todepotlist.HasItem(train)) continue;
 			// The train should fill its platform
-			if (AIVehicle.GetLength(train) < platform * 16 - 7) {
+			if (AIVehicle.GetLength(train) < train_len_limit) {
 				local railtype = AIRail.GetCurrentRailType();
 				AIRail.SetCurrentRailType(route.railtype);
 				local wagon = WormRailBuilder.ChooseWagon(route.crg, engine_blacklist);
