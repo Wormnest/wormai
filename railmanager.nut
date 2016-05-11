@@ -1078,7 +1078,7 @@ function WormRailManager::SaveData(table)
 			break;
 		case BS_REMOVING:
 		case BS_ELECTRIFYING:
-			table.toremove.list = removelist;
+			toremove.list = removelist;
 			break;
 	}
 	table.rawset("toremove", toremove);
