@@ -28,6 +28,7 @@ class WormStation
 	stabottom = null;			///< The bottom tile of the station
 	frontfront = null;			///< ...
 	stationdir = null;			///< The direction of the station
+	optimaldir = null;			///< The optimal direction from one station to the other
 	stasrc = null;				///< Station ID of source station
 	stadst = null;				///< Station ID of destination station
 	homedepot = null;			///< The depot at the source station
@@ -398,6 +399,7 @@ function WormRailBuilder::BuildSingleRailStation(is_source, platform_length, rou
 	// Determine the direction of the station, and get tile lists
 	if (is_source) {
 		dir = WormTiles.GetDirection(route_data.SourceLocation, route_data.DestLocation);
+		station_data.optimaldir = dir; // Should only be set for source
 		if (route_data.SourceIsTown) {
 			tilelist = WormRailBuilder.GetTilesAroundTown(route_data.SourceID, 1, 1);
 			isneartown = true;
@@ -562,7 +564,11 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, platform_length, rou
 	// Get the tile list
 	if (is_source) {
 		dir = WormTiles.GetDirection(route_data.SourceLocation, route_data.DestLocation);
+		station_data.optimaldir = dir; // Should only be set for source
 		if (route_data.SourceIsTown) {
+			// We don't need to use platform_length instead of 2 here because we only need part of
+			// our station to be inside town influence, not the whole station!
+			/// @todo Shouldn't 1, 1 be enough then?
 			tilelist = WormRailBuilder.GetTilesAroundTown(route_data.SourceID, 2, 2);
 			isneartown = true;
 		} else {
@@ -573,6 +579,7 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, platform_length, rou
 	} else {
 		dir = WormTiles.GetDirection(route_data.DestLocation, route_data.SourceLocation);
 		if (route_data.DestIsTown) {
+			/// @todo Shouldn't 1, 1 be enough here?
 			tilelist = WormRailBuilder.GetTilesAroundTown(route_data.DestID, 2, 2);
 			isneartown = true;
 		} else {
@@ -603,7 +610,32 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, platform_length, rou
 			break;
 		} else continue;
 	}
-	if (!success) return false;
+	if (!success) {
+		AILog.Info("Can't build station in optimal direction, trying next direction clockwise.");
+		local nextdir = WormTiles.GetNextDirection(dir, true);
+		// Find a place where the station can be built
+		foreach (tile, dummy in tilelist) {
+			if (WormRailBuilder.CanBuildDoubleRailStation(tile, nextdir, platform_length, station_data)) {
+				success = true;
+				break;
+			} else continue;
+		}
+		if (!success) {
+			AILog.Info("Still can't build station, trying counterclockwise direction.");
+			nextdir = WormTiles.GetNextDirection(dir, false);
+			// Find a place where the station can be built
+			foreach (tile, dummy in tilelist) {
+				if (WormRailBuilder.CanBuildDoubleRailStation(tile, nextdir, platform_length, station_data)) {
+					success = true;
+					break;
+				} else continue;
+			}
+		}
+		if (!success)
+			return false;
+		dir = nextdir;
+		AILog.Info("[DEBUG] Good. We found a spot in this direction.");
+	}
 
 	// Build the station itself
 	if (AIController.GetSetting("newgrf_stations") == 1 && !route_data.SourceIsTown && !route_data.DestIsTown) {
@@ -621,6 +653,8 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, platform_length, rou
 		AILog.Error("Station could not be built: " + AIError.GetLastErrorString());
 		return false;
 	}
+	
+	AILog.Info("[DEBUG] Station was built, now build rail in front of it.");
 	// Build the station parts
 	success = success && AIRail.BuildRail(station_data.statile, station_data.front1, station_data.depfront);
 	success = success && AIRail.BuildRail(station_data.lane2, station_data.front2, station_data.stafront);
@@ -631,7 +665,12 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, platform_length, rou
 	success = success && AIRail.BuildRail(station_data.depfront, station_data.stafront, station_data.frontfront);
 	success = success && AIRail.BuildRail(station_data.stafront, station_data.depfront, station_data.deptile);
 	success = success && AIRail.BuildRail(station_data.stafront, station_data.frontfront, station_data.morefront);
+	if (success)
+		AILog.Info("[DEBUG] Build depot.");
 	success = success && AIRail.BuildRailDepot(station_data.deptile, station_data.depfront);
+
+	if (success)
+		AILog.Info("[DEBUG] Build signals.");
 
 //	local signaltype = (AIController.GetSetting("signaltype") >= 2) ? AIRail.SIGNALTYPE_PBS : AIRail.SIGNALTYPE_NORMAL_TWOWAY;
 	local signaltype = AIRail.SIGNALTYPE_PBS;
@@ -912,7 +951,8 @@ function WormRailBuilder::BuildPassingLaneSection(near_source, train_length, sta
 	local end = [[], []];
 	local reverse = false;
 	// Get the direction of the passing lane section
-	dir = AIRail.GetRailTracks(AIStation.GetLocation(station_data.stasrc));
+//	dir = AIRail.GetRailTracks(AIStation.GetLocation(station_data.stasrc));
+	dir = WormTiles.DirectionToRailTrackDirection(station_data.optimaldir);
 	// Get the places of the stations
 	src_x = AIMap.GetTileX(AIStation.GetLocation(station_data.stasrc));
 	src_y = AIMap.GetTileY(AIStation.GetLocation(station_data.stasrc));
