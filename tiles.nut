@@ -14,6 +14,11 @@
  */
 class WormTiles
 {
+	static DIR_NE = 2;
+	static DIR_NW = 0;
+	static DIR_SE = 1;
+	static DIR_SW = 3;
+
 	/**
 	 * Add a square area to an AITileList containing tiles that are within radius
 	 * tiles from the center tile, taking the edges of the map into account.
@@ -45,6 +50,21 @@ class WormTiles
 	 * @return The direction from the first tile to the second tile.
 	 */
 	static function GetDirection(tilefrom, tileto);
+
+	/**
+	 * Get the next direction clockwise or counterclockwise relative to the specified direction.
+	 * @param direction The current direction
+	 * @param clockwise Boolean: true go clockwise, false go counter clockwise.
+	 * @return The next direction.
+	 */
+	static function GetNextDirection(direction, clockwise);
+
+	/**
+	 * Convert our tile direction to AIRail RailTrack direction.
+	 * @param direction The tile direction.
+	 * @return The RailTrack direction.
+	 */
+	static function DirectionToRailTrackDirection(direction);
 }
 
 function WormTiles::SafeAddSquare(list, tile, radius)
@@ -80,4 +100,48 @@ function WormTiles::GetDirection(tilefrom, tileto)
 		ret = ret + 1;
 	}
 	return ret;
+}
+
+function WormTiles::GetNextDirection(direction, clockwise)
+{
+	switch (direction) {
+		case WormTiles.DIR_NW:
+			return (clockwise ? WormTiles.DIR_NE : WormTiles.DIR_SW);
+			break;
+		case WormTiles.DIR_NE:
+			return (clockwise ? WormTiles.DIR_SE : WormTiles.DIR_NW);
+			break;
+		case WormTiles.DIR_SE:
+			return (clockwise ? WormTiles.DIR_SW : WormTiles.DIR_NE);
+			break;
+		case WormTiles.DIR_SW:
+			return (clockwise ? WormTiles.DIR_NW : WormTiles.DIR_SE);
+			break;
+		default:
+			AILog.Error("Illegal direction!");
+			return direction;
+			break;
+	}
+}
+
+function WormTiles::DirectionToRailTrackDirection(direction)
+{
+	switch (direction) {
+		case WormTiles.DIR_NW:
+			return AIRail.RAILTRACK_NW_SE;
+			break;
+		case WormTiles.DIR_NE:
+			return AIRail.RAILTRACK_NE_SW;
+			break;
+		case WormTiles.DIR_SE:
+			return AIRail.RAILTRACK_NW_SE;
+			break;
+		case WormTiles.DIR_SW:
+			return AIRail.RAILTRACK_NE_SW;
+			break;
+		default:
+			AILog.Error("Illegal direction!");
+			return null;
+			break;
+	}
 }
