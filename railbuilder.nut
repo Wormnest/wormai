@@ -187,20 +187,22 @@ class WormRailBuilder
 	 * Build a passing lane section between the current source and destination.
 	 * Builder class variables used: stasrc, stadst
 	 * @param near_source True if we're building the first passing lane section. (the one closer to the source station)
+	 * @param train_length The maximum train length in tiles that should fit (should be at least 3).
 	 * @param station_data A WormStation class object with info about the stations between which rail is being built.
 	 * @param rail_manager The WormRailManager class object.
 	 * @return True if the construction succeeded.
 	 */
-	function BuildPassingLaneSection(near_source, station_data, rail_manager);
+	function BuildPassingLaneSection(near_source, train_length, station_data, rail_manager);
 
 	/**
 	 * Determine whether a passing lane section can be built at a given position.
 	 * @param centre The centre tile of the proposed passing lane section.
 	 * @param direction The direction of the proposed passing lane section.
 	 * @param reverse True if we are trying to build a flipped passing lane section.
+	 * @param train_length The maximum train length in tiles that should fit (should be at least 3).
 	 * @return True if a passing lane section can be built.
 	 */
-	function CanBuildPassingLaneSection(centre, direction, reverse);
+	function CanBuildPassingLaneSection(centre, direction, reverse, train_length);
 
 	/**
 	 * Build and start trains for the current route.
@@ -903,7 +905,7 @@ function WormRailBuilder::RetryRail(prevprev, pp1, pp2, pp3, head1, railbridges,
 	else return false;
 }
 
-function WormRailBuilder::BuildPassingLaneSection(near_source, station_data, rail_manager)
+function WormRailBuilder::BuildPassingLaneSection(near_source, train_length, station_data, rail_manager)
 {
 	local dir, tilelist, centre;
 	local src_x, src_y, dst_x, dst_y, ps_x, ps_y;
@@ -929,14 +931,18 @@ function WormRailBuilder::BuildPassingLaneSection(near_source, station_data, rai
 	// Get a tile list around the proposed place
 	tilelist = AITileList();
 	centre = AIMap.GetTileIndex(ps_x, ps_y);
-	tilelist.AddRectangle(centre - AIMap.GetTileIndex(10, 10), centre + AIMap.GetTileIndex(10, 10));
+	local rect_half_size = 10;
+	if (train_length > 4)
+		rect_half_size += train_length-4;
+	tilelist.AddRectangle(centre - AIMap.GetTileIndex(rect_half_size, rect_half_size),
+		centre + AIMap.GetTileIndex(rect_half_size, rect_half_size));
 	tilelist.Valuate(AIMap.DistanceManhattan, centre);
 	tilelist.Sort(AIList.SORT_BY_VALUE, true);
 	local success = false;
 	local tile = null;
 	// Find a place where the passing lane section can be built
 	foreach (itile, dummy in tilelist) {
-		if (WormRailBuilder.CanBuildPassingLaneSection(itile, dir, reverse)) {
+		if (WormRailBuilder.CanBuildPassingLaneSection(itile, dir, reverse, train_length)) {
 			success = true;
 			tile = itile;
 			break;
@@ -958,20 +964,32 @@ function WormRailBuilder::BuildPassingLaneSection(near_source, station_data, rai
 //	if (AIController.GetSetting("signaltype") > 0) {
 //		signaltype = (AIController.GetSetting("signaltype") < 2) ? AIRail.SIGNALTYPE_TWOWAY : AIRail.SIGNALTYPE_PBS_ONEWAY;
 //	}
+
+	// The length of the passing lane consisting of the straight part.
+	local lane_length = train_length+2;
+	// Compute the centre
+	local half_length = lane_length / 2;
+	// Even train length requires an odd value here because centre can't divide a tile in half
+	local odd_length = lane_length % 2;
+
 	// Build the passing lane section
 	if (reverse) rvector = -rvector;
 	centre = tile;
-	tile = centre - vector - vector - vector;
+	
+	// The first lane.
+	tile = centre - half_length * vector;
 	end[0] = [tile - vector, tile];
-	for (local x = 0; x < 6; x++) {
+	for (local x = 0; x < lane_length; x++) {
 		success = success && AIRail.BuildRail(tile - vector, tile, tile + vector);
 		tile += vector;
 	}
 	success = success && AIRail.BuildRail(tile - vector, tile, tile + rvector);
 	success = success && AIRail.BuildRail(tile, tile + rvector, tile + rvector + vector);
-	tile = centre + rvector + vector + vector + vector + vector;
+	
+	// The second lane.
+	tile = centre + rvector + (half_length + odd_length) * vector;
 	end[1] = [tile + vector, tile];
-	for (local x = 0; x < 6; x++) {
+	for (local x = 0; x < lane_length; x++) {
 		success = success && AIRail.BuildRail(tile + vector, tile, tile - vector);
 		tile -= vector;
 	}
@@ -980,10 +998,15 @@ function WormRailBuilder::BuildPassingLaneSection(near_source, station_data, rai
 	// Commented out 2 signals since we're using PBS and want to handle more than 2 trains
 	// having the other 2 signals could mean the trains got stuck
 //	success = success && AIRail.BuildSignal(centre - vector, centre - 2*vector, signaltype);
-	success = success && AIRail.BuildSignal(centre - 2*vector + rvector, centre - vector + rvector, signaltype);
+	// Instead of computing half_length-1 several times we update half_length here.
+	half_length--;
+	success = success && AIRail.BuildSignal(centre - half_length*vector + rvector, centre - (half_length-1)*vector + rvector, signaltype);
 //	success = success && AIRail.BuildSignal(centre + rvector + 2*vector, centre + rvector + 3*vector, signaltype);
-	success = success && AIRail.BuildSignal(centre + 3*vector, centre + 2*vector, signaltype);
+	// Add odd_length only once.
+	half_length += odd_length;
+	success = success && AIRail.BuildSignal(centre + half_length*vector, centre + (half_length-1)*vector, signaltype);
 	if (!success) {
+		AILog.Error("[DEBUG] "+AIError.GetLastErrorString());
 		AILog.Warning("Passing lane construction was interrupted.");
 		WormRailBuilder.RemoveRailLine(end[0][1], rail_manager);
 		return null;
@@ -991,48 +1014,66 @@ function WormRailBuilder::BuildPassingLaneSection(near_source, station_data, rai
 	return end;
 }
 
-function WormRailBuilder::CanBuildPassingLaneSection(centre, direction, reverse)
+function WormRailBuilder::CanBuildPassingLaneSection(centre, direction, reverse, train_length)
 {
 	if (!AITile.IsBuildable(centre)) return false;
 	local vector, rvector = null;
+	// The length of the passing lane consisting of the straight part.
+	local lane_length = train_length+2;
+	// Compute the centre
+	local half_length = lane_length / 2;
+	// Even train length requires an odd value here because centre can't divide a tile in half
+	local odd_length = lane_length % 2;
+
 	// Get the direction vectors
 	if (direction == AIRail.RAILTRACK_NE_SW) {
 		vector = AIMap.GetTileIndex(1, 0);
 		rvector = AIMap.GetTileIndex(0, 1);
-		local topcorner = centre - vector - vector;
+		local topcorner = centre - half_length*vector;
 		if (reverse) topcorner -= rvector;
-		if (!AITile.IsBuildableRectangle(topcorner, 6, 2)) return false;
+		if (!AITile.IsBuildableRectangle(topcorner, lane_length+1, 2)) return false;
 	} else {
 		vector = AIMap.GetTileIndex(0, 1);
 		rvector = AIMap.GetTileIndex(1, 0);
-		local topcorner = centre - vector - vector;
+		local topcorner = centre - half_length*vector;
 		if (reverse) topcorner -= rvector;
-		if (!AITile.IsBuildableRectangle(topcorner, 2, 6)) return false;
+		if (!AITile.IsBuildableRectangle(topcorner, 2, lane_length+1)) return false;
 	}
 	if (reverse) rvector = -rvector;
+	
+	// Test if we can build it...
 	local test = AITestMode();
-	local tile = centre - vector - vector - vector;
-	// Do the tests
+	
+	// First lane
+	local tile = centre - half_length*vector;
 	if (!AITile.IsBuildable(tile)) return false;
 	if (!AITile.IsBuildable(tile - vector)) return false;
 	// Do not build on the coast
 	if (AITile.IsCoastTile(tile - vector)) return false;
+	// The connection rails on one side
+	/// @todo The connection start and finish tile need to be at the same height, needs to be checked too!
 	if (!AIRail.BuildRail(tile, tile + vector, tile + vector + rvector)) return false;
 	if (!AIRail.BuildRail(tile + vector, tile + vector + rvector, tile + vector + vector + rvector)) return false;
 	if (!AIRail.BuildRail(tile + vector + rvector, tile + vector, tile + vector + vector)) return false;
-	for (local x = 0; x < 6; x++) {
+	// The straight track
+	for (local x = 0; x < lane_length; x++) {
 		if (!AIRail.BuildRail(tile - vector, tile, tile + vector)) return false;
 		tile += vector;
 	}
-	tile = centre + rvector + vector + vector + vector + vector;
+
+	// Second lane
+	tile = centre + rvector + (half_length + odd_length) * vector;
 	if (!AITile.IsBuildable(tile)) return false;
 	if (!AITile.IsBuildable(tile + vector)) return false;
 	// Do not build on the coast
 	if (AITile.IsCoastTile(tile + vector)) return false;
+	// The connection rails on the other side
+	/// @todo The connection start and finish tile need to be at the same height, needs to be checked too!
 	if (!AIRail.BuildRail(tile, tile - vector, tile - vector - rvector)) return false;
 	if (!AIRail.BuildRail(tile - vector, tile - vector - rvector, tile - vector - vector - rvector)) return false;
 	if (!AIRail.BuildRail(tile - vector - rvector, tile - vector, tile - vector - vector)) return false;
-	for (local x = 0; x < 6; x++) {
+	// The second lane of straight track
+	for (local x = 0; x < lane_length; x++) {
 		if (!AIRail.BuildRail(tile + vector, tile, tile - vector)) return false;
 		tile -= vector;
 	}

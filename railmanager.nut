@@ -295,19 +295,26 @@ function WormRailManager::BuildRailway()
 	else platform_length = 2;
 	if (AICompany.GetLoanAmount() == 0) {
 		local cur_money = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
-		if (cur_money > WormMoney.InflationCorrection(500000))
+		if (cur_money > WormMoney.InflationCorrection(250000))
 			platform_length++;
-		if (cur_money > WormMoney.InflationCorrection(2000000))
+		if (cur_money > WormMoney.InflationCorrection(1000000))
 			platform_length++;
-//		if (cur_money > WormMoney.InflationCorrection(5000000))
-//			platform_length++;
-//		if (cur_money > WormMoney.InflationCorrection(10000000))
-//			platform_length++;
-//		if (cur_money > WormMoney.InflationCorrection(20000000))
-//			platform_length++;
+		if (cur_money > WormMoney.InflationCorrection(2500000))
+			platform_length++;
+		if (cur_money > WormMoney.InflationCorrection(5000000))
+			platform_length++;
+		if (cur_money > WormMoney.InflationCorrection(10000000))
+			platform_length++;
+
+		local max_train_length = AIGameSettings.GetValue("max_train_length");
+		local station_spread = AIGameSettings.GetValue("station_spread");
+		// Don't make platforms longer than max allowed train length
+		if (platform_length > max_train_length)
+			platform_length = max_train_length;
+		// We need to check station spread too since it seems you can set it lower than max_train_length
+		if (platform_length > station_spread)
+			platform_length = station_spread;
 		AILog.Warning("[DEBUG] Selected platform length: " + platform_length);
-		/* Check to make sure we can build a platform that long. */
-		/// @todo Check max length of trains and max station spread
 	}
 	// Don't make the trains too long when starting. Lengthen them later when there's more cargo waiting.
 	local starting_train_size = platform_length;
@@ -399,7 +406,7 @@ function WormRailManager::BuildRailway()
 		}
 
 		// Build the first passing lane section
-		temp_ps = WormRailBuilder.BuildPassingLaneSection(true, station_data, this);
+		temp_ps = WormRailBuilder.BuildPassingLaneSection(true, platform_length, station_data, this);
 		if (temp_ps == null) {
 			AILog.Warning("Could not build first passing lane section");
 			WormRailBuilder.DeleteRailStation(station_data.stasrc, this);
@@ -407,6 +414,7 @@ function WormRailManager::BuildRailway()
 			buildingstage = BS_NOTHING;
 			return false;
 		} else {
+			AILog.Info("First passing lane built successfully!");
 			if (AIMap.DistanceManhattan(end[0], temp_ps[0][0]) < AIMap.DistanceManhattan(end[0], temp_ps[1][0])) {
 				ps1_entry = [temp_ps[0][0], temp_ps[0][1]];
 				ps1_exit = [temp_ps[1][0], temp_ps[1][1]];
@@ -416,7 +424,7 @@ function WormRailManager::BuildRailway()
 			}
 		}
 		// Build the second passing lane section
-		temp_ps = WormRailBuilder.BuildPassingLaneSection(false, station_data, this);
+		temp_ps = WormRailBuilder.BuildPassingLaneSection(false, platform_length, station_data, this);
 		if (temp_ps == null) {
 			AILog.Warning("Could not build second passing lane section");
 			WormRailBuilder.DeleteRailStation(station_data.stasrc, this);
@@ -425,6 +433,7 @@ function WormRailManager::BuildRailway()
 			buildingstage = BS_NOTHING;
 			return false;
 		} else {
+			AILog.Info("Second passing lane built successfully!");
 			if (AIMap.DistanceManhattan(start[0], temp_ps[0][0]) < AIMap.DistanceManhattan(start[0], temp_ps[1][0])) {
 				ps2_entry = [temp_ps[1][0], temp_ps[1][1]];
 				ps2_exit = [temp_ps[0][0], temp_ps[0][1]];
@@ -435,7 +444,7 @@ function WormRailManager::BuildRailway()
 		}
 		// Build the rail between the source station and the first passing lane section
 		if (WormRailBuilder.BuildRail(ps1_entry, end, railbridges)) {
-			AILog.Info("Rail built successfully!");
+			AILog.Info("Rail between source and first passing lane built successfully!");
 		} else {
 			WormRailBuilder.DeleteRailStation(station_data.stadst, this);
 			WormRailBuilder.DeleteRailStation(station_data.stasrc, this);
@@ -446,7 +455,7 @@ function WormRailManager::BuildRailway()
 		}
 		// Build the rail between the two passing lane sections
 		if (WormRailBuilder.BuildRail(ps2_entry, ps1_exit, railbridges)) {
-			AILog.Info("Rail built successfully!");
+			AILog.Info("Rail between both passing lanes built successfully!");
 		} else {
 			WormRailBuilder.DeleteRailStation(station_data.stadst, this);
 			WormRailBuilder.DeleteRailStation(station_data.stasrc, this);
@@ -456,7 +465,7 @@ function WormRailManager::BuildRailway()
 		}
 		// Build the rail between the second passing lane section and the destination station
 		if (WormRailBuilder.BuildRail(start, ps2_exit, railbridges)) {
-			AILog.Info("Rail built successfully!");
+			AILog.Info("Rail between second passing lane and destination built successfully!");
 		} else {
 			WormRailBuilder.DeleteRailStation(station_data.stadst, this);
 			WormRailBuilder.DeleteRailStation(station_data.stasrc, this);
