@@ -1,6 +1,10 @@
 WormAI Changelog
 ================
 
+Version 6, UNRELEASED
+---------------------
++ 
+
 Version 5, 2016-05-14
 ---------------------
 + Add: Train support. Based on SimpleAI but with changes and more to come.
