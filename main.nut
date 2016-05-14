@@ -311,6 +311,7 @@ function WormAI::Start()
 	
 	if (loaded_from_save) {
 		air_manager.AfterLoading();
+		rail_manager.AfterLoading();
 	}
 
 	/* We need our local tickers, as GetTick() will skip ticks */
