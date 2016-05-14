@@ -589,8 +589,8 @@ function WormRailManager::RegisterRoute(route_data, station_data, vehtype, group
 			route.maxvehicles = AIController.GetSetting("max_roadvehs");
 			break;
 		case AIVehicle.VT_RAIL:
-			route.maxvehicles = route_data.double ? (route_data.distance_manhattan > 150 ? 4 :
-				(route_data.distance_manhattan > 100 ? 3 : 2)) : 1;
+			route.maxvehicles = route_data.double ? (route_data.distance_manhattan > 150 ? 5 :
+				(route_data.distance_manhattan > 100 ? 4 : 3)) : 1;
 			break;
 		case AIVehicle.VT_AIR:
 			route.maxvehicles = 0;
