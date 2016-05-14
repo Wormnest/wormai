@@ -1,10 +1,14 @@
 WormAI Changelog
 ================
 
-Version 5, UNRELEASED
+Version 5, 2016-05-14
 ---------------------
++ Add: Train support. Based on SimpleAI but with changes and more to come.
 + Change: Take inflation into account.
-+ Change: Refactor code to make room for train handling.
++ Change: blacklist towns where we failed to build an airport for a while.
++ Change: Don't remove airports we just built if we don't have money
+  to buy the airplanes. We build them later when we have the money.
++ Change: Don't waste time trying to upgrade airport if there's too much noise.
 
 Version 4, 2016-04-30
 ---------------------
