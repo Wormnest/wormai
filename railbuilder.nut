@@ -1209,16 +1209,22 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 		}
 	}
 	local cur_wagons = 1;
-	local platform_length = length / 2 + 1;
-	while (AIVehicle.GetLength(trainengine) + (cur_wagons + 1) * wagon_length + mailwagon_length <= platform_length * 16) {
-		//AILog.Info("Current length: " + (AIVehicle.GetLength(trainengine) + (cur_wagons + 1) * wagon_length + mailwagon_length));
-		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < AIEngine.GetPrice(wagon)) {
-			WormMoney.GetMoney(AIEngine.GetPrice(wagon));
+//	local platform_length = length / 2 + 1;
+//	while (AIVehicle.GetLength(trainengine) + (cur_wagons + 1) * wagon_length + mailwagon_length <= platform_length * 16) {
+	local wanted_length16 = (length / 2 + 1) * 16;
+	// Compute parts that don't change outside te loop.
+	// Includes wagon_length once since we're trying to see if buying one more wagon is possible.
+	local fixed_length = AIVehicle.GetLength(trainengine) + mailwagon_length + wagon_length;
+	local wagon_price = AIEngine.GetPrice(wagon);
+	while (fixed_length + cur_wagons * wagon_length <= wanted_length16) {
+		//AILog.Warning("[DEBUG] Current length: " + (AIVehicle.GetLength(trainengine) + (cur_wagons + 1) * wagon_length + mailwagon_length));
+		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < wagon_price) {
+			WormMoney.GetMoney(wagon_price);
 		}
 		if (!AIVehicle.BuildVehicle(station_data.homedepot, wagon)) break;
 		cur_wagons++;
 	}
-	local price = AIEngine.GetPrice(engine) + cur_wagons * AIEngine.GetPrice(wagon);
+	local price = AIEngine.GetPrice(engine) + cur_wagons * wagon_price;
 	// Refit the wagons if needed
 	if (AIEngine.GetCargoType(wagon) != cargo) AIVehicle.RefitVehicle(firstwagon, cargo);
 	// Attach the wagons to the engine
@@ -1236,6 +1242,7 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 		}
 	}
 	if (!AIVehicle.MoveWagonChain(firstwagon, 0, trainengine, 0)) {
+		AILog.Warning("[DEBUG] Current length: " + (AIVehicle.GetLength(trainengine) + (cur_wagons + 1) * wagon_length + mailwagon_length));
 		AILog.Error("Could not attach the wagons.");
 		AIVehicle.SellWagonChain(trainengine, 0);
 		AIVehicle.SellWagonChain(firstwagon, 0);
@@ -1536,10 +1543,19 @@ function WormRailBuilder::AttachMoreWagons(vehicle, rail_manager)
 	// Attach additional wagons
 	local wagon_length = AIVehicle.GetLength(firstwagon);
 	local cur_wagons = 1;
-	local platform_length = WormRailBuilder.GetRailStationPlatformLength(route.stasrc);
-	local train_length = platform_length * 16;
+	local optimal_length = rail_manager._optimal_train_lengths.GetValue(group);
+//x	local train_length = optimal_length;
+//	local platform_length = WormRailBuilder.GetRailStationPlatformLength(route.stasrc);
+//	local train_length = platform_length * 16;
+//x	local wagon_price = AIEngine.GetPrice(wagon);
+//x	while (AIVehicle.GetLength(vehicle) + (cur_wagons + 1) * wagon_length <= train_length) {
+
+	//local wanted_length16 = (length / 2 + 1) * 16;
+	// Compute parts that don't change outside te loop.
+	// Includes wagon_length once since we're trying to see if buying one more wagon is possible.
+	local fixed_length = AIVehicle.GetLength(vehicle) + wagon_length;
 	local wagon_price = AIEngine.GetPrice(wagon);
-	while (AIVehicle.GetLength(vehicle) + (cur_wagons + 1) * wagon_length <= train_length) {
+	while (fixed_length + cur_wagons * wagon_length <= optimal_length) {
 		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < wagon_price) {
 			WormMoney.GetMoney(wagon_price, WormMoney.WM_SILENT);
 		}

@@ -43,6 +43,7 @@ class WormRailManager
 	/* 2. Variables that will NOT be saved. */
 	_current_railtype = 0;				///< The railtype we are currently using.
 	_planner = null;					///< The route planner class object.
+	_optimal_train_lengths = null;		///< For each group the current optimal trainlength, stored so we don't have to recompute it all the time.
 
 	/** Create an instance of WormRailManager and initialize our variables. */
 	constructor()
@@ -58,6 +59,7 @@ class WormRailManager
 		_planner = WormPlanner(this);
 		route_without_trains = -1;
 		last_route = null;
+		_optimal_train_lengths = AIList();	/// @todo: Needs to be initialized when loading a Save!
 		AILog.Info("[RailManager initialized]");
 	}
 	
@@ -106,15 +108,32 @@ class WormRailManager
 	 * @param station_data A WormStation class object containing info about the station.
 	 * @param vehtype The type of vehicle using this route. Currently always VT_RAIL.
 	 * @param group The vehicle group for the vehicles using this route.
+	 * @param train_length The train_length we start with measure in 1/16th of a tile.
 	 * @return The new route registered.
 	 */
-	function RegisterRoute(route_data, station_data, vehtype, group);
+	function RegisterRoute(route_data, station_data, vehtype, group, train_length);
 
 	/**
 	 * Checks all routes. Empty routes are removed, new vehicles are added if needed, old vehicles are replaced,
 	 * vehicles are restarted if sitting in the depot for no reason, rails are electrified, short trains are lengthened.
 	 */
 	function CheckRoutes();
+
+	/**
+	 * Get the optimal train length for this route.
+	 * @param route The route info.
+	 * @return The optimal length in 1/16 of a tile.
+	 */
+	function GetOptimalTrainLength(route);
+
+	/**
+	 * Get the minimum and maximum length of trains in the supplied list of vehicles.
+	 * @param vehicles AIVehicleList containing the vehicles.
+	 * @return A table giving "min_length" and "max_length" of the shortest and longest vehicle in the list.
+	 * @note The length is given in 1/16 of a tile, thus a one tile train has length 16.
+	 * @pre vehicles should not be null.
+	 */
+	function GetMinMaxTrainLength(vehicles);
 
 	/**
 	 * Checks ungrouped vehicles. Under normal conditions all vehicles should be grouped.
@@ -184,7 +203,14 @@ class WormRailManager
 	 * @param worm_save_version WormAI save data version.
 	 * @pre table should be non null.
 	 */
-	function LoadData(table, worm_save_version);
+	 function LoadData(table, worm_save_version);
+
+	 /**
+	 * Do any necessary processing after a savegame has been loaded.
+	 * Currently recomputes the values for the @ref _optimal_train_lengths list.
+	 */
+	function AfterLoading();
+
 }
 
 function WormRailManager::SetGroupName(group, crg, stasrc)
@@ -295,16 +321,16 @@ function WormRailManager::BuildRailway()
 	else platform_length = 2;
 	if (AICompany.GetLoanAmount() == 0) {
 		local cur_money = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
-		if (cur_money > WormMoney.InflationCorrection(250000))
+		if (cur_money > WormMoney.InflationCorrection(50000))
 			platform_length++;
-		if (cur_money > WormMoney.InflationCorrection(1000000))
+		if (cur_money > WormMoney.InflationCorrection(500000))
 			platform_length++;
 		if (cur_money > WormMoney.InflationCorrection(2500000))
 			platform_length++;
 		if (cur_money > WormMoney.InflationCorrection(5000000))
 			platform_length++;
-		if (cur_money > WormMoney.InflationCorrection(10000000))
-			platform_length++;
+//		if (cur_money > WormMoney.InflationCorrection(10000000))
+//			platform_length++;
 
 		local max_train_length = AIGameSettings.GetValue("max_train_length");
 		local station_spread = AIGameSettings.GetValue("station_spread");
@@ -486,7 +512,7 @@ function WormRailManager::BuildRailway()
 	local build_result = WormRailBuilder.BuildAndStartTrains(trains, 2 * starting_train_size - 2, engine, wagon, null, group,
 		_planner.route.Cargo, station_data, engine_blacklist);
 	
-	last_route = WormRailManager.RegisterRoute(_planner.route, station_data, vehtype, group);
+	last_route = WormRailManager.RegisterRoute(_planner.route, station_data, vehtype, group, starting_train_size*16);
 	
 	// Retry if route was abandoned due to blacklisting
 	local vehicles = AIVehicleList_Group(group);
@@ -533,7 +559,7 @@ function WormRailManager::BuildRailway()
 	return true;
 }
 
-function WormRailManager::RegisterRoute(route_data, station_data, vehtype, group)
+function WormRailManager::RegisterRoute(route_data, station_data, vehtype, group, train_length)
 {
 	/* Table with info about a completed route. */
 	local route = {
@@ -573,6 +599,7 @@ function WormRailManager::RegisterRoute(route_data, station_data, vehtype, group
 	routes.push(route);
 	serviced.AddItem(route_data.SourceID * 256 + route_data.Cargo, 0);
 	groups.AddItem(group, routes.len() - 1);
+	_optimal_train_lengths.AddItem(group, train_length);
 	lastroute = AIDate.GetCurrentDate();
 	return route;
 }
@@ -599,6 +626,7 @@ function WormRailManager::CheckRoutes()
 			if (route_without_trains != route.group) {
 				AILog.Info("Removing empty route: " + AIStation.GetName(route.stasrc) + " - " + AIStation.GetName(route.stadst));
 				route.vehtype = null;
+				_optimal_train_lengths.RemoveItem(route.group);
 				groups.RemoveItem(route.group);
 				AIGroup.DeleteGroup(route.group);
 				serviced.RemoveItem(route.src * 256 + route.crg);
@@ -666,6 +694,7 @@ function WormRailManager::CheckRoutes()
 			AIRail.SetCurrentRailType(route.railtype);
 			local wagon = WormRailBuilder.ChooseWagon(route.crg, engine_blacklist);
 			if (wagon == null) continue;
+			/// @todo Don't use platform length but compute optimal length for this group!
 			local platform = WormRailBuilder.GetRailStationPlatformLength(route.stasrc);
 			local engine = WormRailBuilder.ChooseTrainEngine(route.crg, AIMap.DistanceManhattan(AIStation.GetLocation(route.stasrc),
 				AIStation.GetLocation(route.stadst)), wagon, platform * 2 - 1, engine_blacklist);
@@ -689,33 +718,40 @@ function WormRailManager::CheckRoutes()
 		}
 
 		/* Lengthening short trains */
+		local optimal_length = GetOptimalTrainLength(route);
+		_optimal_train_lengths.SetValue(route.group, optimal_length);
+//		AILog.Warning("[DEBUG] Optimal train length = " + optimal_length + ", in half tiles = " 
+//			+ (optimal_length/8) + ", in tiles = " + (optimal_length/16));
+		local train_len_limit = optimal_length -7;
+		
 		vehicles = AIVehicleList_Group(route.group);
 		local platform = WormRailBuilder.GetRailStationPlatformLength(route.stasrc);
-		local train_len_limit = platform * 16 -7; // Move computation out of the loop.
+//		local train_len_limit = platform * 16 -7; // Move computation out of the loop.
 		local cargo_waiting = AIStation.GetCargoWaiting(route.stasrc, route.crg);
-		foreach (train, dummy in vehicles) {
-			if (todepotlist.HasItem(train)) continue;
-			// Don't lengthen train that doesn't make a profit
-			if (AIVehicle.GetProfitThisYear(train) <= 0) continue;
-			// Only lengthen if there is a reasonable amount of cargo waiting
-			if (cargo_waiting < 150) continue;
-			// The train should fill its platform
-			if (AIVehicle.GetLength(train) < train_len_limit) {
-				local railtype = AIRail.GetCurrentRailType();
-				AIRail.SetCurrentRailType(route.railtype);
-				local wagon = WormRailBuilder.ChooseWagon(route.crg, engine_blacklist);
-				if (wagon == null) break;
-				// Check if we can afford it
-				if (WormMoney.GetMaxBankBalance() > (WormMoney.GetMinimumCashNeeded() + 5 * AIEngine.GetPrice(wagon))) {
-					AILog.Info(AIVehicle.GetName(train) + " is short, sending it to the depot to attach more wagons...");
-					if (!AIVehicle.SendVehicleToDepot(train)) {
-						AIVehicle.ReverseVehicle(train);
-						AIController.Sleep(75);
-						if (!AIVehicle.SendVehicleToDepot(train)) break;
+		// Only lengthen if there is a reasonable amount of cargo waiting
+		if (cargo_waiting > 150) {
+			foreach (train, dummy in vehicles) {
+				if (todepotlist.HasItem(train)) continue;
+				// Don't lengthen train that doesn't make a profit
+				if (AIVehicle.GetProfitThisYear(train) <= 0) continue;
+				// The train should fill its platform
+				if (AIVehicle.GetLength(train) < train_len_limit) {
+					local railtype = AIRail.GetCurrentRailType();
+					AIRail.SetCurrentRailType(route.railtype);
+					local wagon = WormRailBuilder.ChooseWagon(route.crg, engine_blacklist);
+					if (wagon == null) break;
+					// Check if we can afford it
+					if (WormMoney.GetMaxBankBalance() > (WormMoney.GetMinimumCashNeeded() + 5 * AIEngine.GetPrice(wagon))) {
+						AILog.Info(AIVehicle.GetName(train) + " is short, sending it to the depot to attach more wagons...");
+						if (!AIVehicle.SendVehicleToDepot(train)) {
+							AIVehicle.ReverseVehicle(train);
+							AIController.Sleep(75);
+							if (!AIVehicle.SendVehicleToDepot(train)) break;
+						}
+						todepotlist.AddItem(train, TD_ATTACH_WAGONS);
 					}
-					todepotlist.AddItem(train, TD_ATTACH_WAGONS);
+					AIRail.SetCurrentRailType(railtype);
 				}
-				AIRail.SetCurrentRailType(railtype);
 			}
 		}
 
@@ -764,6 +800,64 @@ function WormRailManager::CheckRoutes()
 	WormRailManager.CheckDefaultGroup();
 }
 
+/**
+ * Get the optimal train length for this route.
+ * @param route The route info.
+ * @return The optimal length in 1/16 of a tile.
+ */
+function WormRailManager::GetOptimalTrainLength(route)
+{
+	// Determine absolute maximum train length in tiles
+	local platform = WormRailBuilder.GetRailStationPlatformLength(route.stasrc);
+	local vehicles = AIVehicleList_Group(route.group);
+	local min_max_len = GetMinMaxTrainLength(vehicles);
+//	AILog.Warning("[DEBUG] min/max length " + min_max_len.min_length + " / " + min_max_len.max_length +
+//		", platform = " + (platform*16));
+	// If minimum length of a train is already the platform length we don't need to look further.
+	// Since standard train wagons and engines are half a tile long we measure in eigth parts
+	local min_len8 = (min_max_len.min_length+7)/8;
+	local max_len8 = (min_max_len.max_length+7)/8;
+	local platform8 = platform*2;
+	if (min_len8 == platform8)
+		return platform*16;
+	// If trains are not all equal in length (counted in half tiles) then we first want them all the same size.
+	if (min_len8 < max_len8)
+		return max_len8*8;
+	
+	/// @todo We should get the amount of cargo our average wagon can carry. Assume 25 for now.
+	local veh_count = vehicles.Count();
+	// Safety check
+	if (veh_count == 0) {
+		AILog.Error("[DEBUG] No vehicles in this group!");
+		return 3*16;	// Default = 3 tiles
+	}
+	local cargo_waiting = AIStation.GetCargoWaiting(route.stasrc, route.crg);
+	local per_vehicle8 = cargo_waiting / 25 / veh_count;
+	// Since we want to increase size gradually don't increase with more than 1 whole tile at a time.
+	if (per_vehicle8 > 2)
+		per_vehicle8 = 2;
+	// If total is more than platform length return platform length
+	local optimal_length = max_len8+per_vehicle8;
+	if (optimal_length > platform8)
+		optimal_length = platform8;
+	return optimal_length*8;
+}
+
+function WormRailManager::GetMinMaxTrainLength(vehicles)
+{
+	local result = {
+		min_length = 1024, // 64 (max station spread) * 16
+		max_length = 0
+	}
+	// Since our groups usually have only a small amount of vehicles iterating the list seems best.
+	foreach (vehicle, dummy in vehicles) {
+		local length = AIVehicle.GetLength(vehicle);
+		if (length < result.min_length) result.min_length = length;
+		if (length > result.max_length) result.max_length = length;
+	}
+	return result;
+}
+
 function WormRailManager::CheckDefaultGroup()
 {
 	local vehicles = AIVehicleList_DefaultGroup(AIVehicle.VT_RAIL);
@@ -788,9 +882,35 @@ function WormRailManager::CheckAddTrainToGroup(route, vehicle_count, first_vehic
 		return false;
 
 	if (vehicle_count < route.maxvehicles) {
+		/// @todo remove profit check? What if first vehicle is an older type and the others are making a profit?
+		// However this is used to not add a second vehicle in the first year a route was added?
 		if (AIVehicle.GetProfitThisYear(first_vehicle) <= 0) return false;
-		if (AIStation.GetCargoWaiting(route.stasrc, route.crg) > 150)
+		if (AIStation.GetCargoWaiting(route.stasrc, route.crg) > 150) {
+			// We may want to increase train sizes first before adding a train
+			local optimal_length = _optimal_train_lengths.GetValue(route.group);
+			local vehicles = AIVehicleList_Group(route.group);
+			local min_max_len = GetMinMaxTrainLength(vehicles);
+			local platform = WormRailBuilder.GetRailStationPlatformLength(route.stasrc)*16;
+			if (min_max_len.min_length < min_max_len.max_length)
+				return false;	// Make trains same length first.
+			if (optimal_length > min_max_len.max_length) {
+				switch (vehicle_count) {
+					case 1:
+						if (optimal_length < 3*16) return false;
+						break;
+					case 2:
+						if (optimal_length < 4*16) return false;
+						break;
+					case 3:
+						if (optimal_length < 5*16) return false;
+						break;
+					default:
+						return false;
+						break;
+				}
+			}
 			return SelectAndAddTrain(route);
+		}
 		else
 			return false;
 	}
@@ -838,18 +958,26 @@ function WormRailManager::SelectAndAddTrain(route)
 
 function WormRailManager::AddVehicle(route, mainvehicle, engine, wagon)
 {
+	local trains = AIVehicleList();
+	trains.Valuate(AIVehicle.GetVehicleType);
+	trains.KeepValue(AIVehicle.VT_RAIL);
+
+	// Do not try to add one if we have already reached the train limit
+	if (trains.Count() + 1 > AIGameSettings.GetValue("vehicle.max_trains")) {
+		AILog.Warning("We can't add more trains. We already have the maximum aount allowed.");
+		return false;
+	}
+
 	// A WormStation instance is needed to add a new vehicle
 	local station_data = WormStation();
 	station_data.stasrc = route.stasrc;
 	station_data.stadst = route.stadst;
 	station_data.homedepot = route.homedepot;
 	
-	local trains = AIVehicleList();
-	trains.Valuate(AIVehicle.GetVehicleType);
-	trains.KeepValue(AIVehicle.VT_RAIL);
-	// Do not try to add one if we have already reached the train limit
-	if (trains.Count() + 1 > AIGameSettings.GetValue("vehicle.max_trains")) return false;
-	local length = WormRailBuilder.GetRailStationPlatformLength(station_data.stasrc) * 2 - 2;
+//	local length = WormRailBuilder.GetRailStationPlatformLength(station_data.stasrc) * 2 - 2;
+	// Get the optimal train length for this group.
+	local length = _optimal_train_lengths.GetValue(route.group) / 8 - 2;
+
 	if (WormRailBuilder.BuildAndStartTrains(1, length, engine, wagon, mainvehicle, route.group,
 		route.crg, station_data, engine_blacklist) == ALL_OK) {
 		station_data = null;
@@ -872,6 +1000,7 @@ function WormRailManager::ReplaceVehicle(vehicle)
 	// Although we currently only use this for rail we leave it in, we might need it later...
 	switch (vehtype) {
 		case AIVehicle.VT_RAIL:
+			AILog.Warning("[DEBUG] Replacing " + AIVehicle.GetName(vehicle));
 			AIRail.SetCurrentRailType(route.railtype);
 			wagon = WormRailBuilder.ChooseWagon(route.crg, engine_blacklist);
 			if (wagon != null) {
@@ -1027,7 +1156,8 @@ function WormRailManager::CheckTrainProfits()
 			local v = highest.Begin();
 			local high_profit = highest.GetValue(v);
 			// get profits below 20% of that
-			low_profit_limit = high_profit * 3 / 10; // TESTING: 30%
+			// Trains go for 205 instead of 30% for now since shorter trains will otherwise easily get removed
+			low_profit_limit = high_profit * 2 / 10;
 			// Copy the list_copy back to list which at this point is (should be) empty.
 			list.AddList(list_copy);
 			// Apparently need to use Valuate again on profit for it to work
@@ -1070,7 +1200,7 @@ function WormRailManager::SendTrainToDepotForSelling(vehicle)
 		AIController.Sleep(75);
 		if (!AIVehicle.SendVehicleToDepot(vehicle)) return;
 	}
-	AILog.Info("[DEBUG] and add it to the depot list.");
+//	AILog.Info("[DEBUG] and add it to the depot list.");
 	todepotlist.AddItem(vehicle, WormRailManager.TD_SELL);
 }
 
@@ -1142,3 +1272,12 @@ function WormRailManager::LoadData(table, worm_save_version)
 	}
 
 }
+
+function WormRailManager::AfterLoading()
+{
+	foreach (group, route in groups) {
+		local optimal_length = GetOptimalTrainLength(route);
+		_optimal_train_lengths.AddItem(group, optimal_length);
+	}
+}
+
