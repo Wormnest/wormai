@@ -1280,7 +1280,8 @@ function WormRailManager::LoadData(table, worm_save_version)
 
 function WormRailManager::AfterLoading()
 {
-	foreach (group, route in groups) {
+	foreach (group, route_idx in groups) {
+		local route = routes[route_idx];
 		local optimal_length = GetOptimalTrainLength(route);
 		_optimal_train_lengths.AddItem(group, optimal_length);
 	}
