@@ -3,10 +3,10 @@ WormAI OpenTTD AI
 
 Introduction
 ------------
-WormAI is an ai that tries to be competetive. It currently supports pax
+WormAI is an ai that tries to be competitive. It currently supports pax
 air transport and since version 5 also train support for all cargos.
-In the tests I have done it usually performas fairly well as long as
-you haven't turned on infrastruture maintenance.
+In the tests I have done it usually performs fairly well as long as
+you haven't turned on infrastructure maintenance.
 Trains currently require that 90 degree turns are allowed.
 Please report crashes and other bugs either in the discussion topic
 or the issue tracker listed below.
