@@ -3,11 +3,11 @@ WormAI OpenTTD AI
 
 Introduction
 ------------
-WormAI started as a fork of WrightAI and currently also supports only pax
-air transport. Other types of transport are planned for a future release.
-A lot of changes and improvements to the original code have been made
-since then. It should do fairly well as long as you allow a reasonable
-amount of aircraft and haven't turned on infrastruture maintenance.
+WormAI is an ai that tries to be competetive. It currently supports pax
+air transport and since version 5 also train support for all cargos.
+In the tests I have done it usually performas fairly well as long as
+you haven't turned on infrastruture maintenance.
+Trains currently require that 90 degree turns are allowed.
 Please report crashes and other bugs either in the discussion topic
 or the issue tracker listed below.
 
@@ -36,6 +36,8 @@ Handling of reaching maximum allowed aircraft.
 Handling of breakdown setting and selling of old aircraft.
 Handling of airport upgrading.
 Building of headquarters and statues.
+Building train routes, renew trains, change length when needed, sell
+when unprofitable.
 
 
 Settings
@@ -44,9 +46,12 @@ The following settings can be used. All except the thinking speed can be
 changed during the game.
 
 1. Enable aircraft [default: on]
-   This setting turns on or off aircraft building. Since WormAI currently
-   only supports air transport turning this off means WormAI will not do
-   any new aircraft building nor any maintenance on it's airlines.
+   This setting turns on or off aircraft building. Turning this off
+   means WormAI will not do any new aircraft building nor any
+   maintenance on it's airlines.
+
+2. Enable trains [default: on]
+   This setting turns on or off train building.
 
 2. How fast this AI will think [default depends on AI competitor speed 
    setting]
@@ -74,15 +79,21 @@ changed during the game.
 
 Limitations and shortcomings
 ----------------------------
-Currently only supports aircraft and only transports pax.
 It doesn't do very well when infrastructure maintenance is on.
-Every route consists of 2 airports, unconnected to other airports.
+Every air route consists of 2 airports, unconnected to other airports.
+Trains currently require that 90 degree turns are allowed.
 Only well tested in temperate climate. Performance in arctic is
 not as good but overall not too bad. In sub-tropic it doesn't do
 very well since it only transports passengers but not water or food.
 Doesn't start building as fast as some other AI's meaning that
 in situations with a limited amount of suitable spots for airports
 it might have a difficult time starting.
+
+
+Credits
+-------
+Air transport handling is based on WrightAI.
+Rail transport handling is based on SimpleAI.
 
 
 Wormnest (Jacob Boerema), 2013-2016
