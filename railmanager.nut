@@ -319,8 +319,8 @@ function WormRailManager::BuildRailway()
 	/// @todo replace number by a definied constant or variable depending on date and other factors
 	if (_planner.route.double || _planner.route.distance_manhattan > 50) platform_length = 3;
 	else platform_length = 2;
+	local cur_money = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
 	if (AICompany.GetLoanAmount() == 0) {
-		local cur_money = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
 		if (cur_money > WormMoney.InflationCorrection(50000))
 			platform_length++;
 		if (cur_money > WormMoney.InflationCorrection(500000))
@@ -332,16 +332,21 @@ function WormRailManager::BuildRailway()
 //		if (cur_money > WormMoney.InflationCorrection(10000000))
 //			platform_length++;
 
-		local max_train_length = AIGameSettings.GetValue("max_train_length");
-		local station_spread = AIGameSettings.GetValue("station_spread");
-		// Don't make platforms longer than max allowed train length
-		if (platform_length > max_train_length)
-			platform_length = max_train_length;
-		// We need to check station spread too since it seems you can set it lower than max_train_length
-		if (platform_length > station_spread)
-			platform_length = station_spread;
-		AILog.Warning("[DEBUG] Selected platform length: " + platform_length);
 	}
+	else {
+		if (cur_money > WormMoney.InflationCorrection(250000))
+			platform_length = 4;
+	}
+	local max_train_length = AIGameSettings.GetValue("max_train_length");
+	local station_spread = AIGameSettings.GetValue("station_spread");
+	// Don't make platforms longer than max allowed train length
+	if (platform_length > max_train_length)
+		platform_length = max_train_length;
+	// We need to check station spread too since it seems you can set it lower than max_train_length
+	if (platform_length > station_spread)
+		platform_length = station_spread;
+//	AILog.Warning("[DEBUG] Selected platform length: " + platform_length);
+
 	// Don't make the trains too long when starting. Lengthen them later when there's more cargo waiting.
 	local starting_train_size = platform_length;
 	if (starting_train_size > 3) starting_train_size = 3;
