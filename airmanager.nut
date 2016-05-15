@@ -65,6 +65,8 @@ class WormAirManager
 	incomplete_route_tile1 = 0;			///< Tile of first airport of incomplete air route without aircraft.
 	incomplete_route_tile2 = 0;			///< Tile of second airport of incomplete air route without aircraft.
 	towns_blacklist = null;				///< List of towns where we already tried to build an airport.
+	low_price_small = 0;				///< Lowest price of a small airplane.
+	low_price_big   = 0;				///< Lowest price of a big airplane.
 
 
 	/** Create an instance of WormAirManager and initialize our variables. */
@@ -303,6 +305,11 @@ class WormAirManager
 	 * Callback that handles events. Currently only AIEvent.ET_VEHICLE_CRASHED is handled.
 	 */
 	function HandleEvents();
+	/**
+	 * Get the lowest prices of the current available big and small airplanes.
+	 * @param engine_list List of airplanes that can transport passengers.
+	 */
+	function CheckAirplanePrices(engine_list);
 	/**
 	 * Task that evaluates all available aircraft for how suited they are
 	 * for our purposes. The suitedness values for aircraft which we can use are saved in
@@ -1157,13 +1164,24 @@ function WormAirManager::BuildAirportRoute()
 		// See for capacity of different airport types:
 		// Airport capacity test: http://www.tt-forums.net/viewtopic.php?f=2&t=47279
 		local airport_type = GetOptimalAvailableAirportType();
+		local aircraft_price_low = WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE);
 		if (airport_type == null) {
 			AILog.Warning("No suitable airport type available that we know how to use.");
 			return ERROR_NO_SUITABLE_AIRPORT;
 		}
+		else if (airport_type == AIAirport.AT_SMALL) {
+			if (low_price_small > 0)
+				aircraft_price_low = low_price_small;
+		}
+		else {
+			if (low_price_big > 0)
+				aircraft_price_low = low_price_big;
+		}
 
 		/* Get enough money to work with. Since building on rough terrain costs more we add in overhead costs. */
-		if (!WormMoney.GetMoney(AIAirport.GetPrice(airport_type)*2 + WormMoney.InflationCorrection(BUILD_OVERHEAD + AIRCRAFT_LOW_PRICE))) {
+		if (!WormMoney.GetMoney(AIAirport.GetPrice(airport_type)*2 + WormMoney.InflationCorrection(BUILD_OVERHEAD) +
+			aircraft_price_low, WormMoney.WM_SILENT)) {
+			AILog.Warning("Not making an air route. It would be too expensive.");
 			// Can't get enough money
 			return ERROR_NOT_ENOUGH_MONEY;
 		}
@@ -2081,6 +2099,35 @@ function WormAirManager::HandleEvents()
 }
 
 /**
+ * Get the lowest prices of the current available big and small airplanes.
+ * @param engine_list List of airplanes that can transport passengers.
+ */
+function WormAirManager::CheckAirplanePrices(engine_list)
+{
+	local small_planes = AIList();
+	small_planes.AddList(engine_list);
+	small_planes.Valuate(AIEngine.GetPlaneType);
+	small_planes.KeepValue(AIAirport.PT_SMALL_PLANE);
+	small_planes.Valuate(AIEngine.GetPrice);
+	small_planes.KeepBottom(1);
+	if (small_planes.Count() == 0)
+		low_price_small = 0;
+	else
+		low_price_small = small_planes.GetValue(small_planes.Begin());
+
+	local big_planes = AIList();
+	big_planes.AddList(engine_list);
+	big_planes.Valuate(AIEngine.GetPlaneType);
+	big_planes.KeepValue(AIAirport.PT_BIG_PLANE);
+	big_planes.Valuate(AIEngine.GetPrice);
+	big_planes.KeepBottom(1);
+	if (big_planes.Count() == 0)
+		low_price_big = 0;
+	else
+		low_price_big = big_planes.GetValue(big_planes.Begin());
+}
+
+/**
  * Task that evaluates all available aircraft for how suited they are
  * for our purposes. The suitedness values for aircraft which we can use are saved in
  * @ref engine_usefulness.
@@ -2098,6 +2145,13 @@ function WormAirManager::EvaluateAircraft(clear_warning_shown_flag) {
 
 	engine_list.Valuate(AIEngine.GetCargoType);
 	engine_list.KeepValue(this.passenger_cargo_id);
+
+	/* We don't want helicopters so weed them out. */
+	engine_list.Valuate(AIEngine.GetPlaneType);
+	engine_list.RemoveValue(AIAirport.PT_HELICOPTER);
+	
+	/* Get the current low prices for small and big planes. */
+	CheckAirplanePrices(engine_list);
 
 	// Only use this one when debugging:
 	//engine_list.Valuate(AIEngine.GetCapacity);
