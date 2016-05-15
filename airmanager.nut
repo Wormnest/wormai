@@ -1354,11 +1354,6 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 		engine_list.RemoveValue(AIAirport.PT_BIG_PLANE);
 	}
 	
-	engine_list.Valuate(AIEngine.GetPrice);
-	engine_list.KeepBelowValue(balance < WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE_CUT) ?
-		WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE) : (balance < WormMoney.InflationCorrection(AIRCRAFT_MEDIUM_PRICE_CUT) ?
-		WormMoney.InflationCorrection(AIRCRAFT_MEDIUM_PRICE) : WormMoney.InflationCorrection(AIRCRAFT_HIGH_PRICE)));
-
 	engine_list.Valuate(AIEngine.GetCargoType);
 	engine_list.KeepValue(this.passenger_cargo_id);
 	
@@ -1378,6 +1373,27 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 	//	AILog.Info("Engine: " + AIEngine.GetName(eng) + ", distance: " + AIEngine.GetMaximumOrderDistance(eng));
 	//}
 	////////////
+
+	/* Check if there are any airplanes left. */
+	if (engine_list.Count() == 0) {
+		// Most likely no aircraft found for the range we wanted.
+		AILog.Warning("Couldn't find a suitable aircraft.");
+		return ERROR_BUILD_AIRCRAFT_INVALID;
+	}
+
+	engine_list.Valuate(AIEngine.GetPrice);
+	engine_list.KeepBelowValue(balance < WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE_CUT) ?
+		WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE) : (balance < WormMoney.InflationCorrection(AIRCRAFT_MEDIUM_PRICE_CUT) ?
+		WormMoney.InflationCorrection(AIRCRAFT_MEDIUM_PRICE) : WormMoney.InflationCorrection(AIRCRAFT_HIGH_PRICE)));
+
+	/* Check if there are any airplanes left. */
+	if (engine_list.Count() == 0) {
+		// Either we don't have enough money to buy an airplane, or there are only very expensive airlanes
+		// above our set maximum price.
+		/// @todo Maybe instead of a fixed max we need to find the current max price for an airplane?
+		AILog.Warning("We either don't have enough money for an airplane or the airplanes are too expensive.");
+		return ERROR_NOT_ENOUGH_MONEY;
+	}
 
 	//engine_list.Valuate(AIEngine.GetCapacity);
 	//engine_list.KeepTop(1);
