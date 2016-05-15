@@ -286,7 +286,12 @@ function WormRailManager::BuildRailway()
 			AILog.Warning("Still can't add a train to the last route due to lack of money.");
 		return result;
 	}
-	
+
+	if (!WormMoney.GetMoney(WormMoney.InflationCorrection(50000))) {
+		AILog.Info("Can't get enough money to build a rail route.");
+		return false;
+	}
+
 	/* Plan which route with which cargo we are going to build. */
 	if (!_planner.PlanRailRoute()) return false;
 
