@@ -126,30 +126,30 @@ class WormRailBuilder
 	function CanBuildSingleRailStation(tile, direction, platform_length, station_data);
 
 	/**
-	 * Build a double (two-lane) rail station at a town or an industry.
-	 * Builder class variables used: crg, src, dst, srcplace, dstplace, srcistown, dstistown,
-	 *   statile, deptile, stafront, depfront, frontfront, front1, front2, lane2, morefront
-	 * Builder class variables set: stasrc, stadst, homedepot
+	 * Build a rail station at a town or an industry.
 	 * @param is_source True if we are building the source station.
+	 * @param lanes The number of lanes (platforms). Currently only 1 or 2 is supported.
 	 * @param platform_length The length of the proposed station's platform.
 	 * @param route_data A WormRoute class object containing info about the route.
 	 * @param station_data A WormStation class object containing info about the station.
 	 * @param rail_manager The WormRailManager class object.
 	 * @return True if the construction succeeded.
+	 * @pre lanes > 0 and < 3; route_data, station_data and rail_manager should be valid (non null).
+	 * @todo Support more than 2 lanes.
 	 */
-	function BuildDoubleRailStation(is_source, platform_length, route_data, station_data, rail_manager);
+	function BuildRailStation(is_source, lanes, platform_length, route_data, station_data, rail_manager);
 
 	/**
-	 * Determine whether a double rail station can be built at a given place.
-	 * Builder class variables set: statile, deptile, stafront, depfront, front1, front2,
-	 *   lane2, frontfront, morefront, statop, stabottom
+	 * Determine whether a rail station can be built at a given place.
 	 * @param tile The tile to be checked.
+	 * @param lanes The number of lanes (platforms). Currently only 1 or 2 is supported.
 	 * @param direction The direction of the proposed station.
 	 * @param platform_length The length of the proposed station's platform.
 	 * @param station_data WormStation class object where the build info will be store (should be non null when called).
-	 * @return Ture if a double rail station can be built at the given position.
+	 * @return True if a double rail station can be built at the given position.
+	 * @todo Support more than 2 lanes.
 	 */
-	function CanBuildDoubleRailStation(tile, direction, platform_length, station_data);
+	function CanBuildRailStation(tile, lanes, direction, platform_length, station_data);
 
 	/**
 	 * Build a rail line between two given points.
@@ -557,19 +557,20 @@ function WormRailBuilder::CanBuildSingleRailStation(tile, direction, platform_le
 	return true;
 }
 
-function WormRailBuilder::BuildDoubleRailStation(is_source, platform_length, route_data, station_data, rail_manager)
+function WormRailBuilder::BuildRailStation(is_source, lanes, platform_length, route_data, station_data, rail_manager)
 {
 	local dir, tilelist, otherplace, isneartown = null;
 	local rad = AIStation.GetCoverageRadius(AIStation.STATION_TRAIN);
-	// Get the tile list
+
+	// Determine the direction of the station, and get list of usable tiles.
 	if (is_source) {
+		// Source station
 		dir = WormTiles.GetDirection(route_data.SourceLocation, route_data.DestLocation);
 		station_data.optimaldir = dir; // Should only be set for source
 		if (route_data.SourceIsTown) {
-			// We don't need to use platform_length instead of 2 here because we only need part of
+			// We don't need to use platform_length or width here because we only need part of
 			// our station to be inside town influence, not the whole station!
-			/// @todo Shouldn't 1, 1 be enough then?
-			tilelist = WormRailBuilder.GetTilesAroundTown(route_data.SourceID, 2, 2);
+			tilelist = WormRailBuilder.GetTilesAroundTown(route_data.SourceID, 1, 1);
 			isneartown = true;
 		} else {
 			tilelist = AITileList_IndustryProducing(route_data.SourceID, rad);
@@ -577,10 +578,12 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, platform_length, rou
 		}
 		otherplace = route_data.DestLocation;
 	} else {
+		// Destination station
 		dir = WormTiles.GetDirection(route_data.DestLocation, route_data.SourceLocation);
 		if (route_data.DestIsTown) {
-			/// @todo Shouldn't 1, 1 be enough here?
-			tilelist = WormRailBuilder.GetTilesAroundTown(route_data.DestID, 2, 2);
+			// We don't need to use platform_length or width here because we only need part of
+			// our station to be inside town influence, not the whole station!
+			tilelist = WormRailBuilder.GetTilesAroundTown(route_data.DestID, 1, 1);
 			isneartown = true;
 		} else {
 			tilelist = AITileList_IndustryAccepting(route_data.DestID, rad);
@@ -590,10 +593,12 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, platform_length, rou
 		}
 		otherplace = route_data.SourceLocation;
 	}
+	
+	// Only keep tiles where we can build.
 	tilelist.Valuate(AITile.IsBuildable);
 	tilelist.KeepValue(1);
 
-	// Sort the tile list
+	// Sort the tile list to get the best candidate locations.
 	if (isneartown) {
 		tilelist.Valuate(AITile.GetCargoAcceptance, route_data.Cargo, 1, 1, rad);
 		tilelist.KeepAboveValue(10);
@@ -601,11 +606,11 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, platform_length, rou
 		tilelist.Valuate(AIMap.DistanceManhattan, otherplace);
 	}
 	tilelist.Sort(AIList.SORT_BY_VALUE, !isneartown);
-	local success = false;
-
+	
 	// Find a place where the station can be built
+	local success = false;
 	foreach (tile, dummy in tilelist) {
-		if (WormRailBuilder.CanBuildDoubleRailStation(tile, dir, platform_length, station_data)) {
+		if (WormRailBuilder.CanBuildRailStation(tile, lanes, dir, platform_length, station_data)) {
 			success = true;
 			break;
 		} else continue;
@@ -615,7 +620,7 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, platform_length, rou
 		local nextdir = WormTiles.GetNextDirection(dir, true);
 		// Find a place where the station can be built
 		foreach (tile, dummy in tilelist) {
-			if (WormRailBuilder.CanBuildDoubleRailStation(tile, nextdir, platform_length, station_data)) {
+			if (WormRailBuilder.CanBuildRailStation(tile, lanes, nextdir, platform_length, station_data)) {
 				success = true;
 				break;
 			} else continue;
@@ -625,7 +630,7 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, platform_length, rou
 			nextdir = WormTiles.GetNextDirection(dir, false);
 			// Find a place where the station can be built
 			foreach (tile, dummy in tilelist) {
-				if (WormRailBuilder.CanBuildDoubleRailStation(tile, nextdir, platform_length, station_data)) {
+				if (WormRailBuilder.CanBuildRailStation(tile, lanes, nextdir, platform_length, station_data)) {
 					success = true;
 					break;
 				} else continue;
@@ -641,13 +646,13 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, platform_length, rou
 	if (AIController.GetSetting("newgrf_stations") == 1 && !route_data.SourceIsTown && !route_data.DestIsTown) {
 		// Build a NewGRF rail station
 		success = success && AIRail.BuildNewGRFRailStation(station_data.statop, station_data.stationdir,
-			2, platform_length, AIStation.STATION_NEW, route_data.Cargo,
+			lanes, platform_length, AIStation.STATION_NEW, route_data.Cargo,
 			AIIndustry.GetIndustryType(route_data.SourceID), AIIndustry.GetIndustryType(route_data.DestID),
 			AIMap.DistanceManhattan(route_data.SourceLocation, route_data.DestLocation), is_source);
 	} else {
 		// Build a standard rail station
 		success = success && AIRail.BuildRailStation(station_data.statop, station_data.stationdir,
-			2, platform_length, AIStation.STATION_NEW);
+			lanes, platform_length, AIStation.STATION_NEW);
 	}
 	if (!success) {
 		AILog.Error("Station could not be built: " + AIError.GetLastErrorString());
@@ -656,32 +661,45 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, platform_length, rou
 	
 	AILog.Info("[DEBUG] Station was built, now build rail in front of it.");
 	// Build the station parts
-	success = success && AIRail.BuildRail(station_data.statile, station_data.front1, station_data.depfront);
-	success = success && AIRail.BuildRail(station_data.lane2, station_data.front2, station_data.stafront);
-	success = success && AIRail.BuildRail(station_data.front1, station_data.depfront, station_data.deptile);
-	success = success && AIRail.BuildRail(station_data.front2, station_data.stafront, station_data.frontfront);
-	success = success && AIRail.BuildRail(station_data.front1, station_data.depfront, station_data.stafront);
-	success = success && AIRail.BuildRail(station_data.front2, station_data.stafront, station_data.depfront);
-	success = success && AIRail.BuildRail(station_data.depfront, station_data.stafront, station_data.frontfront);
-	success = success && AIRail.BuildRail(station_data.stafront, station_data.depfront, station_data.deptile);
-	success = success && AIRail.BuildRail(station_data.stafront, station_data.frontfront, station_data.morefront);
+	if (lanes == 1) {
+		// 1 lane station
+		success = success && AIRail.BuildRail(station_data.statile, station_data.depfront, station_data.stafront);
+		success = success && AIRail.BuildRail(station_data.statile, station_data.depfront, station_data.deptile);
+		success = success && AIRail.BuildRail(station_data.deptile, station_data.depfront, station_data.stafront);
+		success = success && AIRail.BuildRail(station_data.depfront, station_data.stafront, station_data.frontfront);
+	}
+	else {
+		// 2 lane station
+		success = success && AIRail.BuildRail(station_data.statile, station_data.front1, station_data.depfront);
+		success = success && AIRail.BuildRail(station_data.lane2, station_data.front2, station_data.stafront);
+		success = success && AIRail.BuildRail(station_data.front1, station_data.depfront, station_data.deptile);
+		success = success && AIRail.BuildRail(station_data.front2, station_data.stafront, station_data.frontfront);
+		success = success && AIRail.BuildRail(station_data.front1, station_data.depfront, station_data.stafront);
+		success = success && AIRail.BuildRail(station_data.front2, station_data.stafront, station_data.depfront);
+		success = success && AIRail.BuildRail(station_data.depfront, station_data.stafront, station_data.frontfront);
+		success = success && AIRail.BuildRail(station_data.stafront, station_data.depfront, station_data.deptile);
+		success = success && AIRail.BuildRail(station_data.stafront, station_data.frontfront, station_data.morefront);
+	}
+
 	if (success)
 		AILog.Info("[DEBUG] Build depot.");
 	success = success && AIRail.BuildRailDepot(station_data.deptile, station_data.depfront);
 
-	if (success)
+	if (success && (lanes > 1)) {
 		AILog.Info("[DEBUG] Build signals.");
 
-//	local signaltype = (AIController.GetSetting("signaltype") >= 2) ? AIRail.SIGNALTYPE_PBS : AIRail.SIGNALTYPE_NORMAL_TWOWAY;
-	local signaltype = AIRail.SIGNALTYPE_PBS;
-	success = success && AIRail.BuildSignal(station_data.front1, station_data.statile, signaltype);
-	success = success && AIRail.BuildSignal(station_data.front2, station_data.lane2, signaltype);
+	//	local signaltype = (AIController.GetSetting("signaltype") >= 2) ? AIRail.SIGNALTYPE_PBS : AIRail.SIGNALTYPE_NORMAL_TWOWAY;
+		local signaltype = AIRail.SIGNALTYPE_PBS;
+		success = success && AIRail.BuildSignal(station_data.front1, station_data.statile, signaltype);
+		success = success && AIRail.BuildSignal(station_data.front2, station_data.lane2, signaltype);
+	}
 
-	// Handle it if the construction was interrupted for any reason
 	if (!success) {
-		AILog.Warning("Station construction was interrupted.");
+		// Construction failed some reason
+		AILog.Warning("Station construction failed: " + AIError.GetLastErrorString());
 		WormRailBuilder.RemoveRailLine(station_data.statile, rail_manager);
-		WormRailBuilder.RemoveRailLine(station_data.front2, rail_manager);
+		if (lanes > 1)
+			WormRailBuilder.RemoveRailLine(station_data.front2, rail_manager);
 		return false;
 	}
 	// Register the station
@@ -694,10 +712,11 @@ function WormRailBuilder::BuildDoubleRailStation(is_source, platform_length, rou
 	return true;
 }
 
-function WormRailBuilder::CanBuildDoubleRailStation(tile, direction, platform_length, station_data)
+function WormRailBuilder::CanBuildRailStation(tile, lanes, direction, platform_length, station_data)
 {
 	if (!AITile.IsBuildable(tile)) return false;
 	local vector, rvector = null;
+	
 	// Set the direction vectors
 	switch (direction) {
 		case DIR_NW:
@@ -721,7 +740,8 @@ function WormRailBuilder::CanBuildDoubleRailStation(tile, direction, platform_le
 			station_data.stationdir = AIRail.RAILTRACK_NW_SE;
 			break;
 	}
-	// Set the top and the bottom tile of the station
+
+	// Determine the top and the bottom tile of the station, used for building the station itself
 	if (direction == DIR_NW || direction == DIR_NE) {
 		station_data.stabottom = tile;
 		station_data.statop = tile + (platform_length-1) * vector;
@@ -732,48 +752,78 @@ function WormRailBuilder::CanBuildDoubleRailStation(tile, direction, platform_le
 		station_data.statile = station_data.stabottom;
 	}
 
+	// Now turn on test mode to check if the station can be built.
 	local test = AITestMode();
-	// Set the tiles for the station parts
-	station_data.lane2 = station_data.statile + rvector;
-	station_data.front1 = station_data.statile + vector;
-	station_data.front2 = station_data.lane2 + vector;
-	station_data.depfront = station_data.front1 + vector;
-	station_data.stafront = station_data.front2 + vector;
-	station_data.deptile = station_data.depfront + vector;
 
-	// Try the second place for the depot if the first one is not suitable
-	if (!AIRail.BuildRailDepot(station_data.deptile, station_data.depfront))
-		station_data.deptile = station_data.depfront - rvector;
-	station_data.frontfront = station_data.stafront + vector;
-	station_data.morefront = station_data.frontfront + vector;
+	// Set the tiles for the other station parts
+	/// @todo part of these can be merged, to be done after we know it's working
+	if (lanes > 1) {
+		station_data.lane2 = station_data.statile + rvector;
+		station_data.front1 = station_data.statile + vector;
+		station_data.front2 = station_data.lane2 + vector;
+		station_data.depfront = station_data.front1 + vector;
+		station_data.stafront = station_data.front2 + vector;
+		station_data.deptile = station_data.depfront + vector;
 
-	// Try the second place for the station exit if the first one is not suitable
-	if ((!AITile.IsBuildable(station_data.frontfront)) || (!AITile.IsBuildable(station_data.morefront)) || 
-		(!AIRail.BuildRail(station_data.stafront, station_data.frontfront, station_data.morefront)) ||
-		(AITile.IsCoastTile(station_data.morefront))) {
-		station_data.frontfront = station_data.stafront + rvector;
-		station_data.morefront = station_data.frontfront + rvector;
+		// Try the second option for the depot if the first one is not suitable
+		if (!AIRail.BuildRailDepot(station_data.deptile, station_data.depfront))
+			station_data.deptile = station_data.depfront - rvector;
+
+		station_data.frontfront = station_data.stafront + vector;
+		station_data.morefront = station_data.frontfront + vector;
+
+		// Try the second option for the station exit if the first one is not suitable
+		if ((!AITile.IsBuildable(station_data.frontfront)) || (!AITile.IsBuildable(station_data.morefront)) || 
+			(!AIRail.BuildRail(station_data.stafront, station_data.frontfront, station_data.morefront)) ||
+			(AITile.IsCoastTile(station_data.morefront))) {
+			station_data.frontfront = station_data.stafront + rvector;
+			station_data.morefront = station_data.frontfront + rvector;
+		}
+	}
+	else {
+		station_data.depfront = station_data.statile + vector;
+		station_data.deptile = station_data.depfront + rvector;
+		station_data.stafront = station_data.depfront + vector;
+		station_data.frontfront = station_data.stafront + vector;
 	}
 
 	// Do the tests
-	if (!AIRail.BuildRailStation(station_data.statop, station_data.stationdir, 2, platform_length, AIStation.STATION_NEW)) return false;
-	if (!AITile.IsBuildable(station_data.front1)) return false;
-	if (!AIRail.BuildRail(station_data.statile, station_data.front1, station_data.depfront)) return false;
-	if (!AITile.IsBuildable(station_data.front2)) return false;
-	if (!AIRail.BuildRail(station_data.lane2, station_data.front2, station_data.stafront)) return false;
-	if (!AITile.IsBuildable(station_data.depfront)) return false;
-	if (!AIRail.BuildRail(station_data.front1, station_data.depfront, station_data.deptile)) return false;
-	if (!AITile.IsBuildable(station_data.stafront)) return false;
-	if (!AIRail.BuildRail(station_data.front2, station_data.stafront, station_data.frontfront)) return false;
-	if (!AIRail.BuildRail(station_data.front1, station_data.depfront, station_data.stafront)) return false;
-	if (!AIRail.BuildRail(station_data.front2, station_data.stafront, station_data.depfront)) return false;
-	if (!AIRail.BuildRail(station_data.depfront, station_data.stafront, station_data.frontfront)) return false;
-	if (!AIRail.BuildRail(station_data.stafront, station_data.depfront, station_data.deptile)) return false;
-	if (!AITile.IsBuildable(station_data.frontfront)) return false;
-	if (!AITile.IsBuildable(station_data.morefront)) return false;
-	if (AITile.IsCoastTile(station_data.morefront)) return false;
-	if (!AIRail.BuildRail(station_data.stafront, station_data.frontfront, station_data.morefront)) return false;
+	/// @todo generalize the different lanes so it will be easier to extend.
+	
+	// Station and depot building
+	if (!AIRail.BuildRailStation(station_data.statop, station_data.stationdir, lanes, platform_length,
+		AIStation.STATION_NEW)) return false;
 	if (!AIRail.BuildRailDepot(station_data.deptile, station_data.depfront)) return false;
+	
+	// rail building
+	if (lanes > 1) {
+		if (!AITile.IsBuildable(station_data.front1)) return false;
+		if (!AIRail.BuildRail(station_data.statile, station_data.front1, station_data.depfront)) return false;
+		if (!AITile.IsBuildable(station_data.front2)) return false;
+		if (!AIRail.BuildRail(station_data.lane2, station_data.front2, station_data.stafront)) return false;
+		if (!AITile.IsBuildable(station_data.depfront)) return false;
+		if (!AIRail.BuildRail(station_data.front1, station_data.depfront, station_data.deptile)) return false;
+		if (!AITile.IsBuildable(station_data.stafront)) return false;
+		if (!AIRail.BuildRail(station_data.front2, station_data.stafront, station_data.frontfront)) return false;
+		if (!AIRail.BuildRail(station_data.front1, station_data.depfront, station_data.stafront)) return false;
+		if (!AIRail.BuildRail(station_data.front2, station_data.stafront, station_data.depfront)) return false;
+		if (!AIRail.BuildRail(station_data.depfront, station_data.stafront, station_data.frontfront)) return false;
+		if (!AIRail.BuildRail(station_data.stafront, station_data.depfront, station_data.deptile)) return false;
+		if (!AITile.IsBuildable(station_data.frontfront)) return false;
+		if (!AITile.IsBuildable(station_data.morefront)) return false;
+		if (AITile.IsCoastTile(station_data.morefront)) return false;
+		if (!AIRail.BuildRail(station_data.stafront, station_data.frontfront, station_data.morefront)) return false;
+	}
+	else {
+		if (!AITile.IsBuildable(station_data.depfront)) return false;
+		if (!AIRail.BuildRail(station_data.statile, station_data.depfront, station_data.stafront)) return false;
+		if (!AIRail.BuildRail(station_data.statile, station_data.depfront, station_data.deptile)) return false;
+		if (!AIRail.BuildRail(station_data.deptile, station_data.depfront, station_data.stafront)) return false;
+		if (!AITile.IsBuildable(station_data.stafront)) return false;
+		if (!AIRail.BuildRail(station_data.depfront, station_data.stafront, station_data.frontfront)) return false;
+		if (!AITile.IsBuildable(station_data.frontfront)) return false;
+		if (AITile.IsCoastTile(station_data.frontfront)) return false;
+	}
 
 	// Check if there is a station just at the back of the proposed station
 	if (AIRail.IsRailStationTile(station_data.statile - platform_length * vector)) {
@@ -781,11 +831,15 @@ function WormRailBuilder::CanBuildDoubleRailStation(tile, direction, platform_le
 			AIRail.GetRailStationDirection(station_data.statile - platform_length * vector) == station_data.stationdir)
 			return false;
 	}
-	if (AIRail.IsRailStationTile(station_data.lane2 - platform_length * vector)) {
-		if (AICompany.IsMine(AITile.GetOwner(station_data.lane2 - platform_length * vector)) &&
-			AIRail.GetRailStationDirection(station_data.lane2 - platform_length * vector) == station_data.stationdir)
-			return false;
+	if (lanes > 1) {
+		// Do the same for the second lane
+		if (AIRail.IsRailStationTile(station_data.lane2 - platform_length * vector)) {
+			if (AICompany.IsMine(AITile.GetOwner(station_data.lane2 - platform_length * vector)) &&
+				AIRail.GetRailStationDirection(station_data.lane2 - platform_length * vector) == station_data.stationdir)
+				return false;
+		}
 	}
+	// Testing done: building everything succeeded.
 	test = null;
 	return true;
 }
