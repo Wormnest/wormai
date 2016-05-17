@@ -377,7 +377,7 @@ function WormRailManager::BuildRailway()
 		local start, end = null;
 
 		// Build the source station
-		if (WormRailBuilder.BuildSingleRailStation(true, platform_length, _planner.route, station_data, this)) {
+		if (WormRailBuilder.BuildRailStation(true, trains, platform_length, _planner.route, station_data, this)) {
 			end = [station_data.frontfront, station_data.stafront];
 			buildingstage = BS_BUILDING;
 			AILog.Info("New station successfully built: " + AIStation.GetName(station_data.stasrc));
@@ -386,7 +386,7 @@ function WormRailManager::BuildRailway()
 			return false;
 		}
 		// Build the destination station
-		if (WormRailBuilder.BuildSingleRailStation(false, platform_length, _planner.route, station_data, this)) {
+		if (WormRailBuilder.BuildRailStation(false, trains, platform_length, _planner.route, station_data, this)) {
 			start = [station_data.frontfront, station_data.stafront];
 			AILog.Info("New station successfully built: " + AIStation.GetName(station_data.stadst));
 		} else {
@@ -421,7 +421,7 @@ function WormRailManager::BuildRailway()
 
 
 		// Build the source station
-		if (WormRailBuilder.BuildDoubleRailStation(true, platform_length, _planner.route, station_data, this)) {
+		if (WormRailBuilder.BuildRailStation(true, trains, platform_length, _planner.route, station_data, this)) {
 			end = [station_data.morefront, station_data.frontfront];
 			buildingstage = BS_BUILDING;
 			AILog.Info("New station successfully built: " + AIStation.GetName(station_data.stasrc));
@@ -431,7 +431,7 @@ function WormRailManager::BuildRailway()
 		}
 
 		// Build the destination station
-		if (WormRailBuilder.BuildDoubleRailStation(false, platform_length, _planner.route, station_data, this)) {
+		if (WormRailBuilder.BuildRailStation(false, trains, platform_length, _planner.route, station_data, this)) {
 			start = [station_data.morefront, station_data.frontfront];
 			AILog.Info("New station successfully built: " + AIStation.GetName(station_data.stadst));
 		} else {
