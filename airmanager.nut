@@ -1179,9 +1179,20 @@ function WormAirManager::BuildAirportRoute()
 		}
 
 		/* Get enough money to work with. Since building on rough terrain costs more we add in overhead costs. */
-		if (!WormMoney.GetMoney(AIAirport.GetPrice(airport_type)*2 + WormMoney.InflationCorrection(BUILD_OVERHEAD) +
-			aircraft_price_low, WormMoney.WM_SILENT)) {
+		local airport_money = AIAirport.GetPrice(airport_type)*2 + WormMoney.InflationCorrection(BUILD_OVERHEAD);
+		if (!WormMoney.GetMoney( airport_money + aircraft_price_low, WormMoney.WM_SILENT)) {
 			AILog.Warning("Not making an air route. It would be too expensive.");
+			AILog.Info("[DEBUG] aircraft low price = " + aircraft_price_low +
+				", airport price for 2 = " + (AIAirport.GetPrice(airport_type)*2));
+			// Can't get enough money
+			return ERROR_NOT_ENOUGH_MONEY;
+		}
+//		else if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < (airport_money +
+//			WormMoney.InflationCorrection(AIRCRAFT_HIGH_PRICE))) {
+		else if (WormMoney.InflationCorrection(AIRCRAFT_HIGH_PRICE) < aircraft_price_low) {
+			AILog.Warning("Not making an air route. The cheapest airplane is too expensive.");
+			AILog.Info("[DEBUG] aircraft low price = " + aircraft_price_low +
+				", expense limit = " + WormMoney.InflationCorrection(AIRCRAFT_HIGH_PRICE));
 			// Can't get enough money
 			return ERROR_NOT_ENOUGH_MONEY;
 		}
@@ -1366,10 +1377,12 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 	*/
 	local airport_type = AIAirport.GetAirportType(order_start_tile);
 	local airport_type2 = AIAirport.GetAirportType(order_end_tile);
+	local small_airport = false;
 	if (airport_type == AIAirport.AT_SMALL || airport_type == AIAirport.AT_COMMUTER ||
 		airport_type2 == AIAirport.AT_SMALL || airport_type2 == AIAirport.AT_COMMUTER) {
 		AILog.Info("Removing big planes from selection since we are building for a small airport.");
 		engine_list.RemoveValue(AIAirport.PT_BIG_PLANE);
+		small_airport = true;
 	}
 	
 	engine_list.Valuate(AIEngine.GetCargoType);
@@ -1399,9 +1412,27 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 		return ERROR_BUILD_AIRCRAFT_INVALID;
 	}
 
+	local aircraft_price_low = WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE);
+	if (small_airport) {
+		if (low_price_small > 0)
+			aircraft_price_low = low_price_small;
+	}
+	else {
+		if (low_price_big > 0)
+			aircraft_price_low = low_price_big;
+	}
+
+	local low_cut = WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE_CUT);
+	local medium_cut = WormMoney.InflationCorrection(AIRCRAFT_MEDIUM_PRICE_CUT);
+	if (aircraft_price_low > 0) {
+		if (aircraft_price_low > low_cut)
+			low_cut = 0;
+		if (aircraft_price_low > medium_cut)
+			medium_cut = 0;
+	}
 	engine_list.Valuate(AIEngine.GetPrice);
-	engine_list.KeepBelowValue(balance < WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE_CUT) ?
-		WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE) : (balance < WormMoney.InflationCorrection(AIRCRAFT_MEDIUM_PRICE_CUT) ?
+	engine_list.KeepBelowValue(balance < low_cut ?
+		WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE) : (balance < medium_cut ?
 		WormMoney.InflationCorrection(AIRCRAFT_MEDIUM_PRICE) : WormMoney.InflationCorrection(AIRCRAFT_HIGH_PRICE)));
 
 	/* Check if there are any airplanes left. */
@@ -1409,7 +1440,13 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 		// Either we don't have enough money to buy an airplane, or there are only very expensive airlanes
 		// above our set maximum price.
 		/// @todo Maybe instead of a fixed max we need to find the current max price for an airplane?
-		AILog.Warning("We either don't have enough money for an airplane or the airplanes are too expensive.");
+		if (balance < low_cut /*WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE)*/)
+			AILog.Warning("We don't have enough money for an airplane.");
+		else if (balance < aircraft_price_low)
+			AILog.Warning("The available airplanes are too expensive.");
+		AILog.Info("[DEBUG] aircraft low price = " + aircraft_price_low +
+			", current money = " + balance + ", low cut = " + low_cut);
+
 		return ERROR_NOT_ENOUGH_MONEY;
 	}
 
