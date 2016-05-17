@@ -833,7 +833,7 @@ function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursion
 				if (AITunnel.GetOtherTunnelEnd(prev) == path.GetTile()) {
 					// If we are building a tunnel
 					if (!AITunnel.BuildTunnel(AIVehicle.VT_RAIL, prev)) {
-						AILog.Info("An error occured while I was building the rail: " + AIError.GetLastErrorString());
+						AILog.Warning("An error occured while I was building the rail: " + AIError.GetLastErrorString());
 						if (AIError.GetLastError() == AIError.ERR_NOT_ENOUGH_CASH) {
 							AILog.Warning("That tunnel would be too expensive. Construction aborted.");
 							return false;
@@ -847,7 +847,7 @@ function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursion
 					local bridgelist = AIBridgeList_Length(AIMap.DistanceManhattan(path.GetTile(), prev) + 1);
 					bridgelist.Valuate(AIBridge.GetMaxSpeed);
 					if (!AIBridge.BuildBridge(AIVehicle.VT_RAIL, bridgelist.Begin(), prev, path.GetTile())) {
-						AILog.Info("An error occured while I was building the rail: " + AIError.GetLastErrorString());
+						AILog.Warning("An error occured while I was building the rail: " + AIError.GetLastErrorString());
 						if (AIError.GetLastError() == AIError.ERR_NOT_ENOUGH_CASH) {
 							AILog.Warning("That bridge would be too expensive. Construction aborted.");
 							return false;
@@ -870,7 +870,8 @@ function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursion
 			} else {
 				// If we are building a piece of rail track
 				if (!AIRail.BuildRail(prevprev, prev, path.GetTile())) {
-					AILog.Info("An error occured while I was building the rail: " + AIError.GetLastErrorString());
+					AILog.Warning("An error occured while I was building the rail: " + AIError.GetLastErrorString());
+					// One of the possibilities I've seen that we maybe could handle differently: ERR_VEHICLE_IN_THE_WAY
 					if (!WormRailBuilder.RetryRail(prevprev, pp1, pp2, pp3, head1, railbridges, recursiondepth)) return false;
 					else return true;
 				}
