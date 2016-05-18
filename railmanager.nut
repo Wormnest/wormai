@@ -275,6 +275,15 @@ function WormRailManager::SetRailType()
 
 function WormRailManager::BuildRailway()
 {
+	/* Don't try to build a new rail line if we have reached the train limit. */
+	local trains = AIVehicleList();
+	trains.Valuate(AIVehicle.GetVehicleType);
+	trains.KeepValue(AIVehicle.VT_RAIL);
+	if (trains.Count() >= AIGameSettings.GetValue("vehicle.max_trains")) {
+		AILog.Warning("Not building a new rail route. We already have the maximum number of trains.");
+		return false;
+	}
+
 	/* Don't try to build a new railway if there is an unfinished route without trains. */
 	if (route_without_trains > -1) {
 		local result = SelectAndAddTrain(last_route);
