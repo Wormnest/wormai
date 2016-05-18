@@ -561,6 +561,8 @@ function WormRailManager::BuildRailway()
 			route_without_trains = group;
 			return true;
 		}
+		else if (build_result != ALL_OK)
+			return false;
 	}
 	route_without_trains = -1;
 	AILog.Info("New route done!");
