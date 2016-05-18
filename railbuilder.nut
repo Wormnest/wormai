@@ -721,7 +721,10 @@ function WormRailBuilder::CanBuildRailStation(tile, lanes, direction, platform_l
 	switch (direction) {
 		case DIR_NW:
 			vector = AIMap.GetTileIndex(0, -1);
-			rvector = AIMap.GetTileIndex(1, 0);		/// @todo Why is this different in CanBuildSingleRailStation?
+			if (lanes > 1)
+				rvector = AIMap.GetTileIndex(1, 0);		/// @todo Why is this different in CanBuildSingleRailStation?
+			else
+				rvector = AIMap.GetTileIndex(-1, 0);
 			station_data.stationdir = AIRail.RAILTRACK_NW_SE;
 			break;
 		case DIR_NE:
@@ -731,7 +734,10 @@ function WormRailBuilder::CanBuildRailStation(tile, lanes, direction, platform_l
 			break;
 		case DIR_SW:
 			vector = AIMap.GetTileIndex(1, 0);
-			rvector = AIMap.GetTileIndex(0, 1);		/// @todo Why is this different in CanBuildSingleRailStation?
+			if (lanes > 1)
+				rvector = AIMap.GetTileIndex(0, 1);		/// @todo Why is this different in CanBuildSingleRailStation?
+			else
+				rvector = AIMap.GetTileIndex(0, -1);
 			station_data.stationdir = AIRail.RAILTRACK_NE_SW;
 			break;
 		case DIR_SE:
@@ -1406,7 +1412,15 @@ function WormRailBuilder::AreRailTilesConnected(tilefrom, tileto)
 	local dirfrom = WormTiles.GetDirection(tilefrom, tileto);
 	local dirto = null;
 	// Some magic bitmasks
-	local acceptable = [22, 42, 37, 25];
+	//RAILTRACK_NE_SW 	 1 Track along the x-axis (north-east to south-west).
+	//RAILTRACK_NW_SE 	 2 Track along the y-axis (north-west to south-east).
+	//RAILTRACK_NW_NE 	 4 Track in the upper corner of the tile (north).
+	//RAILTRACK_SW_SE 	 8 Track in the lower corner of the tile (south).
+	//RAILTRACK_NW_SW 	16 Track in the left corner of the tile (west).
+	//RAILTRACK_NE_SE 	32 Track in the right corner of the tile (east). 
+	local acceptable = [22, 42, 37, 25]; // ORIGINAL
+	// I guess we will allow depots to be built on all sides in the future for more flexibility.
+//	local acceptable = [62, 62, 61, 61]; // we were not deleting some depots, probably because the chagne in signs (relative to SimpleAI) when building depots for single lines
 	// Determine the direction pointing backwards
 	if (dirfrom == 0 || dirfrom == 2) dirto = dirfrom + 1;
 	else dirto = dirfrom - 1;
