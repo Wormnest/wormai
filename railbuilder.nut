@@ -861,12 +861,26 @@ function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursion
 	local pathfinder = WormRailPathFinder();
 	// Set some pathfinder penalties
 	pathfinder._cost_level_crossing = 900;
-	pathfinder._cost_slope = 200;
+	if (AIGameSettings.GetValue("train_acceleration_model ") == 0) {
+		// Original
+		pathfinder._cost_slope = 500;
+		pathfinder._cost_turn = 50;
+	}
+	else {
+		// Realistic
+		// Slope steepness percentage: values 0-10 allowed.
+		pathfinder._cost_slope = 100 + AIGameSettings.GetValue("train_slope_steepness ") * 50;
+		pathfinder._cost_turn = 150;
+	}
 	pathfinder._cost_coast = 100;
-	pathfinder._cost_bridge_per_tile = 75;
-	pathfinder._cost_tunnel_per_tile = 50;
+	
+	/// @todo Can we determine bridge/tunnel costs in advance here (e.g. expensive bridge newgrf)
+	/// Maybe also depend on railtype?
+	pathfinder._cost_bridge_per_tile = 100; //75;
+	pathfinder._cost_tunnel_per_tile = 70;  //50;
 	pathfinder._max_bridge_length = 20;
 	pathfinder._max_tunnel_length = 20;
+	
 	pathfinder.InitializePath([head1], [head2]);
 	AILog.Info("Pathfinding...");
 	local counter = 0;
