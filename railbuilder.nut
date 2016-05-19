@@ -1103,10 +1103,11 @@ function WormRailBuilder::BuildPassingLaneSection(near_source, train_length, sta
 	
 	// First lane
 	tile = centre - half_length * vector;
-	end[0] = [tile - vector, tile];
-	
+	local start_tile = tile - vector; // The tile before the actual passing lane starts
+	end[0] = [start_tile - vector, start_tile];
+
 	// Build the straight part in one go
-	success = success && AIRail.BuildRail(tile - vector, tile, tile + lane_vector);
+	success = success && AIRail.BuildRail(start_tile - vector, start_tile, tile + lane_vector);
 	tile += lane_vector; // Move to tile at other end of straight part
 	// Build connection to other lane
 	success = success && AIRail.BuildRail(tile - vector, tile, tile + rvector);
@@ -1114,9 +1115,11 @@ function WormRailBuilder::BuildPassingLaneSection(near_source, train_length, sta
 	
 	// Second lane
 	tile = centre + rvector + (half_length + odd_length) * vector;
-	end[1] = [tile + vector, tile];
+	start_tile = tile + vector; // The tile before the actual passing lane starts
+	end[1] = [start_tile + vector, start_tile];
+
 	// Build the straight part in one go
-	success = success && AIRail.BuildRail(tile + vector, tile, tile - lane_vector);
+	success = success && AIRail.BuildRail(start_tile + vector, start_tile, tile - lane_vector);
 	tile -= lane_vector; // Move to tile at other end of straight part
 	// Build connection to other lane
 	success = success && AIRail.BuildRail(tile + vector, tile, tile - rvector);
@@ -1168,22 +1171,35 @@ function WormRailBuilder::CanBuildPassingLaneSection(centre, direction, reverse,
 		if (!AITile.IsBuildableRectangle(topcorner, 2, lane_length+1)) return false;
 	}
 	if (reverse) rvector = -rvector;
-	// The length of the straight part
+	// The length of the lane part
 	local lane_vector = lane_length*vector;
+	
+	/**
+	 * Design of a passing lane
+	 *       - - - - - -
+	 *     /         /
+	 *   - - - - - -
+	 * This means that we add one piece of straight track before and after the passing lane.
+	 * This is done to make sure we don't get any 90 degree connections.
+	 */
 	
 	// Test if we can build it...
 	local test = AITestMode();
 	
 	// First lane
 	local tile = centre - half_length*vector;
+	local start_tile = tile - vector; // The tile before the actual passing lane starts
 	if (!AITile.IsBuildable(tile)) return false;
-	if (!AITile.IsBuildable(tile - vector)) return false;
+	if (!AITile.IsBuildable(start_tile)) return false; // == tile - vector
+	if (!AITile.IsBuildable(start_tile - vector)) return false;
 	// Do not build on the coast
-	if (AITile.IsCoastTile(tile - vector)) return false;
+	if (AITile.IsCoastTile(start_tile - vector)) return false;
 	// Since the other lane needs to connect here this tile has to be flat
 	if (!(AITile.GetSlope(tile) == AITile.SLOPE_FLAT)) return false;
 	// Build the straight part in one go
-	if (!AIRail.BuildRail(tile - vector, tile, tile + lane_vector)) return false;
+	// Note we use tile + lane_vector instead of start_tile + lane_vector + vector
+	// This gives the same result but is easier to compute without adding an extra variable
+	if (!AIRail.BuildRail(start_tile - vector, start_tile, tile + lane_vector)) return false;
 	tile += lane_vector; // Move to tile at other end of straight part
 	// The connection to the other lane on one side
 	if (!AIRail.BuildRail(tile - vector, tile, tile + rvector)) return false;
@@ -1191,14 +1207,16 @@ function WormRailBuilder::CanBuildPassingLaneSection(centre, direction, reverse,
 
 	// Second lane
 	tile = centre + rvector + (half_length + odd_length) * vector;
+	start_tile = tile + vector; // The tile before the actual passing lane starts
 	if (!AITile.IsBuildable(tile)) return false;
-	if (!AITile.IsBuildable(tile + vector)) return false;
+	if (!AITile.IsBuildable(start_tile)) return false; // == tile + vector
+	if (!AITile.IsBuildable(start_tile + vector)) return false;
 	// Do not build on the coast
-	if (AITile.IsCoastTile(tile + vector)) return false;
+	if (AITile.IsCoastTile(start_tile + vector)) return false;
 	// Since the other lane needs to connect here this tile has to be flat
 	if (!(AITile.GetSlope(tile) == AITile.SLOPE_FLAT)) return false;
 	// Build the the second straight part in one go
-	if (!AIRail.BuildRail(tile + vector, tile, tile - lane_vector)) return false;
+	if (!AIRail.BuildRail(start_tile + vector, start_tile, tile - lane_vector)) return false;
 	tile -= lane_vector; // Move to tile at other end of straight part
 	// The connection on the other side
 	if (!AIRail.BuildRail(tile + vector, tile, tile - rvector)) return false;
