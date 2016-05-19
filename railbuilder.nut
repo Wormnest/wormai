@@ -41,7 +41,7 @@ class WormStation
 	constructor() {}
 }
 
-class WormRailPathFinder extends RailPathFinder
+class WormRailPathFinder extends Rail
 {
 		_cost_level_crossing = null;
 }
@@ -51,7 +51,7 @@ class WormRailPathFinder extends RailPathFinder
  */
 function WormRailPathFinder::_Cost(path, new_tile, new_direction, self)
 {
-	local cost = ::RailPathFinder._Cost(path, new_tile, new_direction, self);
+	local cost = ::Rail._Cost(path, new_tile, new_direction, self);
 	if (AITile.HasTransportType(new_tile, AITile.TRANSPORT_ROAD)) cost += self._cost_level_crossing;
 	return cost;
 }
