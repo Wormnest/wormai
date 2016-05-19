@@ -45,8 +45,6 @@ RoadBuilder <- SuperLib.RoadBuilder;
 
 // Import List library
 import("AILib.List", "ExtendedList", AILIBLIST_VERSION);
-// Import Rail Pathfinder
-import("pathfinder.rail", "RailPathFinder", 1); 
 
 // Get our required classes.
 require("utils.nut");
@@ -55,6 +53,7 @@ require("strings.nut");
 require("math.nut");
 require("tiles.nut");
 require("valuators.nut");
+require("rail_pathfinder.nut");
 require("airmanager.nut");
 require("railmanager.nut");
 require("railbuilder.nut");
