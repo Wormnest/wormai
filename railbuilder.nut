@@ -1056,7 +1056,7 @@ function WormRailBuilder::BuildPassingLaneSection(near_source, train_length, sta
 	// Get a tile list around the proposed place
 	tilelist = AITileList();
 	centre = AIMap.GetTileIndex(ps_x, ps_y);
-	local rect_half_size = 10;
+	local rect_half_size = 14;
 	if (train_length > 4)
 		rect_half_size += train_length-4;
 	tilelist.AddRectangle(centre - AIMap.GetTileIndex(rect_half_size, rect_half_size),
