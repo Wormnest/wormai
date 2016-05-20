@@ -43,18 +43,19 @@ class WormStation
 
 class WormRailPathFinder extends Rail
 {
-		_cost_level_crossing = null;
+//		_cost_level_crossing = null;
 }
 
 /**
  * Overrides the rail pathfinder's _Cost function to add a penalty for level crossings.
- */
+ * DISABLED. Now part of our pathfinder code.
+ *
 function WormRailPathFinder::_Cost(path, new_tile, new_direction, self)
 {
 	local cost = ::Rail._Cost(path, new_tile, new_direction, self);
 	if (AITile.HasTransportType(new_tile, AITile.TRANSPORT_ROAD)) cost += self._cost_level_crossing;
 	return cost;
-}
+} */
 
 /**
  * Define the WormRailBuilder class which handles trains.
@@ -869,10 +870,15 @@ function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursion
 	else {
 		// Realistic
 		// Slope steepness percentage: values 0-10 allowed.
-		pathfinder._cost_slope = 100 + AIGameSettings.GetValue("train_slope_steepness ") * 50;
+		pathfinder._cost_slope = 100 + AIGameSettings.GetValue("train_slope_steepness") * 50;
 		pathfinder._cost_turn = 150;
 	}
 	pathfinder._cost_coast = 100;
+	
+	if (AIGameSettings.GetValue("forbid_90_deg"))
+		pathfinder._cost_90_turn = pathfinder._max_cost;
+	else
+		pathfinder._cost_90_turn = 250;
 	
 	/// @todo Can we determine bridge/tunnel costs in advance here (e.g. expensive bridge newgrf)
 	/// Maybe also depend on railtype?
@@ -963,6 +969,7 @@ function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursion
 				if (!AIRail.BuildRail(prevprev, prev, path.GetTile())) {
 					AILog.Warning("An error occured while I was building the rail: " + AIError.GetLastErrorString());
 					// One of the possibilities I've seen that we maybe could handle differently: ERR_VEHICLE_IN_THE_WAY
+					// Also seen: ERR_OWNED_BY_ANOTHER_COMPANY
 					if (!WormRailBuilder.RetryRail(prevprev, pp1, pp2, pp3, head1, railbridges, recursiondepth)) return false;
 					else return true;
 				}
