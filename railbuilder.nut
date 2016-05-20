@@ -876,11 +876,27 @@ function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursion
 	
 	/// @todo Can we determine bridge/tunnel costs in advance here (e.g. expensive bridge newgrf)
 	/// Maybe also depend on railtype?
-	pathfinder._cost_bridge_per_tile = 100; //75;
-	pathfinder._cost_tunnel_per_tile = 70;  //50;
-	pathfinder._max_bridge_length = 20;
-	pathfinder._max_tunnel_length = 20;
-	
+	pathfinder._cost_bridge_per_tile = 150; //75;
+	pathfinder._cost_tunnel_per_tile = 75;  //50;
+	// Limit bridge and tunnel length depending on how much money we have
+	local balance = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
+	if (balance < WormMoney.InflationCorrection(100000)) {
+		pathfinder._max_bridge_length = 5;
+		pathfinder._max_tunnel_length = 5;
+	}
+	else if (balance < WormMoney.InflationCorrection(500000)) {
+		pathfinder._max_bridge_length = 10;
+		pathfinder._max_tunnel_length = 10;
+	}
+	else if (balance < WormMoney.InflationCorrection(1000000)) {
+		pathfinder._max_bridge_length = 15;
+		pathfinder._max_tunnel_length = 15;
+	}
+	else {
+		pathfinder._max_bridge_length = 20;
+		pathfinder._max_tunnel_length = 20;
+	}
+
 	pathfinder.InitializePath([head1], [head2]);
 	AILog.Info("Pathfinding...");
 	local counter = 0;
@@ -918,6 +934,7 @@ function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursion
 					}
 				} else {
 					// If we are building a bridge
+					/// @todo  Maybe also valuate on price of the bridge and depend on the max speed we need maybe + a little extra for when we upgrade trains...
 					local bridgelist = AIBridgeList_Length(AIMap.DistanceManhattan(path.GetTile(), prev) + 1);
 					bridgelist.Valuate(AIBridge.GetMaxSpeed);
 					if (!AIBridge.BuildBridge(AIVehicle.VT_RAIL, bridgelist.Begin(), prev, path.GetTile())) {
