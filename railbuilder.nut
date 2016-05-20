@@ -1278,7 +1278,7 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 		mailwagontype = WormRailBuilder.ChooseWagon(mailcargo, engineblacklist);
 		if (mailwagontype == null) mailwagontype = wagon;
 		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < AIEngine.GetPrice(mailwagontype)) {
-			WormMoney.GetMoney(AIEngine.GetPrice(mailwagontype));
+			WormMoney.GetMoney(AIEngine.GetPrice(mailwagontype), WormMoney.WM_SILENT);
 		}
 		mailwagon = AIVehicle.BuildVehicle(station_data.homedepot, mailwagontype);
 		if (mailwagon != null) {
@@ -1318,7 +1318,7 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 	while (fixed_length + cur_wagons * wagon_length <= wanted_length16) {
 		//AILog.Warning("[DEBUG] Current length: " + (AIVehicle.GetLength(trainengine) + (cur_wagons + 1) * wagon_length + mailwagon_length));
 		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < wagon_price) {
-			WormMoney.GetMoney(wagon_price);
+			WormMoney.GetMoney(wagon_price, WormMoney.WM_SILENT);
 		}
 		if (!AIVehicle.BuildVehicle(station_data.homedepot, wagon)) break;
 		cur_wagons++;
@@ -1366,7 +1366,7 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 	// Build the second train if needed
 	if (number > 1) {
 		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < price) {
-			WormMoney.GetMoney(price);
+			WormMoney.GetMoney(price, WormMoney.WM_SILENT);
 		}
 		local nexttrain = AIVehicle.CloneVehicle(station_data.homedepot, trainengine, true);
 		AIVehicle.StartStopVehicle(nexttrain);
