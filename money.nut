@@ -58,6 +58,18 @@ class WormMoney
 	 * @note Taken from SimpleAI.
 	 */
 	function GetMaxBankBalance();
+
+	/**
+	 * Wait a certain maximum amount of time until we have a required amount of money.
+	 * @param amount_required The amount of money we need.
+	 * @param sleep_period The amount of time in ms to sleep after which we check the money again.
+	 * @param iterations The maximum amount of times we will go to sleep.
+	 * @param update_log_period How often we will show a log message "Waiting...", default every 500 ms. Should be a multiple of sleep_period.
+	 * @param silent Boolean: true means don't show any log messages, false (default) show log messages that we are waiting.
+	 * @return Boolean: true means we got the required money, false we still don't have enough money.
+	 * @pre  sleep_period > 0; update_log_period > sleep_period; iterations > 0.
+	 */
+	function WaitForMoney(amount_required, sleep_period, iterations, update_log_period=500, silent=false);
 	/// @}
 
 }
@@ -109,4 +121,20 @@ function WormMoney::GetMaxBankBalance()
 	local maxbalance = balance + AICompany.GetMaxLoanAmount() - AICompany.GetLoanAmount();
 	// overflow protection by krinn
 	return (maxbalance >= balance) ? maxbalance : balance;
+}
+
+function WormMoney::WaitForMoney(amount_required, sleep_period, iterations, update_log_period=500, silent=false)
+{
+	local counter = 0;
+	local update_log = update_log_period / sleep_period;
+	while (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < amount_required) {
+		if (counter == iterations) {
+			return false;
+		}
+		if (!silent && (counter % update_log == 0))
+			AILog.Info("Waiting...");
+		counter++;
+		AIController.Sleep(sleep_period);
+	}
+	return true;
 }
