@@ -1458,6 +1458,7 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 	//engine_list.Valuate(AIEngine.GetCapacity);
 	//engine_list.KeepTop(1);
 	engine_list.Valuate(this.GetCostFactor, this.engine_usefulness);
+	engine_list.RemoveValue(0); // A value of 0 means the engine was not present in list of useful engines
 	engine_list.KeepBottom(1);
 
 	/* Make sure that there was a suitable engine found. */
@@ -2244,12 +2245,18 @@ function WormAirManager::EvaluateAircraft(clear_warning_shown_flag) {
 			factor_list.AddItem(engine,cost_per_pass);
 		}
 	}
+	AILog.Info("Evaluated engines count: " + factor_list.Count());
 	// From experience we know that some small early airplanes are hardly usefull. It's better not
 	// to start with airplanes if there are not better ones available unless we only have planes to play with.
 	factor_list.KeepBelowValue(max_costfactor);
 	this.engine_usefulness.Clear();
 	this.engine_usefulness.AddList(factor_list);
-	AILog.Info("Evaluated engines count: " + this.engine_usefulness.Count());
+	AILog.Info("Useful engines count: " + this.engine_usefulness.Count());
+	if (AIController.GetSetting("debug_show_lists") == 1) {
+		foreach(engine, value in engine_usefulness) {
+			AILog.Info("Engine: " + AIEngine.GetName(engine) + ", pass cost factor: " + value);
+		}
+	}
 	if (!best_engine) {
 		AILog.Warning("Best overall engine: <no engine available>");
 	}
@@ -2341,13 +2348,12 @@ function WormAirManager::BuildStatues()
 function WormAirManager::GetCostFactor(engine, costfactor_list) {
 	// For some reason we can't access this.engine_usefulness from inside the Valuate function,
 	// thus we add that as a parameter
-	//AILog.Info("usefulness list count: " + costfactor_list.Count());
 	if (costfactor_list == null) {
-		return 0;
+		return max_costfactor-1;
 	}
 	else {
+		// Note: this will return 0 for engines that are not found in costfactor_list
 		return costfactor_list.GetValue(engine);
-		//return AIEngine.GetCapacity(engine);
 	}
 }
 
