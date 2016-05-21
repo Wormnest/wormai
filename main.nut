@@ -340,6 +340,13 @@ function WormAI::Start()
 		/* Since these values can be changed in game we need to re-check them regularly. */
 		this.use_air = this.CanBuildAircraft();
 		this.use_trains = this.CanBuildTrains();
+		if (!this.use_trains) {
+			if (this.use_air) {
+				this.air_manager.max_costfactor = WormAirManager.DEFAULT_ANY_COSTFACTOR;
+			}
+		}
+		else
+			this.air_manager.max_costfactor = WormAirManager.DEFAULT_MAX_COSTFACTOR;
 		
 		/* Task scheduling. */
 		new_year = AIDate.GetYear(AIDate.GetCurrentDate());
