@@ -48,6 +48,9 @@ const VEH_STATION_REMOVAL	= 2;				///< Vehicle is sold because one of its statio
  */
 class WormAirManager
 {
+	static DEFAULT_MAX_COSTFACTOR = 350;		///< We don't want airplanes that have a higher costfactor than this unless we have nothing but planes to play with.
+	static DEFAULT_ANY_COSTFACTOR = 10000;		///< Used in case we want to accept any costfactor.
+
 	/* Variables used by WormAirManager */
 	/* 1. Variables that will be saved in a savegame. */
 	towns_used = null;					///< town id, airport station tile
@@ -67,11 +70,13 @@ class WormAirManager
 	towns_blacklist = null;				///< List of towns where we already tried to build an airport.
 	low_price_small = 0;				///< Lowest price of a small airplane.
 	low_price_big   = 0;				///< Lowest price of a big airplane.
+	max_costfactor = 0;
 
 
 	/** Create an instance of WormAirManager and initialize our variables. */
 	constructor()
 	{
+		this.max_costfactor = this.DEFAULT_MAX_COSTFACTOR;
 		this.distance_of_route = {};
 		this.vehicle_to_depot = {};
 		this.towns_used = AIList();
@@ -2239,11 +2244,17 @@ function WormAirManager::EvaluateAircraft(clear_warning_shown_flag) {
 			factor_list.AddItem(engine,cost_per_pass);
 		}
 	}
+	// From experience we know that some small early airplanes are hardly usefull. It's better not
+	// to start with airplanes if there are not better ones available unless we only have planes to play with.
+	factor_list.KeepBelowValue(max_costfactor);
 	this.engine_usefulness.Clear();
 	this.engine_usefulness.AddList(factor_list);
 	AILog.Info("Evaluated engines count: " + this.engine_usefulness.Count());
 	if (!best_engine) {
 		AILog.Warning("Best overall engine: <no engine available>");
+	}
+	else if (this.engine_usefulness.Count() == 0) {
+		AILog.Warning("Best overall engine: <no engine with a reasonable cost factor available>");
 	}
 	else {
 		AILog.Warning("Best overall engine: " + AIEngine.GetName(best_engine) + ", cost factor: " + best_factor);
