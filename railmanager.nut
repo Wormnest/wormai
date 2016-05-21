@@ -1289,7 +1289,7 @@ function WormRailManager::LoadData(table, worm_save_version)
 	if ("buildingstage" in table) buildingstage = table.buildingstage;
 	else buildingstage = BS_NOTHING;
 	if (buildingstage != BS_NOTHING) {
-		toremove = table.toremove;
+		removelist = table.toremove;
 	}
 
 }
