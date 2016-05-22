@@ -1021,7 +1021,6 @@ function WormRailManager::ReplaceVehicle(vehicle)
 	// Although we currently only use this for rail we leave it in, we might need it later...
 	switch (vehtype) {
 		case AIVehicle.VT_RAIL:
-			AILog.Warning("[DEBUG] Replacing " + AIVehicle.GetName(vehicle));
 			AIRail.SetCurrentRailType(route.railtype);
 			wagon = WormRailBuilder.ChooseWagon(route.crg, engine_blacklist);
 			if (wagon != null) {
@@ -1055,11 +1054,19 @@ function WormRailManager::ReplaceVehicle(vehicle)
 		if (engine != null && wagon != null && (WormMoney.GetMaxBankBalance() > AIEngine.GetPrice(engine) +
 			5 * AIEngine.GetPrice(wagon))) {
 			// Sell the train
+			AILog.Warning("Replacing " + AIVehicle.GetName(vehicle) + ", engine: " + AIEngine.GetName(AIVehicle.GetEngineType(vehicle)));
 			AIVehicle.SellWagonChain(vehicle, 0);
-			WormRailManager.AddVehicle(route, ordervehicle, engine, wagon);
+			if (WormRailManager.AddVehicle(route, ordervehicle, engine, wagon))
+				AILog.Info("Replaced with engine: " + AIEngine.GetName(engine));
+			else
+				AILog.Warning("We failed to make a replacement.");
 		} else {
 			// Restart the train if we cannot afford to replace it
 			AIVehicle.StartStopVehicle(vehicle);
+			local reason = "we didn't find a suitable engine or wagon.";
+			if (engine != null && wagon != null)
+				reason = "we don't have enough money.";
+			AILog.Warning("We can't replace " + AIVehicle.GetName(vehicle) + " because " + reason);
 		}
 		// Restore the previous railtype
 		AIRail.SetCurrentRailType(railtype);
