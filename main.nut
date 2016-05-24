@@ -429,17 +429,25 @@ function WormAI::Start()
 		/* Once in a while try to build something */
 		if (this.use_air) {
 			if ((cur_ticker - old_ticker > build_delay_factor * this.delay_build_airport_route) || old_ticker == 0) {
-				local ret = this.air_manager.BuildAirportRoute();
-				if ((ret == ERROR_FIND_AIRPORT1) || (ret == ERROR_MAX_AIRPORTS) ||
-					(ret == ERROR_MAX_AIRCRAFT) && old_ticker != 0) {
-					/* No more routes found or we have the max allowed aircraft, delay even more before trying to find an other */
-					build_delay_factor = 10;
+				if (WormMoney.HasMoney(WormMoney.InflationCorrection(70000))) {
+					/* Since settings can be changed during a game we need to recompute them every time. */
+					this.air_manager.ComputeDistances();
+					local ret = this.air_manager.BuildAirportRoute();
+					if ((ret == ERROR_FIND_AIRPORT1) || (ret == ERROR_MAX_AIRPORTS) ||
+						(ret == ERROR_MAX_AIRCRAFT) && old_ticker != 0) {
+						/* No more routes found or we have the max allowed aircraft, delay even more before trying to find an other */
+						if (build_delay_factor < 10)
+							build_delay_factor++;
+					}
+					else {
+						/* Set default delay back in case we had it increased, see above. */
+						build_delay_factor = 1;
+					}
+					old_ticker = cur_ticker;
 				}
 				else {
-					/* Set default delay back in case we had it increased, see above. */
-					build_delay_factor = 1;
+					AILog.Info("Waiting for more money to build an air route...");
 				}
-				old_ticker = cur_ticker;
 			}
 
 			/* Check for events once in a while */
