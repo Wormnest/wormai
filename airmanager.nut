@@ -1000,9 +1000,6 @@ function WormAirManager::SendAllVehiclesOfStationToDepot(station_id, sell_reason
  */
 function WormAirManager::IsWithinNoiseLimit(tile, old_airport_type, new_airport_type)
 {
-	/** @todo Maybe we should account for wanting to remove an old smaller airport first
-	  * which presumably would decrease the noise level.
-	  */
 	if (!AIGameSettings.GetValue("economy.station_noise_level")) return true;
 	local allowed = AITown.GetAllowedNoise(AIAirport.GetNearestTown(tile, old_airport_type));
 	local increase = AIAirport.GetNoiseLevelIncrease(tile, new_airport_type) -
@@ -1192,7 +1189,6 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 	/// @todo CLOSED airports should not be checked once a month but as often as possible
 	/// because we don't want them to be closed for a long time, loosing profits.
 	for (local t = towns_used.Begin(); !towns_used.IsEnd(); t = towns_used.Next()) {
-		/// @todo Maybe order by highest amount of waiting cargo to choose the station to be converted first.
 		// AILog.Info("Upgrade check for: " + AITown.GetName(t));
 		// Start looking at stations in towns that are the last/second order.
 		local station_tile = towns_used.GetValue(t);
@@ -1245,12 +1241,11 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 			local upgrade_result = Result.FAIL;
 			/* Try to upgrade airport. */
 			if ((optimal_airport == AIAirport.AT_METROPOLITAN) && (optimal_airport == AIAirport.AT_METROPOLITAN)) {
-				/// @todo Since METROPOLITAN is the same size as LARGE we should try first to rebuild it in the same spot!
+				/// Since METROPOLITAN is the same size as LARGE we will try to rebuild it in the same spot!
 				upgrade_result = UpgradeLargeToMetropolitan(nearest_town, station_id, station_tile);
 			}
 			else {
 				local upgrade_list = [optimal_airport];
-				/// @todo If there are airplanes on a closed airport we should send them on their way to empty the airport faster!
 				/// @todo town t may not be the nearest town! Instead of t use nearest town.
 				upgrade_result = Airport.UpgradeAirportInTown(t, station_id, upgrade_list, this.passenger_cargo_id, 
 				  this.passenger_cargo_id);
@@ -1718,8 +1713,6 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 		return ERROR_NOT_ENOUGH_MONEY;
 	}
 
-	//engine_list.Valuate(AIEngine.GetCapacity);
-	//engine_list.KeepTop(1);
 	engine_list.Valuate(this.GetCostFactor, this.engine_usefulness);
 	engine_list.RemoveValue(0); // A value of 0 means the engine was not present in list of useful engines
 	engine_list.KeepBottom(1);
@@ -2756,6 +2749,9 @@ function WormAirManager::LoadFromScratch()
 			}
 		}
 	}
+	
+	/// @todo If problems.Count() > 0 then randomly add them over the available routes. Since it's not that likely we will leave that for another time.
+	
 	if (AIController.GetSetting("debug_show_lists") == 1) {
 		DebugListRoutes();
 	}
