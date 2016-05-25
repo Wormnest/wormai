@@ -58,6 +58,7 @@ class WormAirManager
 	route_2 = null;						///< vehicle id, station_tile of last station in an order
 	
 	/* 2. Variables that will NOT be saved. */
+	/// @todo Change distance_of_route to not register distance PER VEHICLE but only once PER ROUTE
 	distance_of_route = {};				///< vehicle id, distance between first/last order stations
 	vehicle_to_depot = {};				///< vehicle id, boolean always true currently
 	engine_usefulness = null;
