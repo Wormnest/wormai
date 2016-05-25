@@ -384,6 +384,12 @@ class WormAirManager
 	 * Currently recomputes the values for the @ref distance_of_route table.
 	 */
 	function AfterLoading();
+	
+	/**
+	 * Try to load existing air routes and towns used from scratch.
+	 * This can be needed when we get loaded into a savegame from a different AI.
+	 */
+	function LoadFromScratch();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -530,6 +536,7 @@ function WormAirManager::DebugListRoutes()
 		DebugListRoute(veh_check);
 		DebugListVehiclesSentToDepot();
 	}
+	AILog.Info("--------------------");
 	AILog.Info("");
 }
 
@@ -2663,6 +2670,94 @@ function WormAirManager::AfterLoading()
 	if (AIController.GetSetting("debug_show_lists") == 1) {
 		/* Debugging info */
 		DebugListRouteInfo();
+	}
+}
+
+/**
+ * Try to load existing air routes and towns used from scratch.
+ * This can be needed when we get loaded into a savegame from a different AI.
+ */
+function WormAirManager::LoadFromScratch()
+{
+	local airports = AIStationList(AIStation.STATION_AIRPORT);
+	if (airports.Count == 0)
+		return;
+	foreach (airport_id, dummy in airports) {
+		/// @todo code from AdmiralAI Aircraftmanager suggests that airport_id may be same as airport_tile!
+		// If that is true we can remove the call to Airport.GetAirportTile.
+		local airport_tile = Airport.GetAirportTile(airport_id);
+		local airport_type = AIAirport.GetAirportType(airport_tile);
+		local town_id = AIAirport.GetNearestTown(airport_tile, airport_type);
+		/// @todo What to do if multiple airports have the same nearest town?
+		//  Because in that case town is not added which will lead to confusion with certain vehicles/routes.
+		if (towns_used.HasItem(town_id)) {
+			AILog.Warning("Town " + AITown.GetName(town_id) + " is already registered.");
+		}
+		towns_used.AddItem(town_id, airport_tile);
+		AILog.Info("Detected airport " + AIStation.GetName(airport_id) + " near " + AITown.GetName(town_id));
+		if (AIController.GetSetting("debug_show_lists") == 1) {
+			local planes = AIVehicleList_Station(airport_id);
+			if (planes.Count() > 0)
+				foreach (plane, dummy2 in planes) {
+					AILog.Info("  " + AIVehicle.GetName(plane));
+				}
+		}
+	}
+	
+	local vehicles = AIVehicleList();
+	vehicles.Valuate(AIVehicle.GetVehicleType);
+	vehicles.KeepValue(AIVehicle.VT_AIR);
+	if (vehicles.Count() == 0) {
+		/// @todo Add vehicles if there are airports available.
+		return;
+	}
+	local problems = AIList();
+	/* Route reconstruction. */
+	foreach (veh_id, dummy3 in vehicles) {
+		local order_count = AIOrder.GetOrderCount(veh_id);
+		if (order_count == 0) {
+			problems.AddItem(veh_id, 0); // 0 =  no orders, add orders later
+			continue;
+		}
+		local oid = 0;
+		local station_no = 0; // Which station in the orders this is (first, second, ...)
+		local warned = false;
+		while (oid < order_count) {
+			if (AIOrder.IsValidVehicleOrder(veh_id, oid)) {
+				local station_tile = -1;
+				if (AIOrder.IsGotoStationOrder(veh_id, oid)) {
+					if (station_no == 0) {
+						// First station in orders
+						route_1.AddItem(veh_id, AIOrder.GetOrderDestination(veh_id, oid));
+					}
+					else if (station_no == 1) {
+						/// Second station in orders
+						route_2.AddItem(veh_id, AIOrder.GetOrderDestination(veh_id, oid));
+					}
+					else {
+						/// @todo figure out what to do if there are more station in orders...
+						if (!warned) {
+							AILog.Warning("Airplane " + AIVehicle.GetName(veh_id) + " has more than two aiports in it's orders!");
+							warned = true;
+						}
+					}
+					station_no++;
+				}
+				oid++;
+			}
+			else {
+				/* Remove invalid order. */
+				AIOrder.RemoveOrder(oid);
+				order_count--;
+				if (order_count == 0) {
+					problems.AddItem(veh_id, 0); // 0 =  no orders, add orders later
+					break;
+				}
+			}
+		}
+	}
+	if (AIController.GetSetting("debug_show_lists") == 1) {
+		DebugListRoutes();
 	}
 }
 
