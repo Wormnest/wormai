@@ -1743,17 +1743,27 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 		return ERROR_BUILD_AIRCRAFT;
 	}
 
-	/* Send him on his way */
+	/* Send airplane on its way */
 	/* If this isn't the first vehicle with this order, then make a shared order. */
 	local veh_list = AIList();
 	veh_list.AddList(this.route_1);
 	veh_list.KeepValue(tile_1);
+	/* Get a vehicle to share orders with. */
+	local share_veh = -1;
 	if (veh_list.Count() > 0) {
-		local share_veh = veh_list.Begin();
-		AIOrder.ShareOrders(vehicle, share_veh);
-		AILog.Info("Not the first vehicle: share orders.");
+		/* It's possible that a vehicle on our list just got invalid (crash or something).
+		 * So make sure we share orders with a valid vehicle or there will be
+		 * lots of vehicles with empty orders sitting around. */
+		for (local test_veh = veh_list.Begin(); !veh_list.IsEnd(); test_veh = veh_list.Next()) {
+			if (AIVehicle.IsValidVehicle(test_veh)) {
+				share_veh = test_veh;
+				AIOrder.ShareOrders(vehicle, share_veh);
+				AILog.Info("Not the first vehicle: share orders.");
+				break;
+			}
+		}
 	}
-	else {
+	if (share_veh == -1) {
 		/* First vehicle with these orders. */
 		AIOrder.AppendOrder(vehicle, tile_1, AIOrder.OF_FULL_LOAD_ANY);
 		AIOrder.AppendOrder(vehicle, tile_2, AIOrder.OF_FULL_LOAD_ANY);
@@ -1768,11 +1778,13 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 	
 	/* When breakdowns are on add go to depot orders on every airport.
 	   Ignore this when we added aircraft to shared orders. */
-	if ((veh_list.Count() == 0) && (AIGameSettings.GetValue("difficulty.vehicle_breakdowns") > 0)) {
+	if ((share_veh == -1) && (AIGameSettings.GetValue("difficulty.vehicle_breakdowns") > 0)) {
 		/* Get the hangar tiles of both airports. */
 		local Depot_Airport_1 = AIAirport.GetHangarOfAirport(tile_1);
 		local Depot_Airport_2 = AIAirport.GetHangarOfAirport(tile_2);
 		/* Add the depot orders: only go there if service is needed. */
+		/// @todo We need to revise depot orders: both should probably go to depot on same airport as the order before it!
+		/// @todo But this will have implications in several other places that depend on the order of the orders.
 		if (!AIOrder.InsertOrder(vehicle, 1, Depot_Airport_2, AIOrder.OF_SERVICE_IF_NEEDED ))
 			{ AILog.Warning("Failed to insert go to depot order!"); }
 		if (!AIOrder.InsertOrder(vehicle, 3, Depot_Airport_1, AIOrder.OF_SERVICE_IF_NEEDED ))
