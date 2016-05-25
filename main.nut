@@ -101,6 +101,8 @@ class WormAI extends AIController {
 
 	loaded_from_save = false;
 	save_version = 0;
+	save_not_ours = false;				///< Boolean: True if a loaded savegame is not from WormAI itself.
+	
 	aircraft_disabled_shown = 0;		///< Has the aircraft disabled in game settings message been shown (1) or not (0).
 	aircraft_max0_shown = 0;			///< Has the max aircraft is 0 in game settings message been shown.
 	trains_disabled_shown = 0;			///< Has the trains disabled in game settings message been shown (1) or not (0).
@@ -307,7 +309,25 @@ function WormAI::Start()
 	
 	InitSettings();	// Initialize some AI game settings.
 	Welcome();		// Write welcome and AI settings in log.
-	
+
+	/* Try to detect whether we started as replacement of another AI from a savegame.
+	 * In that case we don't get any savegame data but we will most likely have vehicles.
+	 * Not expecting that can make us crash in certain places.
+	 */
+	if (!loaded_from_save) {
+		local vehicles = AIVehicleList();
+		if (vehicles.Count() > 0) {
+			AILog.Info("");
+			AILog.Warning("We were loaded into a savegame from a different AI.");
+			AILog.Warning("WormAI may not work correctly or crash.");
+			AILog.Info("");
+			save_not_ours = true;
+			air_manager.LoadFromScratch();
+			/// @todo load rail_manager data from scratch
+			loaded_from_save = true;
+		}
+	}
+
 	if (loaded_from_save) {
 		AILog.Warning("Savegame post processing...");
 		air_manager.AfterLoading();
