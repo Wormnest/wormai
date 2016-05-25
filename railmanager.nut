@@ -849,7 +849,7 @@ function WormRailManager::GetOptimalTrainLength(route)
 	local veh_count = vehicles.Count();
 	// Safety check
 	if (veh_count == 0) {
-		AILog.Error("[DEBUG] No vehicles in this group!");
+		AILog.Warning("No vehicles in this group!");
 		return 3*16;	// Default = 3 tiles
 	}
 	local cargo_waiting = AIStation.GetCargoWaiting(route.stasrc, route.crg);
