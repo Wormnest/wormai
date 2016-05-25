@@ -197,11 +197,11 @@ function WormAI::InitSettings()
 function WormAI::Welcome()
 {
 	/* Say hello to the user */
-	AILog.Info("Welcome to WormAI.");
+	AILog.Warning("Welcome to WormAI.");
 	AILog.Info("These are our current AI settings:");
 	AILog.Info("- Use planes: " + GetSetting("use_planes"));
 	AILog.Info("- Use trains: " + GetSetting("use_trains"));
-	AILog.Info("- AI speed: " + GetSetting("ai_speed"));
+	AILog.Info("- AI speed/difficulty: " + GetSetting("ai_speed"));
 	AILog.Info("- Minimum Town Size: " + GetSetting("min_town_size"));
 	AILog.Info("- Minimum Airport Distance: " + GetSetting("min_airport_distance"));
 	AILog.Info("- Maximum Airport Distance: " + GetSetting("max_airport_distance"));
@@ -309,8 +309,11 @@ function WormAI::Start()
 	Welcome();		// Write welcome and AI settings in log.
 	
 	if (loaded_from_save) {
+		AILog.Warning("Savegame post processing...");
 		air_manager.AfterLoading();
 		rail_manager.AfterLoading();
+		AILog.Info("done.")
+		AILog.Info("");
 	}
 
 	/* We need our local tickers, as GetTick() will skip ticks */
@@ -487,30 +490,16 @@ function WormAI::Save()
 	local MyOps1 = this.GetOpsTillSuspend();
 	local MyOps2 = 0;
 /* only use for debugging:
-    AILog.Warning("Saving data to savegame not implemented yet!");
     AILog.Info("Ops till suspend: " + this.GetOpsTillSuspend());
-    AILog.Info("");
 */
     /* Save the data */
-    local table = {
-//		townsused = null,
-//		route1 = null,
-//		route2 = null,
-	};
-	/// @todo This should be moved to a AirManager.SaveData function.
-//	local t = ExtendedList();
-//	local r1 = ExtendedList();
-//	local r2 = ExtendedList();
-//	t.AddList(this.air_manager.towns_used);
-//	table.townsused = t.toarray();
-//	r1.AddList(this.air_manager.route_1);
-//	table.route1 = r1.toarray();
-//	r2.AddList(this.air_manager.route_2);
-//	table.route2 = r2.toarray();
+    local table = {};
 
 	/* General data */
 	table.rawset("worm_save_version", 2);	// Version of save data
+
 	/* Air manager data */
+	/// @todo This should be moved to a AirManager.SaveData function.
 	WormUtils.ListToTableEntry(table, "townsused", this.air_manager.towns_used);
 	WormUtils.ListToTableEntry(table, "route1", this.air_manager.route_1);
 	WormUtils.ListToTableEntry(table, "route2", this.air_manager.route_2);
@@ -518,10 +507,6 @@ function WormAI::Save()
 	/* Rail manager data */
 	rail_manager.SaveData(table);
 
-    /* Debugging info 
-    DebugListTownsUsed();
-    DebugListRouteInfo();
-*/   
 /* only use for debugging:
     AILog.Info("Tick: " + this.GetTick() );
 */
@@ -550,24 +535,8 @@ function WormAI::Load(version, data)
 	local MyOps1 = this.GetOpsTillSuspend();
 	local MyOps2 = 0;
 	AILog.Info("Loading savegame saved by WormAI version " + version);
-	/// @todo load data in temp values then later unpack it because
-	/// load has limited time available
-	/// @todo This should call air_manager.LoadData for air related SaveGame data.
-//	if ("townsused" in data) {
-//		local t = ExtendedList();
-//		t.AddFromArray(data.townsused)
-//		this.air_manager.towns_used.AddList(t);
-//	}
-//	if ("route1" in data) {
-//		local r = ExtendedList();
-//		r.AddFromArray(data.route1)
-//		this.air_manager.route_1.AddList(r);
-//	}
-//	if ("route2" in data) {
-//		local r = ExtendedList();
-//		r.AddFromArray(data.route2)
-//		this.air_manager.route_2.AddList(r);
-//	}
+	/// @todo load data in temp values then later unpack it because load has limited time available
+
 	if (data.rawin("worm_save_version")) {
 		this.save_version = data.rawget("worm_save_version");
 		AILog.Info("WormAI save data version " + this.save_version);
@@ -576,8 +545,12 @@ function WormAI::Load(version, data)
 		if (version < 5)
 			AILog.Info("WormAI save data version 1.");
 		else
-			AILog.Warning("Probably a savegame from another AI.");
+			// Since OpenTTD doesn't send savegame data from a different AI
+			// it must be from WormAI but it has an unexpected version number.
+			AILog.Error("Unexpected WormAI savegame version!");
 	}
+
+	/// @todo This should call air_manager.LoadData for air related SaveGame data.
 	WormUtils.TableEntryToList(data, "townsused", this.air_manager.towns_used);
 	WormUtils.TableEntryToList(data, "route1", this.air_manager.route_1);
 	WormUtils.TableEntryToList(data, "route2", this.air_manager.route_2);
@@ -601,5 +574,6 @@ function WormAI::Load(version, data)
 		AILog.Info("Loading WormAI game data. Used ops: " + (MyOps1-MyOps2) );
 		//AILog.Info("Loading: ops till suspend: " + MyOps2 + ", ops used in load: " + (MyOps1-MyOps2) );
 	}
+	AILog.Info("");
  }
  
