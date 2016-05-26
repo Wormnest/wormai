@@ -1823,9 +1823,11 @@ function WormAirManager::ComputeDistances()
  * @param coverageradius The coverage radius of the airport.
  * @param center_tile The tile of the airport at the other end of the route or 0 if this is the first airport on the route.
  * @param minimum_acceptance The minimum cargo acceptance we should allow for suitable spots.
+ * @param add_to_blacklist Boolean (default true) If true adds town to blacklist if no suitable spot could be found.
  * @return The tile where an airport can be built or ERROR_FIND_AIRPORT1 or ERROR_FIND_AIRPORT2.
  */
-function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width, airport_height, coverage_radius, center_tile, minimum_acceptance)
+function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width, airport_height,
+	coverage_radius, center_tile, minimum_acceptance, add_to_blacklist=true)
 {
 	local tile = AITown.GetLocation(town);
 
@@ -1863,7 +1865,8 @@ function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width
 	/* Couldn't find a suitable place for this town, skip to the next */
 	if (list.Count() == 0) {
 		/* Add town to blacklist for a while. */
-		towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+500);
+		if (add_to_blacklist)
+			towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+500);
 		return find_error;
 	}
 
@@ -1881,7 +1884,8 @@ function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width
 	/* Did we find a place to build the airport on? */
 	if (tile == -1) {
 		/* Add town to blacklist for a while. */
-		towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+500);
+		if (add_to_blacklist)
+			towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+500);
 		return find_error;
 	}
 
