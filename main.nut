@@ -370,6 +370,12 @@ function WormAI::Start()
 		}
 		else
 			this.air_manager.max_costfactor = WormAirManager.DEFAULT_MAX_COSTFACTOR;
+
+		if (this.use_air) {
+			/* Since settings can be changed during a game we need to recompute them every time. */
+			/* This is used both by building and upgrading airports. */
+			this.air_manager.ComputeDistances();
+		}
 		
 		/* Task scheduling. */
 		new_year = AIDate.GetYear(AIDate.GetCurrentDate());
@@ -453,8 +459,6 @@ function WormAI::Start()
 		if (this.use_air) {
 			if ((cur_ticker - old_ticker > build_delay_factor * this.delay_build_airport_route) || old_ticker == 0) {
 				if (WormMoney.HasMoney(WormMoney.InflationCorrection(70000))) {
-					/* Since settings can be changed during a game we need to recompute them every time. */
-					this.air_manager.ComputeDistances();
 					local ret = this.air_manager.BuildAirportRoute();
 					if ((ret == ERROR_FIND_AIRPORT1) || (ret == ERROR_MAX_AIRPORTS) ||
 						(ret == ERROR_MAX_AIRCRAFT) && old_ticker != 0) {
