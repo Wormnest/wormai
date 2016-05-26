@@ -1829,6 +1829,10 @@ function WormAirManager::ComputeDistances()
 function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width, airport_height,
 	coverage_radius, center_tile, minimum_acceptance, add_to_blacklist=true)
 {
+	/* No use looking further if we have a bad rating in this town. */
+	if (!Town.TownRatingAllowStationBuilding(town))
+		return ERROR_FIND_AIRPORT1;
+
 	local tile = AITown.GetLocation(town);
 
 	/* Create a grid around the core of the town and see if we can find a spot for an airport .*/
