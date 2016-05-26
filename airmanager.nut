@@ -157,9 +157,9 @@ class WormAirManager
 	function ReplaceAirportTileInfo(old_town_idx, old_tile, new_tile, other_end_of_route_tile);
 	/**
 	 * Determines whether an airport at a given tile is allowed by the town authorities
-	 * because of the noise level
+	 * because of the noise level.
 	 * @param tile The tile where the aiport would be built.
-	 * @param old_airport_type The type of the current airport.
+	 * @param old_airport_type The type of the current airport or AT_INVALID if there is no airport yet.
 	 * @param new_airport_type The type of the proposed replacement airport.
 	 * @return True if the construction would be allowed. If the noise setting is off, it defaults to true.
 	 * @note Adapted from SimpleAI.
@@ -991,9 +991,9 @@ function WormAirManager::SendAllVehiclesOfStationToDepot(station_id, sell_reason
 
 /**
  * Determines whether an airport at a given tile is allowed by the town authorities
- * because of the noise level
+ * because of the noise level.
  * @param tile The tile where the aiport would be built.
- * @param old_airport_type The type of the current airport.
+ * @param old_airport_type The type of the current airport or AT_INVALID if there is no airport yet.
  * @param new_airport_type The type of the proposed replacement airport.
  * @return True if the construction would be allowed. If the noise setting is off, it defaults to true.
  * @note Adapted from SimpleAI.
@@ -1001,10 +1001,21 @@ function WormAirManager::SendAllVehiclesOfStationToDepot(station_id, sell_reason
 function WormAirManager::IsWithinNoiseLimit(tile, old_airport_type, new_airport_type)
 {
 	if (!AIGameSettings.GetValue("economy.station_noise_level")) return true;
-	local allowed = AITown.GetAllowedNoise(AIAirport.GetNearestTown(tile, old_airport_type));
-	local increase = AIAirport.GetNoiseLevelIncrease(tile, new_airport_type) -
-		AIAirport.GetNoiseLevelIncrease(tile, old_airport_type);
-	return (increase < allowed);
+	if (old_airport_type != AIAirport.AT_INVALID) {
+		// Replacing airport
+		local allowed = AITown.GetAllowedNoise(AIAirport.GetNearestTown(tile, old_airport_type));
+		local increase = AIAirport.GetNoiseLevelIncrease(tile, new_airport_type) -
+			AIAirport.GetNoiseLevelIncrease(tile, old_airport_type);
+		// return here or else we need to declare the two local's outside the if
+		return (increase < allowed);
+	}
+	else {
+		// No existing airport
+		local allowed = AITown.GetAllowedNoise(AIAirport.GetNearestTown(tile, new_airport_type));
+		local increase = AIAirport.GetNoiseLevelIncrease(tile, new_airport_type);
+		// return here or else we need to declare the two local's outside the if
+		return (increase < allowed);
+	}
 }
 
 /**
@@ -1078,7 +1089,8 @@ function WormAirManager::UpdateAirportUpgradeList()
 
 		switch (airport_type) {
 			case AIAirport.AT_SMALL:
-				can_handle = 4 + (route_distance / 200);
+				// Since usefullness of small is limited we should under default conditions try to upgrade as soon as we can
+				can_handle = 4 /*+ (route_distance / 200)*/;
 				if ((veh_count > can_handle) || (veh_count == 0)) {
 					this.upgrade_wanted.AddItem(t, station_tile);
 					detail_text = " needs upgrading from SMALL (";
@@ -1116,6 +1128,9 @@ function WormAirManager::SendAirplanesOffAirport(town_id, station_id)
 	local aircraft = AIVehicleList_Station(station_id);
 	if (aircraft.Count() == 0)
 		return;
+	local airport_tiles = AITileList_StationType(station_id, AIStation.STATION_AIRPORT);
+	if (airport_tiles.IsEmpty())
+		return;
 	local skip_to_order = 0;
 	local maintenance = AIOrder.GetOrderCount(aircraft.Begin()) == 4;
 	// We need to decide which order to go to: the maintain order after the current stations order
@@ -1125,14 +1140,19 @@ function WormAirManager::SendAirplanesOffAirport(town_id, station_id)
 		skip_to_order += 1;
 	
 	foreach (plane, dummy in aircraft) {
-		if (Vehicle.IsVehicleAtStation(plane, station_id)) {
-			local cur_order = AIOrder.ResolveOrderPosition(plane, AIOrder.ORDER_CURRENT);
-			if (cur_order != skip_to_order) {
-				AIOrder.SkipToOrder(plane, skip_to_order);
-				AILog.Info("Sent away: " + AIVehicle.GetName(plane));
-			}
-			else {
-				AILog.Info("Order not changed: " + AIVehicle.GetName(plane) + ",order: " + cur_order);
+		local veh_tile = AIVehicle.GetLocation(plane);
+		// If the location of one of our planes is on one of the airport tiles assume it's not empty.
+		if (airport_tiles.HasItem(veh_tile)) {
+			local veh_state = AIVehicle.GetState(plane);
+			if ((veh_state != AIVehicle.VS_RUNNING) && (veh_state != AIVehicle.VS_BROKEN)) {
+				local cur_order = AIOrder.ResolveOrderPosition(plane, AIOrder.ORDER_CURRENT);
+				if (cur_order != skip_to_order) {
+					AIOrder.SkipToOrder(plane, skip_to_order);
+					AILog.Info("Sent away: " + AIVehicle.GetName(plane));
+				}
+				else {
+					AILog.Info("Order not changed: " + AIVehicle.GetName(plane) + ",order: " + cur_order);
+				}
 			}
 		}
 	}
@@ -1148,8 +1168,7 @@ function WormAirManager::SendAirplanesOffAirport(town_id, station_id)
  */ 
 function WormAirManager::UpgradeLargeToMetropolitan(nearest_town, station_id, station_tile)
 {
-	local hangar_aircraft = Airport.GetAircraftInHangar(station_id);
-	if (hangar_aircraft.Count() != 0) {
+	if (!IsAirportEmpty(station_id)) {
 		AILog.Info("Can't upgrade, there are still airplanes on the airport.");
 		return Result.FAIL;
 	}
@@ -1170,6 +1189,96 @@ function WormAirManager::UpgradeLargeToMetropolitan(nearest_town, station_id, st
 		return Result.REBUILD_FAILED;
 }
 
+/**
+ * Check whether the airport (including depots) is empty, meaning no airplanes.
+ * @return true if it is empty, otherwise false
+ */
+function WormAirManager::IsAirportEmpty(station_id)
+{
+	local aircraft = AIVehicleList_Station(station_id);
+	if (aircraft.Count() == 0)
+		return true;
+	local airport_tiles = AITileList_StationType(station_id, AIStation.STATION_AIRPORT);
+	if (airport_tiles.IsEmpty())
+		return false;
+
+	foreach (plane, dummy in aircraft) {
+		local veh_tile = AIVehicle.GetLocation(plane);
+		//AILog.Info("[DEBUG] " + AIVehicle.GetName(plane) + ", location: " + WormStrings.WriteTile(veh_tile));
+		// If the location of one of our planes is on one of the airport tiles assume it's not empty.
+		if (airport_tiles.HasItem(veh_tile)) {
+			local veh_state = AIVehicle.GetState(plane);
+			// We need to exclude running and broken because those can also be circling around the airport
+			// and just by chance be above an airport tile. Ofcourse this way we will miss airplanes
+			// that are taxiing on the airport or landing/taking off but that can't be helped I think.
+			if ((veh_state != AIVehicle.VS_RUNNING) && (veh_state != AIVehicle.VS_BROKEN)) {
+				//AILog.Warning("[DEBUG] This is an airport tile.");
+				return false;
+			}
+		}
+	}
+	// No planes found on airport tiles
+	return true;
+}
+
+/**
+ * Tries to upgrade airport from small to either large or metropolitan.
+ * @param nearest_town The nearest town according to town influence.
+ * @param station_id The id of the airport to upgrade.
+ * @param station_tile The tile of the airport.
+ * @return SuperLib.Result.SUCCESS if we succeed, or else SuperLib.Result.REBUILD_FAILED or SuperLib.Result.FAIL.
+ */
+function WormAirManager::UpgradeSmall(nearest_town, station_id, station_tile, airport_type, other_station_tile)
+{
+	if (!IsAirportEmpty(station_id)) {
+		AILog.Info("Can't upgrade, there are still airplanes on the airport.");
+		return Result.FAIL;
+	}
+
+	AILog.Warning("[DEBUG] Current distance: " + WormMath.Sqrt(AITile.GetDistanceSquareToTile(station_tile, other_station_tile)));
+	if (other_station_tile <= 0)
+		AILog.Warning("[DEBUG] Other station tile = " + other_station_tile);
+
+	// Find a new spot in same town for an airport
+	/// @todo Ideally we should include the tiles of the current airport in our search for a new spot!
+	/// @todo Maybe add as an extra parameter an optional list (default null) with the tiles of the airport
+	/// @todo Set acceptance to maybe 50 lower than acceptance of current airport?
+	/// On the other hand it will already go for the highest acceptance spot, maybe do acceptance = 50?
+	local new_location = FindAirportSpotInTown(nearest_town, airport_type,
+		AIAirport.GetAirportWidth(airport_type), AIAirport.GetAirportHeight(airport_type),
+		AIAirport.GetAirportCoverageRadius(airport_type), other_station_tile, 50,
+		false, AIAirport.AT_SMALL);
+	// Check if we managed to find a spot
+	if (new_location < 0) {
+		// Blacklisting upgrading is done by caller
+		return Result.FAIL;
+	}
+	
+	// Try to remove old airport
+	/// @todo Can we use RemoveAirport too or does that make it impossible to reuse station_id?
+	if (!AITile.DemolishTile(station_tile)) {
+		AILog.Warning(AIError.GetLastErrorString());
+		AILog.Info("Removing old airport failed, can't upgrade (probably airplane in the way).");
+		return Result.FAIL;
+	}
+
+	// Try to build new airport in the new location
+	local airport_status = AIAirport.BuildAirport(new_location, airport_type, station_id);
+	if (!airport_status) {
+		// Try to get our old station back...
+		AILog.Warning(AIError.GetLastErrorString());
+		AILog.Info("Upgrading airport failed, try to get old airport back.");
+		airport_status = AIAirport.BuildAirport(station_tile, AIAirport.AT_SMALL, station_id);
+	}
+	if (airport_status)
+		// New station tile etc will be updated by caller.
+		return Result.SUCCESS;
+	else {
+		AILog.Warning(AIError.GetLastErrorString());
+		return Result.REBUILD_FAILED;
+	}
+}
+
  /**
  * Checks all airports to see if they should be upgraded.
  * If they can it tries to upgrade the airport. If it fails after removing the old airport
@@ -1184,7 +1293,8 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 	UpdateAirportUpgradeList(); // This call should be moved to maybe once a year checking?
 	if (upgrade_wanted == null) return;
 	
-	/// @todo Maybe set a max amount of upgrades at one time?
+	// Set a max amount of upgrades at one time.
+	local closed_count = 0;
 	/// @todo Maybe only upgrade if we have enought money
 	/// @todo CLOSED airports should not be checked once a month but as often as possible
 	/// because we don't want them to be closed for a long time, loosing profits.
@@ -1204,6 +1314,11 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 				AIStation.OpenCloseAirport(station_id);
 			}
 			continue;
+		}
+		if (closed_count == 3) {
+			// 3 airports closed at the same time maximum
+			AILog.Info("Maximum number of airports closed at the same time reached.");
+			break;
 		}
 
 		/* Determine tile of other side of route: If station there is invalid we won't
@@ -1225,6 +1340,7 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 				}
 				continue;
 			}
+			
 			AILog.Info("Airport: " + AIStation.GetName(station_id) + " needs upgrading!");
 			/* Airport needs upgrading if possible... */
 			/* Close airport to make sure no airplanes will land, but those still there
@@ -1233,6 +1349,7 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 			local old_airport_closed = AIStation.IsAirportClosed(station_id);
 			/* Make sure airport is closed. */
 			if (!old_airport_closed) {
+				closed_count++;
 				AIStation.OpenCloseAirport(station_id);
 				// Send all airplanes that are on the airport to their next order...
 				SendAirplanesOffAirport(t, station_id);
@@ -1245,10 +1362,12 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 				upgrade_result = UpgradeLargeToMetropolitan(nearest_town, station_id, station_tile);
 			}
 			else {
-				local upgrade_list = [optimal_airport];
+//				local upgrade_list = [optimal_airport];
 				/// @todo town t may not be the nearest town! Instead of t use nearest town.
-				upgrade_result = Airport.UpgradeAirportInTown(t, station_id, upgrade_list, this.passenger_cargo_id, 
-				  this.passenger_cargo_id);
+				/// @todo However UpdateAirportTileInfo needs to work with and maybe others too.
+//				upgrade_result = Airport.UpgradeAirportInTown(t, station_id, upgrade_list, this.passenger_cargo_id, 
+//				  this.passenger_cargo_id);
+				upgrade_result = UpgradeSmall(nearest_town, station_id, station_tile, optimal_airport, tile_other_st);
 			}
 			/* Need to check if it succeeds. */
 			if (upgrade_result == Result.SUCCESS) {
@@ -1328,7 +1447,10 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 				if (old_airport_closed && AIStation.IsAirportClosed(station_id)) {
 					AIStation.OpenCloseAirport(station_id);
 					AILog.Info("We couldn't upgrade the airport this time, blacklisting it for a while.");
-					this.upgrade_blacklist.AddItem(t, AIDate.GetCurrentDate()+500);
+					local days = 500;
+					if (airport_type == AIAirport.AT_SMALL)
+						days = 100; // We want to get rid of small airports faster in this case
+					this.upgrade_blacklist.AddItem(t, AIDate.GetCurrentDate()+days);
 				}
 			}
 		}
@@ -1824,10 +1946,11 @@ function WormAirManager::ComputeDistances()
  * @param center_tile The tile of the airport at the other end of the route or 0 if this is the first airport on the route.
  * @param minimum_acceptance The minimum cargo acceptance we should allow for suitable spots.
  * @param add_to_blacklist Boolean (default true) If true adds town to blacklist if no suitable spot could be found.
+ * @param old_airport_type (default=AIAirport.AT_INVALID) If not invalid noise limits are checked for replacing old_airport_type with airport type.
  * @return The tile where an airport can be built or ERROR_FIND_AIRPORT1 or ERROR_FIND_AIRPORT2.
  */
 function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width, airport_height,
-	coverage_radius, center_tile, minimum_acceptance, add_to_blacklist=true)
+	coverage_radius, center_tile, minimum_acceptance, add_to_blacklist=true, old_airport_type=AIAirport.AT_INVALID)
 {
 	/* No use looking further if we have a bad rating in this town. */
 	if (!Town.TownRatingAllowStationBuilding(town))
@@ -1838,20 +1961,37 @@ function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width
 	/* Create a grid around the core of the town and see if we can find a spot for an airport .*/
 	local list = AITileList();
 	/* Take into account that towns grow larger over time. A constant value of 15 may not be
-	 * enough for large towns to get outside the building. Inspired by AIAI which uses 100 insted of 75.
+	 * enough for large towns to get outside the building.
+	 * Inspired by AIAI which uses 100 instead of 75, and 15 instead of 10.
+	 * I used 15 too at first but then we get more tiles than needed, slowing us down.
 	 */
-	local range = WormMath.Sqrt(AITown.GetPopulation(town)/75) + 15;
+	local range = WormMath.Sqrt(AITown.GetPopulation(town)/75) + 10;
 
 	/* Safely add a square rectangle taking care of border tiles. */
 	WormTiles.SafeAddSquare(list, tile, range);
+	//AILog.Warning( "[DEBUG] town: " + AITown.GetName(town));
+	//AILog.Warning("[DEBUG] Tiles before any limiting: " + list.Count());
 	/* Remove all tiles where an airport can't be built. */
 	list.Valuate(AITile.IsBuildableRectangle, airport_width, airport_height);
 	list.KeepValue(1);
+	//AILog.Warning("[DEBUG] Tiles after buildable rectangle limiting: " + list.Count());
 
-	local find_error = ERROR_FIND_AIRPORT1;
+	// Only keep tiles where we don't go over the noise limit.
+	/// @todo Is this really useful. Does it matter what tile we build on in same town?
+	list.Valuate(this.IsWithinNoiseLimit, old_airport_type, airport_type);
+	list.KeepValue(1);
+	//AILog.Warning("[DEBUG] Tiles after noise limiting: " + list.Count());
+
+	// If Count is 0 here we should blacklist regardless of acceptance and regardless of distance
+	if (list.Count() == 0) {
+		/* Add town to blacklist for a while. */
+		if (add_to_blacklist)
+			towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+500);
+		return ERROR_FIND_AIRPORT1;
+	}
+
 	/* Check if we need to consider the distance to another tile. */
 	if (center_tile != 0) {
-		find_error = ERROR_FIND_AIRPORT2;
 		/* If we have a tile defined, check to see if it's within the minimum and maximum allowed. */
 		list.Valuate(AITile.GetDistanceSquareToTile, center_tile);
 		/* Keep above minimum distance. */
@@ -1860,18 +2000,25 @@ function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width
 		list.KeepBelowValue(this.max_distance_squared);
 		/// @todo In early games with low maximum speeds we may need to adjust maximum and
 		/// maybe even minimum distance to get a round trip within a year.
+		//AILog.Warning("[DEBUG] Tiles after distance limiting: " + list.Count());
+
+		// No blacklisting here at all since distance is always relative to another airport, not absolute!
+		if (list.Count() == 0) {
+			return ERROR_FIND_AIRPORT1;
+		}
 	}
 
 	/* Sort on acceptance, remove places that don't have acceptance */
 	list.Valuate(AITile.GetCargoAcceptance, this.passenger_cargo_id, airport_width, airport_height, coverage_radius);
 	list.RemoveBelowValue(minimum_acceptance);
+	//AILog.Warning("[DEBUG] Tiles after acceptance (" + minimum_acceptance + ") limiting: " + list.Count());
 	
 	/* Couldn't find a suitable place for this town, skip to the next */
 	if (list.Count() == 0) {
 		/* Add town to blacklist for a while. */
-		if (add_to_blacklist)
+		if (add_to_blacklist && (minimum_acceptance > 25))
 			towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+500);
-		return find_error;
+		return ERROR_FIND_AIRPORT1;
 	}
 
 	/* Walk all the tiles and see if we can build the airport at all */
@@ -1888,9 +2035,9 @@ function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width
 	/* Did we find a place to build the airport on? */
 	if (tile == -1) {
 		/* Add town to blacklist for a while. */
-		if (add_to_blacklist)
+		if (add_to_blacklist && (minimum_acceptance > 25))
 			towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+500);
-		return find_error;
+		return ERROR_FIND_AIRPORT1;
 	}
 
 	AILog.Info("Found a good spot for an airport in " + AITown.GetName(town) + " (id: "+ town + 
