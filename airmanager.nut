@@ -1354,7 +1354,7 @@ function WormAirManager::TryToBuildAirport(tile_1, tile_2, is_first_airport, air
 		local err = AIError.GetLastError();
 		local ok = false;
 		if (err == AIError.ERR_AREA_NOT_CLEAR) {
-			/* Area not clear: matbe another company built something there just before us. */
+			/* Area not clear: maybe another company built something there just before us. */
 			/* Try once to get a new spot in the same town. */
 			AILog.Info("Airport spot at tile " + WormStrings.WriteTile(build_tile) + " not clear, trying to find another spot.");
 			local retry_tile = FindAirportSpotInTown(GetTownFromStationTile(build_tile), airport_type,
@@ -1363,7 +1363,7 @@ function WormAirManager::TryToBuildAirport(tile_1, tile_2, is_first_airport, air
 			if (retry_tile >= 0) {
 				build_tile = retry_tile;
 				if (AIAirport.BuildAirport(build_tile, airport_type, AIStation.STATION_NEW)) {
-					AILog.Warning("We built an airport on the second try.")
+					AILog.Warning("We built an airport on the second try.");
 					ok = true;
 				}
 			}
@@ -2740,7 +2740,7 @@ function WormAirManager::LoadFromScratch()
 						route_2.AddItem(veh_id, AIOrder.GetOrderDestination(veh_id, oid));
 					}
 					else {
-						/// @todo figure out what to do if there are more station in orders...
+						/// @todo figure out what to do if there are more stations in orders...
 						if (!warned) {
 							AILog.Warning("Airplane " + AIVehicle.GetName(veh_id) + " has more than two aiports in it's orders!");
 							warned = true;
