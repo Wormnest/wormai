@@ -1449,8 +1449,10 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 			else {
 				/* If airport was already closed before we started trying to upgrade and is now
 					still closed then open it again to give airplanes a chance to land and be
-					handled. We will try upgrading again at a later time. */
-				if (old_airport_closed && AIStation.IsAirportClosed(station_id)) {
+					handled unless it was caused by airplanes still being on the airport.
+					We will try upgrading again at a later time. */
+				if (old_airport_closed && AIStation.IsAirportClosed(station_id) &&
+					(upgrade_result != BUILD_AIRPORT_NOT_EMPTY)) {
 					AIStation.OpenCloseAirport(station_id);
 					AILog.Info("We couldn't upgrade the airport this time, blacklisting it for a while.");
 					local days = 500;
