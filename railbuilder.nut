@@ -640,7 +640,7 @@ function WormRailBuilder::BuildRailStation(is_source, lanes, platform_length, ro
 		if (!success)
 			return false;
 		dir = nextdir;
-		AILog.Info("[DEBUG] Good. We found a spot in this direction.");
+		//AILog.Info("[DEBUG] Good. We found a spot in this direction.");
 	}
 
 	// Build the station itself
@@ -660,7 +660,7 @@ function WormRailBuilder::BuildRailStation(is_source, lanes, platform_length, ro
 		return false;
 	}
 	
-	AILog.Info("[DEBUG] Station was built, now build rail in front of it.");
+	//AILog.Info("[DEBUG] Station was built, now build rail in front of it.");
 	// Build the station parts
 	if (lanes == 1) {
 		// 1 lane station
@@ -682,12 +682,12 @@ function WormRailBuilder::BuildRailStation(is_source, lanes, platform_length, ro
 		success = success && AIRail.BuildRail(station_data.stafront, station_data.frontfront, station_data.morefront);
 	}
 
-	if (success)
-		AILog.Info("[DEBUG] Build depot.");
+	//if (success)
+	//	AILog.Info("[DEBUG] Build depot.");
 	success = success && AIRail.BuildRailDepot(station_data.deptile, station_data.depfront);
 
 	if (success && (lanes > 1)) {
-		AILog.Info("[DEBUG] Build signals.");
+		//AILog.Info("[DEBUG] Build signals.");
 
 	//	local signaltype = (AIController.GetSetting("signaltype") >= 2) ? AIRail.SIGNALTYPE_PBS : AIRail.SIGNALTYPE_NORMAL_TWOWAY;
 		local signaltype = AIRail.SIGNALTYPE_PBS;
@@ -1365,7 +1365,7 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 		}
 	}
 	if (!AIVehicle.MoveWagonChain(firstwagon, 0, trainengine, 0)) {
-		AILog.Warning("[DEBUG] Current length: " + (AIVehicle.GetLength(trainengine) + (cur_wagons + 1) * wagon_length + mailwagon_length));
+		//AILog.Warning("[DEBUG] Current length: " + (AIVehicle.GetLength(trainengine) + (cur_wagons + 1) * wagon_length + mailwagon_length));
 		AILog.Error("Could not attach the wagons.");
 		AIVehicle.SellWagonChain(trainengine, 0);
 		AIVehicle.SellWagonChain(firstwagon, 0);
