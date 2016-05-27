@@ -1235,9 +1235,9 @@ function WormAirManager::UpgradeSmall(nearest_town, station_id, station_tile, ai
 		return Result.FAIL;
 	}
 
-	AILog.Warning("[DEBUG] Current distance: " + WormMath.Sqrt(AITile.GetDistanceSquareToTile(station_tile, other_station_tile)));
-	if (other_station_tile <= 0)
-		AILog.Warning("[DEBUG] Other station tile = " + other_station_tile);
+//	AILog.Warning("[DEBUG] Current distance: " + WormMath.Sqrt(AITile.GetDistanceSquareToTile(station_tile, other_station_tile)));
+//	if (other_station_tile <= 0)
+//		AILog.Warning("[DEBUG] Other station tile = " + other_station_tile);
 
 	// Find a new spot in same town for an airport
 	/// @todo Ideally we should include the tiles of the current airport in our search for a new spot!
