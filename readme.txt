@@ -20,11 +20,8 @@ Source repository: http://dev.openttdcoop.org/projects/ai-worm/repository
 Requirements
 ------------
 OpenTTD 1.4 or later.
-SuperLib, AILibList and AILibCommon (used by AILibList).
-I won't list the versions here since then I would have to update this
-text every time the versions change. However I have a script that
-updates the library versions before a release of my AI so I
-should always be using the latest versions at the time of release.
+SuperLib, AyStar, AILibList and AILibCommon (used by AILibList).
+The library versions should be the latest versions at the time of release.
 
 
 Features
