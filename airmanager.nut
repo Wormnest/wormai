@@ -50,6 +50,13 @@ class WormAirManager
 {
 	static DEFAULT_MAX_COSTFACTOR = 350;		///< We don't want airplanes that have a higher costfactor than this unless we have nothing but planes to play with.
 	static DEFAULT_ANY_COSTFACTOR = 10000;		///< Used in case we want to accept any costfactor.
+	
+	static BUILD_SUCCESS = 1;			///< Status code: Building airport succeeded
+	static BUILD_FAILED  = 2;			///< Building airport failed
+	static BUILD_REBUILD_FAILED = 3;	///< Rebuilding airport failed
+	static BUILD_REMOVE_FAILED = 4;		///< Removing airport failed
+	static BUILD_AIRPORT_NOT_EMPTY = 5;	///< Airport is not empty, removing impossible
+	static BUILD_NO_NEW_LOCATION = 6;	///< We could not find a good location for the replacement airport
 
 	/* Variables used by WormAirManager */
 	/* 1. Variables that will be saved in a savegame. */
@@ -1048,7 +1055,7 @@ function WormAirManager::UpdateAirportUpgradeList()
 		}
 	}
 	
-	AILog.Warning("Update list of airports that need to be upgraded.");
+//	AILog.Warning("Update list of airports that need to be upgraded.");
 	foreach (t, station_tile in temp) {
 		local station_id = AIStation.GetStationID(station_tile);
 		// Go to next town if station isn't valid anymore
@@ -1163,19 +1170,19 @@ function WormAirManager::SendAirplanesOffAirport(town_id, station_id)
  * @param nearest_town The nearest town according to town influence.
  * @param station_id The id of the airport to upgrade.
  * @param station_tile The tile of the airport.
- * @return SuperLib.Result.SUCCESS if we succeed, or else SuperLib.Result.REBUILD_FAILED or SuperLib.Result.FAIL.
+ * @return BUILD_SUCCESS if we succeed, or else one of the BUILD_XXX error codes.
  * @pre Noise and Town allowance already checked, enough money, ...
  */ 
 function WormAirManager::UpgradeLargeToMetropolitan(nearest_town, station_id, station_tile)
 {
 	if (!IsAirportEmpty(station_id)) {
 		AILog.Info("Can't upgrade, there are still airplanes on the airport.");
-		return Result.FAIL;
+		return BUILD_AIRPORT_NOT_EMPTY;
 	}
 	// Try to remove old airport
 	/// @todo Can we use RemoveAirport too or does that make it impossible to reuse station_id?
 	if (!AITile.DemolishTile(station_tile))
-		return Result.FAIL;
+		return BUILD_REMOVE_FAILED;
 	// Try to build new airport in same spot
 	local airport_status = AIAirport.BuildAirport(station_tile, AIAirport.AT_METROPOLITAN, station_id);
 	if (!airport_status) {
@@ -1184,9 +1191,9 @@ function WormAirManager::UpgradeLargeToMetropolitan(nearest_town, station_id, st
 		airport_status = AIAirport.BuildAirport(station_tile, AIAirport.AT_LARGE, station_id);
 	}
 	if (airport_status)
-		return Result.SUCCESS;
+		return BUILD_SUCCESS;
 	else
-		return Result.REBUILD_FAILED;
+		return BUILD_REBUILD_FAILED;
 }
 
 /**
@@ -1226,13 +1233,13 @@ function WormAirManager::IsAirportEmpty(station_id)
  * @param nearest_town The nearest town according to town influence.
  * @param station_id The id of the airport to upgrade.
  * @param station_tile The tile of the airport.
- * @return SuperLib.Result.SUCCESS if we succeed, or else SuperLib.Result.REBUILD_FAILED or SuperLib.Result.FAIL.
+ * @return BUILD_SUCCESS if we succeed, or else one of the BUILD_XXX error codes.
  */
 function WormAirManager::UpgradeSmall(nearest_town, station_id, station_tile, airport_type, other_station_tile)
 {
 	if (!IsAirportEmpty(station_id)) {
 		AILog.Info("Can't upgrade, there are still airplanes on the airport.");
-		return Result.FAIL;
+		return BUILD_AIRPORT_NOT_EMPTY;
 	}
 
 //	AILog.Warning("[DEBUG] Current distance: " + WormMath.Sqrt(AITile.GetDistanceSquareToTile(station_tile, other_station_tile)));
@@ -1251,7 +1258,8 @@ function WormAirManager::UpgradeSmall(nearest_town, station_id, station_tile, ai
 	// Check if we managed to find a spot
 	if (new_location < 0) {
 		// Blacklisting upgrading is done by caller
-		return Result.FAIL;
+		AILog.Info("We couldn't find a good location for the replacement airport.");
+		return BUILD_NO_NEW_LOCATION;
 	}
 	
 	// Try to remove old airport
@@ -1259,7 +1267,7 @@ function WormAirManager::UpgradeSmall(nearest_town, station_id, station_tile, ai
 	if (!AITile.DemolishTile(station_tile)) {
 		AILog.Warning(AIError.GetLastErrorString());
 		AILog.Info("Removing old airport failed, can't upgrade (probably airplane in the way).");
-		return Result.FAIL;
+		return BUILD_REMOVE_FAILED;
 	}
 
 	// Try to build new airport in the new location
@@ -1272,10 +1280,10 @@ function WormAirManager::UpgradeSmall(nearest_town, station_id, station_tile, ai
 	}
 	if (airport_status)
 		// New station tile etc will be updated by caller.
-		return Result.SUCCESS;
+		return BUILD_SUCCESS;
 	else {
 		AILog.Warning(AIError.GetLastErrorString());
-		return Result.REBUILD_FAILED;
+		return BUILD_REBUILD_FAILED;
 	}
 }
 
@@ -1336,12 +1344,11 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 					aircraft there in case of upgrade failure. */
 				if (AIStation.IsAirportClosed(station_id)) {
 					AIStation.OpenCloseAirport(station_id);
-					AILog.Warning("Opening airport again since other one got removed.");
+					AILog.Warning("Opening airport " + AIStation.GetName(station_id) + " again since other one got removed.");
 				}
 				continue;
 			}
 			
-			AILog.Info("Airport: " + AIStation.GetName(station_id) + " needs upgrading!");
 			/* Airport needs upgrading if possible... */
 			/* Close airport to make sure no airplanes will land, but those still there
 				will be handled. */
@@ -1349,28 +1356,27 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 			local old_airport_closed = AIStation.IsAirportClosed(station_id);
 			/* Make sure airport is closed. */
 			if (!old_airport_closed) {
+				AILog.Info("Closing airport " + AIStation.GetName(station_id) + " because it needs upgrading!");
 				closed_count++;
 				AIStation.OpenCloseAirport(station_id);
 				// Send all airplanes that are on the airport to their next order...
 				SendAirplanesOffAirport(t, station_id);
 			}
+			else {
+				AILog.Info("Try upgrading airport " + AIStation.GetName(station_id) + " again.");
+			}
 			local nearest_town = AIAirport.GetNearestTown(station_tile, airport_type);
-			local upgrade_result = Result.FAIL;
+			local upgrade_result = BUILD_FAILED;
 			/* Try to upgrade airport. */
 			if ((optimal_airport == AIAirport.AT_METROPOLITAN) && (optimal_airport == AIAirport.AT_METROPOLITAN)) {
 				/// Since METROPOLITAN is the same size as LARGE we will try to rebuild it in the same spot!
 				upgrade_result = UpgradeLargeToMetropolitan(nearest_town, station_id, station_tile);
 			}
 			else {
-//				local upgrade_list = [optimal_airport];
-				/// @todo town t may not be the nearest town! Instead of t use nearest town.
-				/// @todo However UpdateAirportTileInfo needs to work with and maybe others too.
-//				upgrade_result = Airport.UpgradeAirportInTown(t, station_id, upgrade_list, this.passenger_cargo_id, 
-//				  this.passenger_cargo_id);
 				upgrade_result = UpgradeSmall(nearest_town, station_id, station_tile, optimal_airport, tile_other_st);
 			}
 			/* Need to check if it succeeds. */
-			if (upgrade_result == Result.SUCCESS) {
+			if (upgrade_result == BUILD_SUCCESS) {
 				/* Need to get the station id of the upgraded station. */
 				/* Check if old station_id is still valid */
 				if (AIStation.IsValidStation(station_id)) {
@@ -1398,7 +1404,7 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 				if (AIStation.IsAirportClosed(station_id))
 					{ AIStation.OpenCloseAirport(station_id); }
 			}
-			else if (upgrade_result == Result.REBUILD_FAILED) {
+			else if (upgrade_result == BUILD_REBUILD_FAILED) {
 				/* Oh boy. Airport was removed but rebuilding a replacement failed. */
 				AILog.Warning("We removed the old airport but failed to build a replacement!");
 				/* 1. Try to build a second airport as replacement. */
