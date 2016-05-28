@@ -1,14 +1,16 @@
 WormAI Changelog
 ================
 
-Version 6, UNRELEASED
+Version 6, 2016-05-28
 ---------------------
-+ Fix: Crash when loading a savegame saved when building a rail route or replacing trains.
++ Fix: Crash when loading a savegame saved when building a rail route or
+  when replacing trains.
 + Fix: Crash when we get loaded into a savegame without getting any saved data.
 + Fix: We need to make sure we have at least some money to build a rail route.
 + Fix: Make sure that the vehicle we share orders with is valid.
 + Fix: 90 degree turns near a passing lane.
-+ Fix: border of map starts at 1,1 not 0,0.
++ Fix: border of map starts at 1,1 not 0,0. (We were not building airports
+  in towns near the left and upper borders.)
 + Change: more checks before building a passing lane, we should see less land
   is sloped wrong messages.
 + Change: Improved airport upgrading.
