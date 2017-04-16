@@ -1,6 +1,13 @@
 WormAI Changelog
 ================
 
+Version 7, 2017-04-16
+---------------------
++ Fix: Not checking air route range at startup under certain conditions.
++ Change: Adjust maximum distance for air routes when we have limited money.
++ Change: Adjust airCraft selection when we have limited funds and high prices
+  of longer range aircraft.
+
 Version 6, 2016-05-28
 ---------------------
 + Fix: Crash when loading a savegame saved when building a rail route or
