@@ -249,6 +249,12 @@ class WormAirManager
 	/** @name Aircraft handling */
     /// @{
 	/**
+	 * Get the minimum price of an aircraft.
+	 * @param IsForSmallAirport Boolean True if only aircraft that can land on small airports should be considered.
+	 * @return The lowest price of an aircraft.
+	 */
+	function GetAircraftMinimumPrice(IsForSmallAirport);
+	/**
 	 * Get the maximum distance this aircraft can safely fly without landing.
 	 * @param engine The engine id for which we want to know the maximum distance.
 	 * @return The maximum distance.
@@ -1514,6 +1520,34 @@ function WormAirManager::TryToBuildAirport(tile_1, tile_2, is_first_airport, air
 }
 
 /**
+ * Get the minimum price of an aircraft.
+ * @param IsForSmallAirport Boolean True if only aircraft that can land on small airports should be considered.
+ * @return The lowest price of an aircraft.
+ */
+function WormAirManager::GetAircraftMinimumPrice(IsForSmallAirport)
+{
+	// @todo This really only needs to be recomputed when there is a change in available aircraft.
+	local aircraft_price_low = WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE);
+	if (IsForSmallAirport) {
+		if (low_price_small > 0)
+			aircraft_price_low = low_price_small;
+	}
+	else {
+		if (low_price_big > 0) {
+			//AILog.Info("low price big = " + low_price_big + ", low price small = " + low_price_small);
+			if ((low_price_big > aircraft_price_low) && (low_price_small > 0))
+				// Lowest price of large aircraft is too high, try with small aircraft
+				aircraft_price_low = low_price_small;
+			else
+				aircraft_price_low = low_price_big;
+		}
+		else if (low_price_small > 0)
+			aircraft_price_low = low_price_small;
+	}
+	return aircraft_price_low;
+}
+
+/**
  * Build an airport route. Find 2 cities that are big enough and try to build airport in both cities.
  * Then we can build an aircraft and try to make some money.
  * We limit our amount of airports to max aircraft / AIRPORT_LIMIT_FACTOR * 2.
@@ -1556,19 +1590,12 @@ function WormAirManager::BuildAirportRoute()
 		// See for capacity of different airport types:
 		// Airport capacity test: http://www.tt-forums.net/viewtopic.php?f=2&t=47279
 		local airport_type = GetOptimalAvailableAirportType();
-		local aircraft_price_low = WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE);
 		if (airport_type == null) {
 			AILog.Warning("No suitable airport type available that we know how to use.");
 			return ERROR_NO_SUITABLE_AIRPORT;
 		}
-		else if (airport_type == AIAirport.AT_SMALL) {
-			if (low_price_small > 0)
-				aircraft_price_low = low_price_small;
-		}
-		else {
-			if (low_price_big > 0)
-				aircraft_price_low = low_price_big;
-		}
+		local aircraft_price_low = GetAircraftMinimumPrice((airport_type == AIAirport.AT_SMALL) || (airport_type == AIAirport.AT_COMMUTER));
+		
 
 		/* Get enough money to work with. Since building on rough terrain costs more we add in overhead costs. */
 		local airport_money = AIAirport.GetPrice(airport_type)*2 + WormMoney.InflationCorrection(BUILD_OVERHEAD);
