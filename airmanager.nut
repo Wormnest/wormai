@@ -83,6 +83,7 @@ class WormAirManager
 	upgrade_wanted = null;				///< List of airports we would like to upgrade.
 	min_distance_squared = 0;			///< Precomputed minimum distance squared based on current settings.
 	max_distance_squared = 0;			///< Precomputed maximum distance squared based on current settings.
+	max_aircraft_distance = 0;			///< Highest distance that an aircraft can fly.
 
 
 	/** Create an instance of WormAirManager and initialize our variables. */
@@ -1968,7 +1969,24 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 function WormAirManager::ComputeDistances()
 {
 	this.min_distance_squared = AIController.GetSetting("min_airport_distance") * AIController.GetSetting("min_airport_distance");
+	local old_max = this.max_distance_squared;
 	this.max_distance_squared = AIController.GetSetting("max_airport_distance") * AIController.GetSetting("max_airport_distance");
+	if (this.max_aircraft_distance > 0) {
+		local dist_squared = this.max_aircraft_distance * 8 / 10;
+		if (dist_squared < this.max_distance_squared) {
+			/* Set max distance to 80% of what best aircraft can go. */
+			//AILog.Info("[DEBUG ] Current max squared: " + this.max_distance_squared);
+			this.max_distance_squared = dist_squared;
+			if (old_max != this.max_distance_squared)
+				AILog.Info("Adjusted max distance squared to: " + this.max_distance_squared);
+			
+			/* If we lower the max we also need to check if it's not lower than the minimum. */
+			if (this.min_distance_squared+200 > this.max_distance_squared) {
+				this.min_distance_squared = this.max_distance_squared - 200;
+				AILog.Info("Adjusted min distance squared to: " + this.min_distance_squared);
+			}
+		}
+	}
 }
 
 /**
@@ -2692,6 +2710,32 @@ function WormAirManager::EvaluateAircraft(clear_warning_shown_flag) {
 	// Remember best engine for logging purposes
 	local best_engine = null;
 	local best_factor = 10000000; // Very high factor so any engine will be below it
+	// We don't set max_aircraft_distance to 0 here but use a local variable first because in certain
+	// very low money conditions it may stay 0 which would cause the set max distance not to take
+	// into account the lower limit because of low money. In that case we keep the old max distance.
+	//this.max_aircraft_distance = 0; // Recompute farthest distance we can go.
+	local temp_max_distance = 0;
+	local low_money_limit = 0;	// In low money conditions we don't add to max_aircraft_distance if
+								// aircraft costs more than low_money_limit.
+	local max_money = WormMoney.GetMaxBankBalance();
+	if (WormMoney.InflationCorrection(AIRCRAFT_MEDIUM_PRICE_CUT) > max_money) {
+		low_money_limit = max_money / 2;
+		// Since we need to use this to set a maximum distance it makes no sense to set a limit
+		// where no aircraft can be used to update that maximum.
+		if (low_price_small > 0) {
+			if (low_money_limit < low_price_small)
+				low_money_limit = low_price_small;
+		}
+		else if (low_price_big > 0) {
+			if (low_money_limit < low_price_big)
+				low_money_limit = low_price_big;
+		}
+		//AILog.Info("[DEBUG] Price limit for aircraft distance: " + low_money_limit);
+	}
+	else {
+		// Make sure we don't limit max distance if we have enough money.
+		temp_max_distance = 10000 * 10000;
+	}
 	
 	foreach(engine, value in engine_list) {
 		// From: http://thegrebs.com/irc/openttd/2012/04/20
@@ -2719,6 +2763,27 @@ function WormAirManager::EvaluateAircraft(clear_warning_shown_flag) {
 				best_factor = cost_per_pass;
 				best_engine = engine;
 			}
+			local engine_distance = AIEngine.GetMaximumOrderDistance(engine);
+			if (engine_distance > temp_max_distance) {
+				//AILog.Info("[DEBUG] engine distance " + engine_distance + " > current known max: " + temp_max_distance);
+				if (low_money_limit == 0) {
+					//AILog.Info("[DEBUG] low money = 0!");
+					temp_max_distance = engine_distance;
+				}
+				else {
+					local eprice = AIEngine.GetPrice(engine);
+					//AILog.Info("[DEBUG] engine price: " + eprice);
+					if (eprice <= low_money_limit) {
+						temp_max_distance = engine_distance;
+						//AILog.Info("[DEBUG] Setting max distance to: " + temp_max_distance);
+					}
+				}
+			}
+			else if (temp_max_distance == 0) {
+				/* Set dummy maximum when there are aircraft without distance limits. */
+				temp_max_distance = 10000 * 10000;
+			}
+			
 			if (AIController.GetSetting("debug_show_lists") == 1) {
 				// Show info about evaluated engines
 				AILog.Info("Engine: " + AIEngine.GetName(engine) + ", price: " + AIEngine.GetPrice(engine) +
@@ -2754,6 +2819,12 @@ function WormAirManager::EvaluateAircraft(clear_warning_shown_flag) {
 	else {
 		AILog.Warning("Best overall engine: " + AIEngine.GetName(best_engine) + ", cost factor: " + best_factor);
 	}
+	if (temp_max_distance > 0) {
+		this.max_aircraft_distance = temp_max_distance;
+		AILog.Warning("Max route distance: " + this.max_aircraft_distance);
+	}
+	if (this.max_aircraft_distance > 0)
+		this.ComputeDistances();
 }
 
 /**
