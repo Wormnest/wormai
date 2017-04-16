@@ -1602,8 +1602,8 @@ function WormAirManager::BuildAirportRoute()
 		local airport_money = AIAirport.GetPrice(airport_type)*2 + WormMoney.InflationCorrection(BUILD_OVERHEAD);
 		if (!WormMoney.GetMoney( airport_money + aircraft_price_low, WormMoney.WM_SILENT)) {
 			AILog.Warning("Not making an air route. It would be too expensive.");
-			AILog.Info("[DEBUG] aircraft low price = " + aircraft_price_low +
-				", airport price for 2 = " + (AIAirport.GetPrice(airport_type)*2));
+			//AILog.Info("[DEBUG] aircraft low price = " + aircraft_price_low +
+			//	", airport price for 2 = " + (AIAirport.GetPrice(airport_type)*2));
 			// Can't get enough money
 			return ERROR_NOT_ENOUGH_MONEY;
 		}
@@ -1611,8 +1611,8 @@ function WormAirManager::BuildAirportRoute()
 //			WormMoney.InflationCorrection(AIRCRAFT_HIGH_PRICE))) {
 		else if (WormMoney.InflationCorrection(AIRCRAFT_HIGH_PRICE) < aircraft_price_low) {
 			AILog.Warning("Not making an air route. The cheapest airplane is too expensive.");
-			AILog.Info("[DEBUG] aircraft low price = " + aircraft_price_low +
-				", expense limit = " + WormMoney.InflationCorrection(AIRCRAFT_HIGH_PRICE));
+			//AILog.Info("[DEBUG] aircraft low price = " + aircraft_price_low +
+			//	", expense limit = " + WormMoney.InflationCorrection(AIRCRAFT_HIGH_PRICE));
 			// Can't get enough money
 			return ERROR_NOT_ENOUGH_MONEY;
 		}
@@ -2100,11 +2100,11 @@ function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width
 		list.Valuate(AITile.GetDistanceSquareToTile, center_tile);
 		/* Keep above minimum distance. */
 		list.KeepAboveValue(this.min_distance_squared);
+		/* Make sure that there are affordable aircraft that can go the max distance. */
 		/* Keep below maximum distance. */
 		list.KeepBelowValue(this.max_distance_squared);
 		/// @todo In early games with low maximum speeds we may need to adjust maximum and
 		/// maybe even minimum distance to get a round trip within a year.
-		//AILog.Warning("[DEBUG] Tiles after distance limiting: " + list.Count());
 
 		// No blacklisting here at all since distance is always relative to another airport, not absolute!
 		if (list.Count() == 0) {
@@ -2146,6 +2146,11 @@ function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width
 
 	AILog.Info("Found a good spot for an airport in " + AITown.GetName(town) + " (id: "+ town + 
 		", tile " + WormStrings.WriteTile(tile) + ", acceptance: " + list.GetValue(tile) + ").");
+	if (center_tile != 0) {
+		local sq_dist = AITile.GetDistanceSquareToTile(tile, center_tile);
+		local range = WormMath.Sqrt(sq_dist);
+		AILog.Info("Squared distance from other airport: " +  sq_dist + ", range: " + range + ", max dist: " + this.max_distance_squared);
+	}
 
 	return tile;
 }
