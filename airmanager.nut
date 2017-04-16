@@ -1776,14 +1776,12 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 
 	local engine_list = AIEngineList(AIVehicle.VT_AIR);
 
-	/* When bank balance < AIRCRAFT_LOW_PRICE_CUT, buy cheaper planes */
-	local balance = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
+	/* When we don't have a lot of money buy cheaper planes. */
+	local max_money = WormMoney.GetMaxBankBalance();
 	
-	/*** @todo Maybe try to get more loan here? */
-	
-	/* Balance below a certain minimum? Wait until we buy more planes. */
-	if (balance < WormMoney.InflationCorrection(MINIMUM_BALANCE_AIRCRAFT)) {
-		AILog.Warning("We are low on money (" + balance + "). We are not going to buy an airplane right now.");
+	/* Available money below a certain minimum? Wait until we have more money to before we buy more planes. */
+	if (max_money < WormMoney.InflationCorrection(MINIMUM_BALANCE_AIRCRAFT)) {
+		AILog.Warning("We are low on money (" + max_money + "). We are not going to buy an airplane right now.");
 		return ERROR_NOT_ENOUGH_MONEY;
 	}
 	
@@ -1798,17 +1796,90 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 	*/
 	local airport_type = AIAirport.GetAirportType(order_start_tile);
 	local airport_type2 = AIAirport.GetAirportType(order_end_tile);
-	local small_airport = false;
+	local for_small_airport = false;
 	if (airport_type == AIAirport.AT_SMALL || airport_type == AIAirport.AT_COMMUTER ||
 		airport_type2 == AIAirport.AT_SMALL || airport_type2 == AIAirport.AT_COMMUTER) {
 		AILog.Info("Removing big planes from selection since we are building for a small airport.");
 		engine_list.RemoveValue(AIAirport.PT_BIG_PLANE);
-		small_airport = true;
+		for_small_airport = true;
 	}
 	
 	engine_list.Valuate(AIEngine.GetCargoType);
 	engine_list.KeepValue(this.passenger_cargo_id);
 	
+	local aircraft_price_low = GetAircraftMinimumPrice(for_small_airport);
+
+	local low_cut = WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE_CUT);
+	local medium_cut = WormMoney.InflationCorrection(AIRCRAFT_MEDIUM_PRICE_CUT);
+	if (aircraft_price_low > 0) {
+		if (aircraft_price_low > low_cut)
+			low_cut = 0;
+		if (aircraft_price_low > medium_cut)
+			medium_cut = 0;
+	}
+	
+	local max_spendable = WormMoney.GetMaxBankBalance();
+	// Don't use everything on 1 aircraft. For now set a max of 3/4.
+	local max_usable = max_spendable * 3 / 4;
+	local max_cost = 0;
+	local price = 0;
+	
+	/* If we already built airports but don't have any aircraft at all yet then we should allow
+	 * using all available money. Because if we get stuck with airports without aircraft we
+	 * might not be able to recover at all.
+	 */
+	if (this.route_1.Count() == 0) {
+		price = max_spendable;
+	}
+	else {
+		if (max_usable < low_cut) {
+			price = WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE);
+			if (price < aircraft_price_low)
+				price = max_usable;
+		}
+		else if (max_usable < medium_cut) {
+			price = WormMoney.InflationCorrection(AIRCRAFT_MEDIUM_PRICE);
+			if (price < max_usable / 2)
+				price = max_usable / 2;
+		}
+		else {
+			price = WormMoney.InflationCorrection(AIRCRAFT_HIGH_PRICE);
+			if (price < max_usable / 3)
+				price = max_usable / 3;
+		}
+	}
+	max_cost = price;
+	
+	//AILog.Info("[DEBUG] aircraft low price = " + aircraft_price_low +
+	//	", current available money = " + max_money + ", max usable = " + max_usable + ", low cut = " + low_cut + ", max cost = " + max_cost);
+	if (max_usable < aircraft_price_low) {
+		AILog.Warning("We don't have enough money for an airplane.");
+		return ERROR_NOT_ENOUGH_MONEY;
+	}
+	else if (max_cost < aircraft_price_low) {
+		AILog.Warning("The available airplanes are too expensive.");
+		return ERROR_NOT_ENOUGH_MONEY;
+	}
+	
+	engine_list.Valuate(AIEngine.GetPrice);
+	engine_list.KeepBelowValue(max_cost);
+
+	/* Check if there are any airplanes left. */
+	if (engine_list.Count() == 0) {
+		// Either we don't have enough money to buy an airplane, or there are only very expensive airlanes
+		// above our set maximum price.
+		AILog.Warning("The available airplanes are too expensive.");
+		return ERROR_NOT_ENOUGH_MONEY;
+	}
+
+	//local distance_between_stations = AIOrder.GetOrderDistance(null, tile_1, tile_2);
+	local distance_between_stations = AIMap.DistanceSquare(tile_1, tile_2);
+	/* Subtract a little distance since aircraft might need to fly around airport. */
+	if (distance_between_stations > 400)
+		distance_between_stations = distance_between_stations - 200;
+	
+	//AILog.Info("[DEBUG] Usable aircraft before checking distance: " + engine_list.Count());
+	//AILog.Info("[DEBUG] Squared distance we need to fly: " + distance_between_stations);
 	// Newer versions of OpenTTD allow NewGRFs to set a maximum distance a plane can fly between orders
 	// That means we need to make sure planes can fly the distance necessary for our intended order.
 	// Since distance is returned squared we need to get the squared distance for our intended order.
@@ -1816,9 +1887,8 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 	//foreach (eng,x in engine_list) {
 	//	AILog.Info("Engine: " + AIEngine.GetName(eng) + ", distance: " + AIEngine.GetMaximumOrderDistance(eng));
 	//}
-	//local distance_between_stations = AIOrder.GetOrderDistance(null, tile_1, tile_2);
-	local distance_between_stations = AIMap.DistanceSquare(tile_1, tile_2);
 	engine_list.KeepAboveValue(distance_between_stations);
+	//AILog.Info("[DEBUG] Number of aircraft that can fly this distance: " + engine_list.Count());
 	// debugging:
 	//AILog.Info("squared distance: " + distance_between_stations);
 	//foreach (eng,x in engine_list) {
@@ -1829,46 +1899,20 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 	/* Check if there are any airplanes left. */
 	if (engine_list.Count() == 0) {
 		// Most likely no aircraft found for the range we wanted.
-		AILog.Warning("Couldn't find a suitable aircraft.");
-		return ERROR_BUILD_AIRCRAFT_INVALID;
-	}
-
-	local aircraft_price_low = WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE);
-	if (small_airport) {
-		if (low_price_small > 0)
-			aircraft_price_low = low_price_small;
-	}
-	else {
-		if (low_price_big > 0)
-			aircraft_price_low = low_price_big;
-	}
-
-	local low_cut = WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE_CUT);
-	local medium_cut = WormMoney.InflationCorrection(AIRCRAFT_MEDIUM_PRICE_CUT);
-	if (aircraft_price_low > 0) {
-		if (aircraft_price_low > low_cut)
-			low_cut = 0;
-		if (aircraft_price_low > medium_cut)
-			medium_cut = 0;
-	}
-	engine_list.Valuate(AIEngine.GetPrice);
-	engine_list.KeepBelowValue(balance < low_cut ?
-		WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE) : (balance < medium_cut ?
-		WormMoney.InflationCorrection(AIRCRAFT_MEDIUM_PRICE) : WormMoney.InflationCorrection(AIRCRAFT_HIGH_PRICE)));
-
-	/* Check if there are any airplanes left. */
-	if (engine_list.Count() == 0) {
-		// Either we don't have enough money to buy an airplane, or there are only very expensive airlanes
-		// above our set maximum price.
-		/// @todo Maybe instead of a fixed max we need to find the current max price for an airplane?
-		if (balance < low_cut /*WormMoney.InflationCorrection(AIRCRAFT_LOW_PRICE)*/)
-			AILog.Warning("We don't have enough money for an airplane.");
-		else if (balance < aircraft_price_low)
-			AILog.Warning("The available airplanes are too expensive.");
-		AILog.Info("[DEBUG] aircraft low price = " + aircraft_price_low +
-			", current money = " + balance + ", low cut = " + low_cut);
-
-		return ERROR_NOT_ENOUGH_MONEY;
+		AILog.Warning("Couldn't find a suitable aircraft that can fly the desired distance (" + distance_between_stations + ") and is within our budget.");
+		// Since in most cases this will mean not enough money we return that code instead of ERROR_BUILD_AIRCRAFT_INVALID
+		// Returning the other code would cause the airports to be destroyed again which costs us money!
+		// However if route_without_aircraft is True but our max distance for out current money situation
+		// doesn't allow us to get an aircraft for this distance then return ERROR_BUILD_AIRCRAFT_INVALID.
+		// Reason: It may be unprofitable to buy aircraft for that distance for a long time which will
+		// block buying aircraft for other routes and also creating other new routes.
+		// Also remove when we don't have any aircraft at all yet or else we might get stuck with airports without
+		// aircraft and no money left to start a new route.
+		
+		if (route_without_aircraft && ((distance_between_stations > this.max_distance_squared) || (this.route_1.Count() == 0)))
+			return ERROR_BUILD_AIRCRAFT_INVALID;
+		else
+			return ERROR_NOT_ENOUGH_MONEY;
 	}
 
 	engine_list.Valuate(this.GetCostFactor, this.engine_usefulness);
@@ -1890,6 +1934,12 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 	}
 	/* Price of cheapest engine can be more than our bank balance, check for that. */
 	eng_price = AIEngine.GetPrice(engine);
+	local balance = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
+	if (eng_price > balance) {
+		WormMoney.GetMoney(eng_price);
+		balance = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
+	}
+
 	if (eng_price > balance) {
 		AILog.Warning("Can't buy aircraft. The cheapest selected aircraft (" + eng_price + ") costs more than our available funds (" + balance + ").");
 		return ERROR_NOT_ENOUGH_MONEY;
