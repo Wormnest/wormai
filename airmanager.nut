@@ -1684,10 +1684,11 @@ function WormAirManager::BuildAirportRoute()
 			// Can't get enough money
 			return ERROR_NOT_ENOUGH_MONEY;
 		}
-		route_without_aircraft = false;
 	}
 
 	local ret = this.BuildAircraft(tile_1, tile_2, tile_1);
+	// Set to false after BuildAircraft because it's checked there too!
+	route_without_aircraft = false;
 	if (ret < 0) {
 		if (!(ret == ERROR_NOT_ENOUGH_MONEY)) {
 			// For some reason removing an airport in here sometimes fails, sleeping a little
