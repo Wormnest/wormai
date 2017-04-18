@@ -41,6 +41,7 @@ const MAX_STATUES_BUILD_COUNT = 3;				///< Maximum number of statues we will bui
 const VEH_OLD_AGE			= 0;				///< Vehicle is sold because of its old age.
 const VEH_LOW_PROFIT		= 1;				///< Vehicle is sold because it has low profits.
 const VEH_STATION_REMOVAL	= 2;				///< Vehicle is sold because one of its stations got removed and could not be replaced.
+const VEH_TOO_MANY			= 3;				///< Vehicle is sold because there are too many on this route
 /// @}
 
 /**
@@ -274,14 +275,14 @@ class WormAirManager
 	 * Send all vehicles belonging to a station to depot for selling.
 	 * @param station_id The id of the station.
 	 * @param sell_reason The reason for selling. Valid reasons are
-	 * @ref VEH_OLD_AGE, @ref VEH_LOW_PROFIT, @ref VEH_STATION_REMOVAL
+	 * @ref VEH_OLD_AGE, @ref VEH_LOW_PROFIT, @ref VEH_STATION_REMOVAL, @ref VEH_TOO_MANY
 	 */
 	function SendAllVehiclesOfStationToDepot(station_id, sell_reason);
 	/**
 	 * Send a vehicle to depot to be sold when it arrives.
 	 * @param vehicle The vehicle id of the vehicle to be sold.
 	 * @param sell_reason The reason for selling. Valid reasons are
-	 * @ref VEH_OLD_AGE, @ref VEH_LOW_PROFIT, @ref VEH_STATION_REMOVAL
+	 * @ref VEH_OLD_AGE, @ref VEH_LOW_PROFIT, @ref VEH_STATION_REMOVAL, @ref VEH_TOO_MANY
 	 */
 	function SendToDepotForSelling(vehicle,sell_reason);
 	/**
@@ -988,7 +989,7 @@ function WormAirManager::ReplaceOrders(veh, is_first_order, breakdowns, station_
  * Send all vehicles belonging to a station to depot for selling.
  * @param station_id The id of the station.
  * @param sell_reason The reason for selling. Valid reasons are
- * @ref VEH_OLD_AGE, @ref VEH_LOW_PROFIT, @ref VEH_STATION_REMOVAL
+ * @ref VEH_OLD_AGE, @ref VEH_LOW_PROFIT, @ref VEH_STATION_REMOVAL, @ref VEH_TOO_MANY
  */
 function WormAirManager::SendAllVehiclesOfStationToDepot(station_id, sell_reason)
 {
@@ -2218,7 +2219,7 @@ function WormAirManager::FindSuitableAirportSpot(airport_type, center_tile)
  * Send a vehicle to depot to be sold when it arrives.
  * @param vehicle The vehicle id of the vehicle to be sold.
  * @param sell_reason The reason for selling. Valid reasons are
- * @ref VEH_OLD_AGE, @ref VEH_LOW_PROFIT, @ref VEH_STATION_REMOVAL
+ * @ref VEH_OLD_AGE, @ref VEH_LOW_PROFIT, @ref VEH_STATION_REMOVAL, @ref VEH_TOO_MANY
  */
 function WormAirManager::SendToDepotForSelling(vehicle,sell_reason)
 {
@@ -2232,12 +2233,16 @@ function WormAirManager::SendToDepotForSelling(vehicle,sell_reason)
 					WormStrings.GetAgeString(AIVehicle.GetMaxAge(vehicle));
 			} break;
 			case VEH_LOW_PROFIT: {
-				info_text += "low profits: " + AIVehicle.GetProfitLastYear(vehicle) + " / " + 
-					AIVehicle.GetProfitThisYear(vehicle);
+				info_text += "low profits last year: " + AIVehicle.GetProfitLastYear(vehicle);
 			} break;
 			case VEH_STATION_REMOVAL: {
 				info_text += "removal of station";
 			} break;
+			case VEH_TOO_MANY: {
+				info_text += "too many aircraft on this route";
+			} break;
+			default:
+				info_text += "ATTENTION: We forgot to add the reason";
 		}
 		AILog.Info(info_text);
 		/* Send it to depot. */
