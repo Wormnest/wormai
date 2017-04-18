@@ -2609,12 +2609,14 @@ function WormAirManager::ManageAirRoutes()
 function WormAirManager::UpdateBlacklists()
 {
 	local cur_date = AIDate.GetCurrentDate();
+	local debug_on = AIController.GetSetting("debug_show_lists") == 1;
 	// Suitable towns for airports blacklist
 	for (local town = towns_blacklist.Begin(); !towns_blacklist.IsEnd(); town = towns_blacklist.Next()) {
 		local expires = towns_blacklist.GetValue(town);
 		if (expires < cur_date) {
 			towns_blacklist.RemoveItem(town);
-			AILog.Info("Removed town " + AITown.GetName(town) + " from blacklist.");
+			if (debug_on)
+				AILog.Info("Removed town " + AITown.GetName(town) + " from blacklist.");
 		}
 //		else
 //			AILog.Info("Town " + AITown.GetName(town) + " is blacklisted until " + Helper.GetDateString(expires) + ".");
@@ -2624,7 +2626,8 @@ function WormAirManager::UpdateBlacklists()
 		local expires = upgrade_blacklist.GetValue(town);
 		if (expires < cur_date) {
 			upgrade_blacklist.RemoveItem(town);
-			AILog.Info("Removed town " + AITown.GetName(town) + " from airport upgrade blacklist.");
+			if (debug_on)
+				AILog.Info("Removed town " + AITown.GetName(town) + " from airport upgrade blacklist.");
 		}
 	}
 
