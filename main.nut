@@ -54,6 +54,7 @@ require("math.nut");
 require("tiles.nut");
 require("valuators.nut");
 require("rail_pathfinder.nut");
+require("airport.nut");
 require("airmanager.nut");
 require("railmanager.nut");
 require("railbuilder.nut");
