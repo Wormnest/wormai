@@ -328,6 +328,17 @@ class WormAirManager
 	 * @todo Refactor the parts of this function into separate functions.
 	 */
 	function ManageAirRoutes();
+	/**
+	 * Check for routes that are over saturated, i.e. have aircraft waiting in hangar or flying in queue around airport.
+	 * There's some things we can do about it.
+	 * 1. Remove full load order; Note that usually the town that doesn't have a lot of waiting aircraft
+	 *    is the one whose order we should change.
+	 * 2. Remove some aircraft (the lowest in capacity first, but not aicraft younger than 2 years)
+	 * 3. Upgrade to larger airport (may be problematic because of extra noise)
+	 * @note Only 2. is currently implemented.
+	 * @todo Points 1 and 3.
+	 */
+	function CheckOversaturatedRoutes();
 	/** 
 	 * Callback that handles events. Currently only AIEvent.ET_VEHICLE_CRASHED is handled.
 	 */
@@ -2601,6 +2612,68 @@ function WormAirManager::ManageAirRoutes()
 		return ret;
 	}
 	AILog.Info(Helper.GetCurrentDateString() + " Finished managing air routes.");
+}
+
+/**
+ * Check for routes that are over saturated, i.e. have aircraft waiting in hangar or flying in queue around airport.
+ * There's some things we can do about it.
+ * 1. Remove full load order; Note that usually the town that doesn't have a lot of waiting aircraft
+ *    is the one whose order we should change.
+ * 2. Remove some aircraft (the lowest in capacity first, but not aicraft younger than 2 years)
+ * 3. Upgrade to larger airport (may be problematic because of extra noise)
+ * @note Only 2. is currently implemented.
+ * @todo Points 1 and 3.
+ */
+function WormAirManager::CheckOversaturatedRoutes()
+{
+	local list = AIStationList(AIStation.STATION_AIRPORT);
+	local debug_on = AIController.GetSetting("debug_show_lists") == 1;
+	for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
+		/* Don't check if station is closed (usually means we are trying to upgrade airport). */
+		if (AIStation.IsAirportClosed(i)) continue;
+
+		local saturation = RouteSaturationStatus(i, -1);
+		local loading = GetNumLoadingAtStation(i);
+		local t1 = GetAirportTileFromStation(i);
+		local terminals = GetNumLoadingBays(t1);
+		local adjusted_saturation = saturation + terminals - loading;
+		// @todo Should we also check planes in the waiting queue to land?
+
+		// Only do something if we have at least 4 aircraft in a hangar.
+		if (adjusted_saturation > -4) continue;
+		
+		local list2 = AIVehicleList_Station(i);
+		if (debug_on) {
+			AILog.Warning("[DEBUG] Station " + AIStation.GetName(i) + ", " + list2.Count() + 
+				" vehicles, saturation: " + (-saturation) + ", (un)loading: " + loading);
+		}
+		/* We check only aircraft here. */
+		list2.Valuate(AIVehicle.GetVehicleType);
+		list2.KeepValue(AIVehicle.VT_AIR);
+		// 1. Remove vehicles younger than 2 years
+		list2.Valuate(AIVehicle.GetAge);
+		list2.KeepAboveValue(2*365);
+		if (debug_on)
+			AILog.Info("[DEBUG] Older than 2 years: " + list2.Count());
+		// 2. Remove the X smallest capacity aircraft
+		list2.Valuate(AIVehicle.GetCapacity, this.passenger_cargo_id);
+		
+		// How many aircraft are we going to remove?
+		local amount_to_remove = -saturation - 2;
+		// Make sure we have at least that amount (that is older than 2 years)
+		if (list2.Count() < amount_to_remove)
+			amount_to_remove = list2.Count();
+		
+		// Only keep the aircraft that we want to remove.
+		list2.KeepBottom(amount_to_remove);
+		if (debug_on)
+			AILog.Info("[DEBUG] Removing: " + list2.Count());
+		
+		/* Send them all to depot to be sold. */
+		for (local veh = list2.Begin(); !list2.IsEnd(); veh = list2.Next()) {
+			SendToDepotForSelling(veh, VEH_TOO_MANY);
+		}
+	}
 }
 
 /**
