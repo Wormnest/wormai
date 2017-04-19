@@ -1283,7 +1283,7 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 			local nearest_town = AIAirport.GetNearestTown(station_tile, airport_type);
 			local upgrade_result = WormAirport.BUILD_FAILED;
 			/* Try to upgrade airport. */
-			if ((optimal_airport == AIAirport.AT_METROPOLITAN) && (optimal_airport == AIAirport.AT_METROPOLITAN)) {
+			if ((airport_type == AIAirport.AT_LARGE) && (optimal_airport == AIAirport.AT_METROPOLITAN)) {
 				/// Since METROPOLITAN is the same size as LARGE we will try to rebuild it in the same spot!
 				upgrade_result = WormAirport.UpgradeLargeToMetropolitan(nearest_town, station_id, station_tile);
 			}
