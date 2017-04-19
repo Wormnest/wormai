@@ -2872,7 +2872,7 @@ function WormAirManager::CheckOversaturatedRoutes()
 		local saturation = RouteSaturationStatus(i, -1);
 		local loading = GetNumLoadingAtStation(i);
 		local t1 = GetAirportTileFromStation(i);
-		local terminals = GetNumLoadingBays(t1);
+		local terminals = GetNumTerminals(t1);
 		local adjusted_saturation = saturation + terminals - loading;
 		// @todo Should we also check planes in the waiting queue to land?
 
