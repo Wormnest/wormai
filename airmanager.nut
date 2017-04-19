@@ -2068,9 +2068,19 @@ function WormAirManager::ComputeDistances()
 function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width, airport_height,
 	coverage_radius, center_tile, minimum_acceptance, add_to_blacklist=true, old_airport_type=AIAirport.AT_INVALID)
 {
+	local debug_on = AIController.GetSetting("debug_show_lists") == 1;
+	if (debug_on) {
+		AILog.Info("Town: " + AITown.GetName(town));
+	}
 	/* No use looking further if we have a bad rating in this town. */
-	if (!Town.TownRatingAllowStationBuilding(town))
+	if (!Town.TownRatingAllowStationBuilding(town)) {
+		if (debug_on)
+			AILog.Info("Can't build airport: AI has bad rating in town.");
+		/* Add town to blacklist for a while. */
+		if (add_to_blacklist)
+			towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+500);
 		return ERROR_FIND_AIRPORT1;
+	}
 
 	local tile = AITown.GetLocation(town);
 
@@ -2085,24 +2095,26 @@ function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width
 
 	/* Safely add a square rectangle taking care of border tiles. */
 	WormTiles.SafeAddSquare(list, tile, range);
-	//AILog.Warning( "[DEBUG] town: " + AITown.GetName(town));
-	//AILog.Warning("[DEBUG] Tiles before any limiting: " + list.Count());
 	/* Remove all tiles where an airport can't be built. */
 	list.Valuate(AITile.IsBuildableRectangle, airport_width, airport_height);
 	list.KeepValue(1);
-	//AILog.Warning("[DEBUG] Tiles after buildable rectangle limiting: " + list.Count());
+	if (debug_on)
+		AILog.Info("Tiles after buildable rectangle limiting: " + list.Count());
 
 	// Only keep tiles where we don't go over the noise limit.
 	/// @todo Is this really useful. Does it matter what tile we build on in same town?
 	list.Valuate(this.IsWithinNoiseLimit, old_airport_type, airport_type);
 	list.KeepValue(1);
-	//AILog.Warning("[DEBUG] Tiles after noise limiting: " + list.Count());
+	if (debug_on)
+		AILog.Info("Tiles after noise limiting: " + list.Count());
 
 	// If Count is 0 here we should blacklist regardless of acceptance and regardless of distance
 	if (list.Count() == 0) {
+		if (debug_on)
+			AILog.Info("Can't build in town because of too much noise.");
 		/* Add town to blacklist for a while. */
 		if (add_to_blacklist)
-			towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+500);
+			towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+1000);
 		return ERROR_FIND_AIRPORT1;
 	}
 
@@ -2120,6 +2132,8 @@ function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width
 
 		// No blacklisting here at all since distance is always relative to another airport, not absolute!
 		if (list.Count() == 0) {
+			if (debug_on)
+				AILog.Info("Can't build airport: No tiles within allowed distance to other town.");
 			return ERROR_FIND_AIRPORT1;
 		}
 	}
@@ -2127,13 +2141,16 @@ function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width
 	/* Sort on acceptance, remove places that don't have acceptance */
 	list.Valuate(AITile.GetCargoAcceptance, this.passenger_cargo_id, airport_width, airport_height, coverage_radius);
 	list.RemoveBelowValue(minimum_acceptance);
-	//AILog.Warning("[DEBUG] Tiles after acceptance (" + minimum_acceptance + ") limiting: " + list.Count());
+	if (debug_on)
+		AILog.Info("Tiles after acceptance (" + minimum_acceptance + ") limiting: " + list.Count());
 	
 	/* Couldn't find a suitable place for this town, skip to the next */
 	if (list.Count() == 0) {
+		if (debug_on)
+			AILog.Info("No tiles in town above minimum acceptance rating.");
 		/* Add town to blacklist for a while. */
-		if (add_to_blacklist && (minimum_acceptance > 25))
-			towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+500);
+		if (add_to_blacklist)
+			towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+250);
 		return ERROR_FIND_AIRPORT1;
 	}
 
@@ -2151,14 +2168,16 @@ function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width
 	/* Did we find a place to build the airport on? */
 	if (tile == -1) {
 		/* Add town to blacklist for a while. */
-		if (add_to_blacklist && (minimum_acceptance > 25))
-			towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+500);
+		if (add_to_blacklist)
+			towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+250);
+		if (debug_on)
+			AILog.Info("Can't build airport: trying to build failed.");
 		return ERROR_FIND_AIRPORT1;
 	}
 
 	AILog.Info("Found a good spot for an airport in " + AITown.GetName(town) + " (id: "+ town + 
 		", tile " + WormStrings.WriteTile(tile) + ", acceptance: " + list.GetValue(tile) + ").");
-	if (center_tile != 0) {
+	if (debug_on && (center_tile != 0)) {
 		local sq_dist = AITile.GetDistanceSquareToTile(tile, center_tile);
 		local range = WormMath.Sqrt(sq_dist);
 		AILog.Info("Squared distance from other airport: " +  sq_dist + ", range: " + range + ", max dist: " + this.max_distance_squared);
