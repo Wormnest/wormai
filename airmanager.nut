@@ -2202,6 +2202,12 @@ function WormAirManager::FindSuitableAirportSpot(airport_type, center_tile)
 	airport_rad = AIAirport.GetAirportCoverageRadius(airport_type);
 
 	local town_list = AITownList();
+	local town_count = town_list.Count();
+	local debug_on = AIController.GetSetting("debug_show_lists") == 1;
+	if (debug_on) {
+		AILog.Info("Number of towns: " + town_list.Count() + ", already used: " + this.towns_used.Count() +
+			", on blacklist: " + this.towns_blacklist.Count());
+	}
 	/* Remove all the towns that already have an airport. */
 	town_list.RemoveList(this.towns_used);
 	/* Remove all the towns where we already tried to build an airport. */
@@ -2209,9 +2215,54 @@ function WormAirManager::FindSuitableAirportSpot(airport_type, center_tile)
 
 	town_list.Valuate(AITown.GetPopulation);
 	town_list.KeepAboveValue(AIController.GetSetting("min_town_size"));
+	if (debug_on) {
+		AILog.Info("Number left above minimum size: " + town_list.Count());
+	}
+	
+	local min_towns = 0;
+	if (town_count < 10) {
+		if (center_tile != 0)
+			min_towns = 1;
+		else
+			min_towns = 2;
+	}
+	else if (town_count < 50)
+		min_towns = 5;
+	else if (town_count < 200)
+		min_towns = 10;
+	else
+		min_towns = 20;
+	
+	if (town_list.Count() < min_towns) {
+		if (debug_on) {
+			AILog.Info("Not enough towns to choose from: " + town_list.Count());
+		}
+		return ERROR_FIND_AIRPORT_FINAL;
+	}
+	
+	/* If we are looking for the second town of a new route then first remove all towns that
+	 * are not within the distance limits.
+	 */
+	/* Check if we need to consider the distance to another tile. */
+	if (center_tile != 0) {
+		/* If we have a tile defined, check to see if it's within the minimum and maximum allowed. */
+		town_list.Valuate(AITown.GetDistanceSquareToTile, center_tile);
+		/* Keep above minimum distance. */
+		town_list.KeepAboveValue(this.min_distance_squared);
+		/* Make sure that there are affordable aircraft that can go the max distance. */
+		/* Keep below maximum distance. */
+		town_list.KeepBelowValue(this.max_distance_squared);
+		if (debug_on) {
+			AILog.Info("Number left within the distance limits: " + town_list.Count());
+		}
+	}
+	
 	/* Keep the best 20, if we can't find 2 stations in there, just leave it anyway */
-	/* Original value was 10. We increase it to 20 to make it more likely we will find
-	   a town in case there are a lot of unsuitable locations. */
+	// First select 40 then sort based on being a city
+	town_list.KeepTop(40);
+	/* Prefer cities that grow faster over normal towns but don't rule them out. */
+	town_list.Valuate(AITown.IsCity);
+	// Keep the top 20 which should include all cities since they are less common than towns.
 	town_list.KeepTop(20);
 	town_list.Valuate(AIBase.RandItem);
 	
