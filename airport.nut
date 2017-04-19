@@ -66,6 +66,15 @@ class WormAirport /////////////////////////////////////////// 1188 <------------
 	 */ 
 	static function UpgradeLargeToMetropolitan(nearest_town, station_id, station_tile);
 
+	/**
+	 * Tries to upgrade airport from small to either large or metropolitan.
+	 * @param station_id The id of the airport to upgrade.
+	 * @param station_tile The tile of the airport.
+	 * @param airport_type The type of airport to build.
+	 * @return WormAirport.BUILD_SUCCESS if we succeed, or else one of the BUILD_XXX error codes.
+	 */
+	function UpgradeSmall(station_id, station_tile, airport_type);
+
 }
 
 /**
@@ -196,3 +205,36 @@ function WormAirport::UpgradeLargeToMetropolitan(nearest_town, station_id, stati
 		return BUILD_REBUILD_FAILED;
 }
 
+/**
+ * Tries to upgrade airport from small to either large or metropolitan.
+ * @param station_id The id of the airport to upgrade.
+ * @param station_tile The tile of the airport.
+ * @param airport_type The type of airport to build.
+ * @return WormAirport.BUILD_SUCCESS if we succeed, or else one of the BUILD_XXX error codes.
+ */
+function WormAirport::UpgradeSmall(station_id, station_tile, airport_type)
+{
+	// Try to remove old airport
+	/// @todo Can we use RemoveAirport too or does that make it impossible to reuse station_id?
+	if (!AITile.DemolishTile(station_tile)) {
+		AILog.Warning(AIError.GetLastErrorString());
+		AILog.Info("Removing old airport failed, can't upgrade (probably airplane in the way).");
+		return BUILD_REMOVE_FAILED;
+	}
+
+	// Try to build new airport in the new location
+	local airport_status = AIAirport.BuildAirport(new_location, airport_type, station_id);
+	if (!airport_status) {
+		// Try to get our old station back...
+		AILog.Warning(AIError.GetLastErrorString());
+		AILog.Info("Upgrading airport failed, try to get old airport back.");
+		airport_status = AIAirport.BuildAirport(station_tile, AIAirport.AT_SMALL, station_id);
+	}
+	if (airport_status)
+		// New station tile etc will be updated by caller.
+		return BUILD_SUCCESS;
+	else {
+		AILog.Warning(AIError.GetLastErrorString());
+		return BUILD_REBUILD_FAILED;
+	}
+}
