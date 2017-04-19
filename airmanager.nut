@@ -1654,11 +1654,19 @@ function WormAirManager::BuildAirportRoute()
 					tile_2 = this.FindSuitableAirportSpot(airport_type, tile_1);
 				}
 				if (tile_2 < 0) {
+					/* Blacklist the tile_1 town for a while. But first we need to find the town id. */
+					local town = GetTownFromStationTile(tile_1);
+					if (town != null)
+						towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+500);
 					this.towns_used.RemoveValue(tile_1);
 					return ERROR_FIND_AIRPORT2;
 				}
 			}
 			else {
+				/* Blacklist the tile_1 town for a while. But first we need to find the town id. */
+				local town = GetTownFromStationTile(tile_1);
+				if (town != null)
+					towns_blacklist.AddItem(town, AIDate.GetCurrentDate()+500);
 				this.towns_used.RemoveValue(tile_1);
 				return ERROR_FIND_AIRPORT2;
 			}
