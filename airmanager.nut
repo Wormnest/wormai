@@ -189,6 +189,11 @@ class WormAirManager
 	 */
 	function CheckForAirportsNeedingToBeUpgraded();
 	/**
+	 * Update the @ref upgrade_wanted list of towns with airports that can and should be upgraded.
+	 * 
+	 */ 
+	function UpdateAirportUpgradeList();
+	/**
 	 * Build an airport route. Find 2 cities that are big enough and try to build airport in both cities.
 	 * Then we can build an aircraft and try to make some money.
 	 * We limit our amount of airports to max aircraft / AIRPORT_LIMIT_FACTOR * 2.
@@ -204,6 +209,21 @@ class WormAirManager
 	 */
 	function FindSuitableAirportSpot(airport_type, center_tile);
 	/**
+	 * Find a candidate spot in the specified town to build an airport of the specified type.
+	 * @param town The town id of the town where we should search.
+	 * @param airport_type For which type of airport.
+	 * @param airport_width The width of the airport.
+	 * @param airport_height The height of the airport.
+	 * @param coverageradius The coverage radius of the airport.
+	 * @param center_tile The tile of the airport at the other end of the route or 0 if this is the first airport on the route.
+	 * @param minimum_acceptance The minimum cargo acceptance we should allow for suitable spots.
+	 * @param add_to_blacklist Boolean (default true) If true adds town to blacklist if no suitable spot could be found.
+	 * @param old_airport_type (default=AIAirport.AT_INVALID) If not invalid noise limits are checked for replacing old_airport_type with airport type.
+	 * @return The tile where an airport can be built or ERROR_FIND_AIRPORT1 or ERROR_FIND_AIRPORT2.
+	 */
+	function FindAirportSpotInTown(town, airport_type, airport_width, airport_height,
+		coverage_radius, center_tile, minimum_acceptance, add_to_blacklist=true, old_airport_type=AIAirport.AT_INVALID);
+	/**
 	  * Sells the airports at tile_1 and tile_2. Removes towns from towns_used list too.
 	  * @param airport_1_tile The tile of the first airport to remove
 	  * @param airport_2_tile The tile of the other airport to remove
@@ -211,6 +231,40 @@ class WormAirManager
 	  * case but the towns_used will be updated.
 	  */
 	function SellAirports(airport_1_tile, airport_2_tile);
+	/**
+	 * Try to build an airport.
+	 * @param tile_1 The tile of the proposed first airport on a route.
+	 * @param tile_2 The tile of the proposed second airport on a route.
+	 * @param is_first_airport Boolean: true if it's the first airport we want to build, false if the second should be built.
+	 * @param airport_type The type of airport to build.
+	 * @return The actual tile where the airport was built or ERROR_BUILD_AIRPORT1.
+	 * @note The actual tile where the airport got built can be different than tile_1/tile_2 because
+	 * if building there fails we will try to find a second spot to build. If that succeeds the tile of
+	 * that spot is returned.
+	 */
+	function TryToBuildAirport(tile_1, tile_2, is_first_airport, airport_type);
+	/**
+	 * Tries to upgrade airport from large to metropolitan in the same location since they are the same size.
+	 * @param nearest_town The nearest town according to town influence.
+	 * @param station_id The id of the airport to upgrade.
+	 * @param station_tile The tile of the airport.
+	 * @return BUILD_SUCCESS if we succeed, or else one of the BUILD_XXX error codes.
+	 * @pre Noise and Town allowance already checked, enough money, ...
+	 */ 
+	function UpgradeLargeToMetropolitan(nearest_town, station_id, station_tile);
+	/**
+	 * Tries to upgrade airport from small to either large or metropolitan.
+	 * @param nearest_town The nearest town according to town influence.
+	 * @param station_id The id of the airport to upgrade.
+	 * @param station_tile The tile of the airport.
+	 * @return BUILD_SUCCESS if we succeed, or else one of the BUILD_XXX error codes.
+	 */
+	function UpgradeSmall(nearest_town, station_id, station_tile, airport_type, other_station_tile);
+	/**
+	 * Check whether the airport (including depots) is empty, meaning no airplanes.
+	 * @return true if it is empty, otherwise false
+	 */
+	function IsAirportEmpty(station_id);
 	/// @}
 
 	/** @name Order handling */
@@ -313,6 +367,12 @@ class WormAirManager
 	 * @return The number of aircraft (un)loading or -1 in case of an error.
 	 */
 	function GetNumLoadingAtStation(st_id);
+	/**
+	 * Send all airplanes that are currently on this (assumed closed) airport to their next order.
+	 * @param town_id The id of the town this airport belongs to.
+	 * @param station_id The id of the airport station.
+	 */ 
+	function SendAirplanesOffAirport(town_id, station_id);
 	/// @}
 
 	/** @name Task related functions */
@@ -364,6 +424,10 @@ class WormAirManager
 	 * Callback that handles events. Currently only AIEvent.ET_VEHICLE_CRASHED is handled.
 	 */
 	function HandleEvents();
+	/**
+	 * Compute squared min and max route distances based on our AI settings, adjusted for the range of the aircraft we can afford.
+	 */
+	function ComputeDistances();
 	/**
 	 * Get the lowest prices of the current available big and small airplanes.
 	 * @param engine_list List of airplanes that can transport passengers.
@@ -2062,7 +2126,7 @@ function WormAirManager::BuildAircraft(tile_1, tile_2, start_tile)
 }
 
 /**
- * Compute squared min and max distances based on our AI settings.
+ * Compute squared min and max route distances based on our AI settings, adjusted for the range of the aircraft we can afford.
  */
 function WormAirManager::ComputeDistances()
 {
