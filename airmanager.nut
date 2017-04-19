@@ -121,12 +121,6 @@ class WormAirManager
 	/** @name  Airport handling functions */
     /// @{
 	/**
-	 * Get the number of terminals for aircraft on the specified airport.
-	 * @param airport_tile A tile that is part of an airport.
-	 * @return Number of bays.
-	 */
-	function GetNumTerminals(airport_tile);
-	/**
 	 * Get tile of airport at the other end of the route.
 	 * @param town_id Town id of town at this end of route.
 	 * @param station_tile tile of station at this end of route.
@@ -316,12 +310,6 @@ class WormAirManager
 	 * Sell all vehicles in depot that are marked to be sold.
 	 */
 	function SellVehiclesInDepot();
-	/*
-	 * Get the number of aircraft (un)loading at the specified station.
-	 * @st_id The id of the station
-	 * @return The number of aircraft (un)loading or -1 in case of an error.
-	 */
-	function GetNumLoadingAtStation(st_id);
 	/**
 	 * Send all airplanes that are currently on this (assumed closed) airport to their next order.
 	 * @param town_id The id of the town this airport belongs to.
@@ -432,12 +420,6 @@ class WormAirManager
 	 * @return true if station is valid, otherwise false.
 	 */
 	function IsValidLastStation(veh);
-	/**
-	 * Get the first airport tile you can find that is part of station st_id.
-	 * @param st_id The airport station id.
-	 * @return The tile number or -1
-	 */
-	function GetAirportTileFromStation(st_id);
 	/// @}
 
 	/** @name Valuator functions */
@@ -2342,74 +2324,6 @@ function WormAirManager::SellVehiclesInDepot()
 }
 
 /**
- * Get the first airport tile you can find that is part of station st_id.
- * @param st_id The airport station id.
- * @return The tile number or -1
- */
-function WormAirManager::GetAirportTileFromStation(st_id)
-{
-	// Get one of the airport tiles (since station can also have non airport tiles, e.g. train station)
-	local airport_tiles = AITileList_StationType(st_id, AIStation.STATION_AIRPORT);
-	if(airport_tiles.IsEmpty())
-		return -1;
-	return airport_tiles.Begin();
-}
-
-/*
- * Get the number of aircraft (un)loading at the specified station.
- * @st_id The id of the station
- * @return The number of aircraft (un)loading or -1 in case of an error.
- */
-function WormAirManager::GetNumLoadingAtStation(st_id)
-{
-	local airport_tiles = AITileList_StationType(st_id, AIStation.STATION_AIRPORT);
-	if(airport_tiles.IsEmpty())
-		return -1;
-
-	// All vechicles going to this station.
-	local vehicle_list = AIVehicleList_Station(st_id);
-	// No need to remove other vehicles than aircraft since they won't be found on airport tiles anyway.
-	
-	local loading_unloading = 0;
-	// Loop over all vehicles going to this station and check their state
-	foreach (vehid, dummy in vehicle_list) {
-		local loc = AIVehicle.GetLocation(vehid);
-		local state = AIVehicle.GetState(vehid);
-		if ((state == AIVehicle.VS_AT_STATION) && airport_tiles.HasItem(loc))
-			loading_unloading++;
-	}
-	return loading_unloading;
-}
-
-/**
- * Get the number of terminals for aircraft on the specified airport.
- * @param airport_tile A tile that is part of an airport.
- * @return Number of bays.
- */
-function WormAirManager::GetNumTerminals(airport_tile)
-{
-	switch(AIAirport.GetAirportType(airport_tile)) {
-		case AIAirport.AT_SMALL:
-			return 2;
-			break;
-		case AIAirport.AT_COMMUTER:
-		case AIAirport.AT_LARGE:
-		case AIAirport.AT_METROPOLITAN:
-			return 3;
-			break;
-		case AIAirport.AT_INTERNATIONAL:
-			return 6;
-			break;
-		case AIAirport.AT_INTERCON:
-			return 8;
-			break;
-		default:
-			return 0;
-			break; 
-	}
-}
-
-/**
  * Check if this airport route is overcrowded.
  * @note Current SuperLib version 40 and older versions have incorrect GetAircraftInHangar and
  * GetNumNonStopedAircraftInAirportDepot. We can't use those so we create our own function.
@@ -2450,11 +2364,11 @@ function WormAirManager::RouteSaturationStatus(st1, st2)
 	if (waiting_in_depot > 0) {
 		local debug_on = AIController.GetSetting("debug_show_lists") == 1;
 		if (debug_on) {
-			local t1 = GetAirportTileFromStation(st1);
-			local terminals = GetNumTerminals(t1);
+			local t1 = WormAirport.GetAirportTileFromStation(st1);
+			local terminals = WormAirport.GetNumTerminals(t1);
 			if (st2 > -1) {
-				local t2 = GetAirportTileFromStation(st2);
-				terminals += GetNumTerminals(t2);
+				local t2 = WormAirport.GetAirportTileFromStation(st2);
+				terminals += WormAirport.GetNumTerminals(t2);
 				AILog.Info("Route " + AIStation.GetName(st1) + " - " + AIStation.GetName(st2) + " has " + waiting_in_depot + " aircraft temporarily waiting in depot and " +
 					loading_unloading + " (max " + terminals + ") aircraft loading and/or unloading.")
 			}
@@ -2740,9 +2654,9 @@ function WormAirManager::CheckOversaturatedRoutes()
 		if (AIStation.IsAirportClosed(i)) continue;
 
 		local saturation = RouteSaturationStatus(i, -1);
-		local loading = GetNumLoadingAtStation(i);
-		local t1 = GetAirportTileFromStation(i);
-		local terminals = GetNumTerminals(t1);
+		local loading = WormAirport.GetNumLoadingAtStation(i);
+		local t1 = WormAirport.GetAirportTileFromStation(i);
+		local terminals = WormAirport.GetNumTerminals(t1);
 		local adjusted_saturation = saturation + terminals - loading;
 		// @todo Should we also check planes in the waiting queue to land?
 

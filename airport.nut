@@ -12,7 +12,7 @@
 /**
  * Define the WormAirport class which holds airport related functions.
  */
-class WormAirport /////////////////////////////////////////// 1188 <--------------------------------
+class WormAirport
 {
 
 	static BUILD_SUCCESS = 1;			///< Status code: Building airport succeeded
@@ -30,6 +30,27 @@ class WormAirport /////////////////////////////////////////// 1188 <------------
 	 * @return The optimal AirportType or null if no suitable airport is available.
 	 */
 	static function GetOptimalAvailableAirportType();
+
+	/**
+	 * Get the first airport tile you can find that is part of station st_id.
+	 * @param st_id The airport station id.
+	 * @return The tile number or -1
+	 */
+	static function GetAirportTileFromStation(st_id);
+
+	/*
+	 * Get the number of aircraft (un)loading at the specified station.
+	 * @st_id The id of the station
+	 * @return The number of aircraft (un)loading or -1 in case of an error.
+	 */
+	static function GetNumLoadingAtStation(st_id);
+
+	/**
+	 * Get the number of terminals for aircraft on the specified airport.
+	 * @param airport_tile A tile that is part of an airport.
+	 * @return Number of bays.
+	 */
+	static function GetNumTerminals(airport_tile);
 
 	/**
 	 * Check whether the airport (including depots) is empty, meaning no airplanes.
@@ -73,7 +94,7 @@ class WormAirport /////////////////////////////////////////// 1188 <------------
 	 * @param airport_type The type of airport to build.
 	 * @return WormAirport.BUILD_SUCCESS if we succeed, or else one of the BUILD_XXX error codes.
 	 */
-	function UpgradeSmall(station_id, station_tile, airport_type);
+	static function UpgradeSmall(station_id, station_tile, airport_type);
 
 }
 
@@ -96,6 +117,74 @@ function WormAirport::GetOptimalAvailableAirportType()
 		AirType = AIAirport.AT_SMALL;
 	}
 	return AirType;
+}
+
+/**
+ * Get the first airport tile you can find that is part of station st_id.
+ * @param st_id The airport station id.
+ * @return The tile number or -1
+ */
+function WormAirport::GetAirportTileFromStation(st_id)
+{
+	// Get one of the airport tiles (since station can also have non airport tiles, e.g. train station)
+	local airport_tiles = AITileList_StationType(st_id, AIStation.STATION_AIRPORT);
+	if(airport_tiles.IsEmpty())
+		return -1;
+	return airport_tiles.Begin();
+}
+
+/*
+ * Get the number of aircraft (un)loading at the specified station.
+ * @st_id The id of the station
+ * @return The number of aircraft (un)loading or -1 in case of an error.
+ */
+function WormAirport::GetNumLoadingAtStation(st_id)
+{
+	local airport_tiles = AITileList_StationType(st_id, AIStation.STATION_AIRPORT);
+	if(airport_tiles.IsEmpty())
+		return -1;
+
+	// All vechicles going to this station.
+	local vehicle_list = AIVehicleList_Station(st_id);
+	// No need to remove other vehicles than aircraft since they won't be found on airport tiles anyway.
+	
+	local loading_unloading = 0;
+	// Loop over all vehicles going to this station and check their state
+	foreach (vehid, dummy in vehicle_list) {
+		local loc = AIVehicle.GetLocation(vehid);
+		local state = AIVehicle.GetState(vehid);
+		if ((state == AIVehicle.VS_AT_STATION) && airport_tiles.HasItem(loc))
+			loading_unloading++;
+	}
+	return loading_unloading;
+}
+
+/**
+ * Get the number of terminals for aircraft on the specified airport.
+ * @param airport_tile A tile that is part of an airport.
+ * @return Number of bays.
+ */
+function WormAirport::GetNumTerminals(airport_tile)
+{
+	switch(AIAirport.GetAirportType(airport_tile)) {
+		case AIAirport.AT_SMALL:
+			return 2;
+			break;
+		case AIAirport.AT_COMMUTER:
+		case AIAirport.AT_LARGE:
+		case AIAirport.AT_METROPOLITAN:
+			return 3;
+			break;
+		case AIAirport.AT_INTERNATIONAL:
+			return 6;
+			break;
+		case AIAirport.AT_INTERCON:
+			return 8;
+			break;
+		default:
+			return 0;
+			break; 
+	}
 }
 
 /**
