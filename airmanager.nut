@@ -2848,6 +2848,7 @@ function WormAirManager::ManageAirRoutes()
 		}
 		return ret;
 	}
+	CheckOversaturatedRoutes();
 	AILog.Info(Helper.GetCurrentDateString() + " Finished managing air routes.");
 }
 
