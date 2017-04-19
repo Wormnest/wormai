@@ -50,14 +50,14 @@ class WormMoney
 	 * @todo Think of a better computation than stationcount * 50 since I think maintenance costs don't increase linearly.
 	 * @return 10000 pounds plus the expected station maintenance costs.
 	 */
-	function GetMinimumCashNeeded();
+	static function GetMinimumCashNeeded();
 
 	/**
 	 * Calculates how much cash will be on hand if the maximum loan is taken.
 	 * @return The maximum amount of money.
 	 * @note Taken from SimpleAI.
 	 */
-	function GetMaxBankBalance();
+	static function GetMaxBankBalance();
 
 	/**
 	 * Wait a certain maximum amount of time until we have a required amount of money.
@@ -69,7 +69,7 @@ class WormMoney
 	 * @return Boolean: true means we got the required money, false we still don't have enough money.
 	 * @pre  sleep_period > 0; update_log_period > sleep_period; iterations > 0.
 	 */
-	function WaitForMoney(amount_required, sleep_period, iterations, update_log_period=500, silent=false);
+	static function WaitForMoney(amount_required, sleep_period, iterations, update_log_period=500, silent=false);
 	/// @}
 
 }
