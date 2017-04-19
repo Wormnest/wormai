@@ -2811,12 +2811,19 @@ function WormAirManager::ManageAirRoutes()
 
 		/* Do not build more aircraft if there are too many planes waiting to land at both
 		   the airports part of this order. */
-		if (Airport.GetNumAircraftInAirportQueue(i, false) > 2) continue;
-		if (Airport.GetNumAircraftInAirportQueue(s2_id, false) > 2) continue;
-		/* Same for when there are too many non stopped aircraft waiting in hangars. */
-		if (Airport.GetNumNonStopedAircraftInAirportDepot(i) > 2) continue;
-		if (Airport.GetNumNonStopedAircraftInAirportDepot(s2_id) > 2) continue;
-
+		local q1 = Airport.GetNumAircraftInAirportQueue(i, true);
+		if (q1 > 2) {
+			AILog.Warning("Station " + AIStation.GetName(i) + " has a lot of aircraft waiting to land: " + q1);
+			continue;
+		}
+		local q2 = Airport.GetNumAircraftInAirportQueue(s2_id, false);
+		if (q2 > 2) {
+			AILog.Warning("Station " + AIStation.GetName(s2_id) + " has a lot of aircraft waiting to land: " + q2);
+			continue;
+		}
+		local saturation = RouteSaturationStatus(i, s2_id);
+		if (saturation < 0) continue;
+		
 		AILog.Info("Station " + AIStation.GetName(i) + "(id: " + i +
 			") has a lot of waiting passengers (cargo: " + list.GetValue(i) + ")");
 		AILog.Info("Other station: " + AIStation.GetName(s2_id) + " waiting passengers: " + s2_waiting);
