@@ -1199,29 +1199,7 @@ function WormAirManager::UpgradeSmall(nearest_town, station_id, station_tile, ai
 		return WormAirport.BUILD_NO_NEW_LOCATION;
 	}
 	
-	// Try to remove old airport
-	/// @todo Can we use RemoveAirport too or does that make it impossible to reuse station_id?
-	if (!AITile.DemolishTile(station_tile)) {
-		AILog.Warning(AIError.GetLastErrorString());
-		AILog.Info("Removing old airport failed, can't upgrade (probably airplane in the way).");
-		return WormAirport.BUILD_REMOVE_FAILED;
-	}
-
-	// Try to build new airport in the new location
-	local airport_status = AIAirport.BuildAirport(new_location, airport_type, station_id);
-	if (!airport_status) {
-		// Try to get our old station back...
-		AILog.Warning(AIError.GetLastErrorString());
-		AILog.Info("Upgrading airport failed, try to get old airport back.");
-		airport_status = AIAirport.BuildAirport(station_tile, AIAirport.AT_SMALL, station_id);
-	}
-	if (airport_status)
-		// New station tile etc will be updated by caller.
-		return WormAirport.BUILD_SUCCESS;
-	else {
-		AILog.Warning(AIError.GetLastErrorString());
-		return WormAirport.BUILD_REBUILD_FAILED;
-	}
+	return WormAirport.UpgradeSmall(station_id, station_tile, airport_type);
 }
 
  /**
