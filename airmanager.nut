@@ -78,6 +78,7 @@ class WormAirManager
 	min_distance_squared = 0;			///< Precomputed minimum distance squared based on current settings.
 	max_distance_squared = 0;			///< Precomputed maximum distance squared based on current settings.
 	max_aircraft_distance = 0;			///< Highest distance that an aircraft can fly.
+	max_preferred_distance = 0;			///< Max preferred distance based on speed and reliability.
 
 
 	/** Create an instance of WormAirManager and initialize our variables. */
@@ -1920,19 +1921,28 @@ function WormAirManager::ComputeDistances()
 	this.min_distance_squared = AIController.GetSetting("min_airport_distance") * AIController.GetSetting("min_airport_distance");
 	local old_max = this.max_distance_squared;
 	this.max_distance_squared = AIController.GetSetting("max_airport_distance") * AIController.GetSetting("max_airport_distance");
-	if (this.max_aircraft_distance > 0) {
-		local dist_squared = this.max_aircraft_distance * 8 / 10;
+	local max_distance = 0;
+	local preferred_dist_squared = this.max_preferred_distance * this.max_preferred_distance;
+	if (preferred_dist_squared < this.max_aircraft_distance)
+		max_distance = preferred_dist_squared;
+	else
+		max_distance = this.max_aircraft_distance;
+	if (max_distance > 0) {
+		local dist_squared = max_distance * 9 / 10;
 		if (dist_squared < this.max_distance_squared) {
-			/* Set max distance to 80% of what best aircraft can go. */
+			/* Set max distance to 90% of what best aircraft can go. */
 			//AILog.Info("[DEBUG ] Current max squared: " + this.max_distance_squared);
 			this.max_distance_squared = dist_squared;
 			if (old_max != this.max_distance_squared)
-				AILog.Info("Adjusted max distance squared to: " + this.max_distance_squared);
+				AILog.Info("Adjusted max distance squared to: " + this.max_distance_squared +
+					", range: " + WormMath.Sqrt(this.max_distance_squared));
 			
 			/* If we lower the max we also need to check if it's not lower than the minimum. */
+			/// @todo min distance needs better computation!
 			if (this.min_distance_squared+200 > this.max_distance_squared) {
 				this.min_distance_squared = this.max_distance_squared - 200;
-				AILog.Info("Adjusted min distance squared to: " + this.min_distance_squared);
+				AILog.Info("Adjusted min distance squared to: " + this.min_distance_squared +
+					", range: " + WormMath.Sqrt(this.min_distance_squared));
 			}
 		}
 	}
@@ -2835,6 +2845,35 @@ function WormAirManager::CheckAirplanePrices(engine_list)
 }
 
 /**
+ * Compute the optimal maximum distance an aircraft should fly based on the supplied maximum speed.
+ * @param speed The maximum speed of the aircraft.
+ * @param reliability The reliability of the aircraft.
+ * @return The maximum distance in tiles.
+ */
+function WormAirManager::GetPreferredMaxDistance(speed, reliability)
+{
+	/*
+	 * According to: https://wiki.openttd.org/Game_mechanics#Vehicle_speeds
+	 * The speed is in OpenTTD's internal speed unit. This is mph / 1.6, which is roughly km/h. To get km/h multiply this number by 1.00584.
+	 * A tile is, for vehicle speed purposes 664.(216) km-ish, 668 km or 415 miles long.
+	 * By default aircraft fly at a quarter of their listed speed (this can be changed in advanced settings).
+	 * Aircraft acceleration varies per aircraft, between 144 km-ish/h/day and 400 km-ish/h/day.
+	 * Broken down planes fly at 320 km-ish/h.
+	 * Airport taxi speed is 150 km-ish/h. 
+	 * Note that for aircraft the returned value is already adjusted for plane speed (between 1/1 to 1/4).
+	 * This means that if plane speed is 1/4 you need to multiply the returned speed by 4 to get the shown speed in the gui.
+	 */
+	// Assume we want an average distance that can be travelled in roughly 100 days.
+	// Max distance should be a bit more than average say 150%.
+	local full_speed_time = reliability;
+	local broken_down_time = 100-reliability;
+	local broken_down_speed = 320 / AIGameSettings.GetValue("plane_speed");
+	local distance_100 = (speed * 24 * full_speed_time) + (broken_down_speed * 24 * broken_down_time);
+	// Return 150% of tiles travelled in 100 days for now (i.e. * 150/100).
+	return distance_100 * 1500 / 664216;
+}
+
+/**
  * Task that evaluates all available aircraft for how suited they are
  * for our purposes. The suitedness values for aircraft which we can use are saved in
  * @ref engine_usefulness.
@@ -2894,6 +2933,8 @@ function WormAirManager::EvaluateAircraft(clear_warning_shown_flag) {
 		// Make sure we don't limit max distance if we have enough money.
 		temp_max_distance = 10000 * 10000;
 	}
+	local highest_speed = 0;
+	local hs_reliability = 100;
 	
 	foreach(engine, value in engine_list) {
 		// From: http://thegrebs.com/irc/openttd/2012/04/20
@@ -2910,6 +2951,11 @@ function WormAirManager::EvaluateAircraft(clear_warning_shown_flag) {
 		local _eval_distance = 50000;	// assumed distance for passengers to travel
 		if (AIEngine.IsValidEngine(engine)) {
 			local speed = AIEngine.GetMaxSpeed(engine);
+			local reliability = AIEngine.GetReliability(engine);
+			if (speed > highest_speed) {
+				highest_speed = speed;
+				hs_reliability = reliability;
+			}
 			local cap = AIEngine.GetCapacity(engine);
 			local ycost = AIEngine.GetRunningCost(engine);
 			//local costfactor = ycost / (speed * cap);
@@ -2945,7 +2991,8 @@ function WormAirManager::EvaluateAircraft(clear_warning_shown_flag) {
 			if (AIController.GetSetting("debug_show_lists") == 1) {
 				// Show info about evaluated engines
 				AILog.Info("Engine: " + AIEngine.GetName(engine) + ", price: " + AIEngine.GetPrice(engine) +
-					", yearly running costs: " + AIEngine.GetRunningCost(engine));
+					", yearly running costs: " + AIEngine.GetRunningCost(engine) + ", reliability: " +
+					AIEngine.GetReliability(engine) + "%, preferred max distance: " + GetPreferredMaxDistance(speed, reliability));
 				AILog.Info( "    Capacity: " + AIEngine.GetCapacity(engine) + ", Maximum speed: " + 
 					AIEngine.GetMaxSpeed(engine) + ", Maximum distance: " + AIEngine.GetMaximumOrderDistance(engine) +
 					", type: " + WormStrings.GetAircraftTypeAsText(engine));
@@ -2977,11 +3024,15 @@ function WormAirManager::EvaluateAircraft(clear_warning_shown_flag) {
 	else {
 		AILog.Warning("Best overall engine: " + AIEngine.GetName(best_engine) + ", cost factor: " + best_factor);
 	}
+	if (highest_speed > 0) {
+		this.max_preferred_distance = GetPreferredMaxDistance(highest_speed, hs_reliability);
+		AILog.Warning("Highest speed: " + highest_speed + ", preferred max distance: " + this.max_preferred_distance);
+	}
 	if (temp_max_distance > 0) {
 		this.max_aircraft_distance = temp_max_distance;
 		AILog.Warning("Max route distance: " + this.max_aircraft_distance);
 	}
-	if (this.max_aircraft_distance > 0)
+	if ((this.max_aircraft_distance > 0) || (this.max_preferred_distance > 0))
 		this.ComputeDistances();
 }
 
