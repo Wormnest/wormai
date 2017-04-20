@@ -1181,7 +1181,7 @@ function WormAirManager::UpgradeSmall(nearest_town, station_id, station_tile, ai
 		return WormAirport.BUILD_NO_NEW_LOCATION;
 	}
 	
-	return WormAirport.UpgradeSmall(station_id, station_tile, airport_type);
+	return WormAirport.UpgradeSmall(station_id, station_tile, airport_type, new_location);
 }
 
  /**

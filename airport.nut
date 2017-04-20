@@ -92,9 +92,10 @@ class WormAirport
 	 * @param station_id The id of the airport to upgrade.
 	 * @param station_tile The tile of the airport.
 	 * @param airport_type The type of airport to build.
+	 * @param new_location The tile where the airport should be rebuilt.
 	 * @return WormAirport.BUILD_SUCCESS if we succeed, or else one of the BUILD_XXX error codes.
 	 */
-	static function UpgradeSmall(station_id, station_tile, airport_type);
+	static function UpgradeSmall(station_id, station_tile, airport_type, new_location);
 
 }
 
@@ -299,9 +300,10 @@ function WormAirport::UpgradeLargeToMetropolitan(nearest_town, station_id, stati
  * @param station_id The id of the airport to upgrade.
  * @param station_tile The tile of the airport.
  * @param airport_type The type of airport to build.
+ * @param new_location The tile where the airport should be rebuilt.
  * @return WormAirport.BUILD_SUCCESS if we succeed, or else one of the BUILD_XXX error codes.
  */
-function WormAirport::UpgradeSmall(station_id, station_tile, airport_type)
+function WormAirport::UpgradeSmall(station_id, station_tile, airport_type, new_location)
 {
 	// Try to remove old airport
 	/// @todo Can we use RemoveAirport too or does that make it impossible to reuse station_id?
