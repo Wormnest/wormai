@@ -82,7 +82,7 @@ class WormAirport
 	 * @param nearest_town The nearest town according to town influence.
 	 * @param station_id The id of the airport to upgrade.
 	 * @param station_tile The tile of the airport.
-	 * @return BUILD_SUCCESS if we succeed, or else one of the BUILD_XXX error codes.
+	 * @return WormAirport.BUILD_SUCCESS if we succeed, or else one of the BUILD_XXX error codes.
 	 * @pre Noise and Town allowance already checked, enough money, ...
 	 */ 
 	static function UpgradeLargeToMetropolitan(nearest_town, station_id, station_tile);
@@ -268,19 +268,19 @@ function WormAirport::RemoveAirport(tile)
  * @param nearest_town The nearest town according to town influence.
  * @param station_id The id of the airport to upgrade.
  * @param station_tile The tile of the airport.
- * @return BUILD_SUCCESS if we succeed, or else one of the BUILD_XXX error codes.
+ * @return WormAirport.BUILD_SUCCESS if we succeed, or else one of the BUILD_XXX error codes.
  * @pre Noise and Town allowance already checked, enough money, ...
  */ 
 function WormAirport::UpgradeLargeToMetropolitan(nearest_town, station_id, station_tile)
 {
 	if (!WormAirport.IsAirportEmpty(station_id)) {
 		AILog.Info("Can't upgrade, there are still airplanes on the airport.");
-		return BUILD_AIRPORT_NOT_EMPTY;
+		return WormAirport.BUILD_AIRPORT_NOT_EMPTY;
 	}
 	// Try to remove old airport
 	/// @todo Can we use RemoveAirport too or does that make it impossible to reuse station_id?
 	if (!AITile.DemolishTile(station_tile))
-		return BUILD_REMOVE_FAILED;
+		return WormAirport.BUILD_REMOVE_FAILED;
 	// Try to build new airport in same spot
 	local airport_status = AIAirport.BuildAirport(station_tile, AIAirport.AT_METROPOLITAN, station_id);
 	if (!airport_status) {
@@ -289,9 +289,9 @@ function WormAirport::UpgradeLargeToMetropolitan(nearest_town, station_id, stati
 		airport_status = AIAirport.BuildAirport(station_tile, AIAirport.AT_LARGE, station_id);
 	}
 	if (airport_status)
-		return BUILD_SUCCESS;
+		return WormAirport.BUILD_SUCCESS;
 	else
-		return BUILD_REBUILD_FAILED;
+		return WormAirport.BUILD_REBUILD_FAILED;
 }
 
 /**
@@ -308,7 +308,7 @@ function WormAirport::UpgradeSmall(station_id, station_tile, airport_type)
 	if (!AITile.DemolishTile(station_tile)) {
 		AILog.Warning(AIError.GetLastErrorString());
 		AILog.Info("Removing old airport failed, can't upgrade (probably airplane in the way).");
-		return BUILD_REMOVE_FAILED;
+		return WormAirport.BUILD_REMOVE_FAILED;
 	}
 
 	// Try to build new airport in the new location
@@ -321,9 +321,9 @@ function WormAirport::UpgradeSmall(station_id, station_tile, airport_type)
 	}
 	if (airport_status)
 		// New station tile etc will be updated by caller.
-		return BUILD_SUCCESS;
+		return WormAirport.BUILD_SUCCESS;
 	else {
 		AILog.Warning(AIError.GetLastErrorString());
-		return BUILD_REBUILD_FAILED;
+		return WormAirport.BUILD_REBUILD_FAILED;
 	}
 }
