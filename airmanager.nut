@@ -165,13 +165,19 @@ class WormAirManager
 	 */
 	function BuildAirportRoute();
 	/**
+	 * Get a list of towns that is suitable to be searched for an airport location.
+	 * @return AITownList with towns that can be used.
+	 */
+	function GetTownListForAirportSearch();
+	/**
 	 * Find a suitable spot for an airport, walking all towns hoping to find one.
 	 * When a town is used, it is marked as such and not re-used.
 	 * @param airport_type The type of airport we want to build.
 	 * @param center_tile The tile around which we will search for a spot for the airport.
+	 * @param towns List of towns to search.
 	 * @return tile where we can build the airport or an error code.
 	 */
-	function FindSuitableAirportSpot(airport_type, center_tile);
+	function FindSuitableAirportSpot(airport_type, center_tile, towns);
 	/**
 	 * Find a candidate spot in the specified town to build an airport of the specified type.
 	 * @param town The town id of the town where we should search.
@@ -1314,7 +1320,10 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 					   be farther away than the old one that certain aircraft with limited
 					   range will cause problems. */
 					AILog.Info("Try to build a replacement airport somewhere else");
-					local tile_2 = this.FindSuitableAirportSpot(optimal_airport, tile_other_end);
+					/// @todo Check if it is possible to init towns only once (set to null list outside loop),
+					/// then here check for it being null...
+					local towns = GetTownListForAirportSearch();
+					local tile_2 = this.FindSuitableAirportSpot(optimal_airport, tile_other_end, towns);
 					if (tile_2 >= 0) {
 						/* Valid tile for airport: try to build it. */
 						if (!AIAirport.BuildAirport(tile_2, optimal_airport, AIStation.STATION_NEW)) {
@@ -1511,12 +1520,16 @@ function WormAirManager::BuildAirportRoute()
 		/* Show some info about what we are doing */
 		AILog.Info(Helper.GetCurrentDateString() + " Trying to build an airport route");
 
-		tile_1 = this.FindSuitableAirportSpot(airport_type, 0);
+		local towns = GetTownListForAirportSearch();
+		if (towns == null) {
+			return return ERROR_FIND_AIRPORT1;
+		}
+		tile_1 = this.FindSuitableAirportSpot(airport_type, 0, towns);
 		if (tile_1 < 0) {
 			if ((this.towns_used.Count() == 0) && (tile_1 == ERROR_FIND_AIRPORT_ACCEPTANCE)) {
 				// We don't have any airports yet so try again at a lower acceptance limit
 				while(tile_1 == ERROR_FIND_AIRPORT_ACCEPTANCE) {
-					tile_1 = this.FindSuitableAirportSpot(airport_type, 0);
+					tile_1 = this.FindSuitableAirportSpot(airport_type, 0, towns);
 				}
 				if (tile_1 < 0) return ERROR_FIND_AIRPORT1;
 			}
@@ -1524,13 +1537,13 @@ function WormAirManager::BuildAirportRoute()
 				return ERROR_FIND_AIRPORT1;
 			}
 		}
-		tile_2 = this.FindSuitableAirportSpot(airport_type, tile_1);
+		tile_2 = this.FindSuitableAirportSpot(airport_type, tile_1, towns);
 		if (tile_2 < 0) {
 			// Check for 1, not 0, here since if we get here we have at least 1 airport.
 			if ((this.towns_used.Count() == 1) && (tile_2 == ERROR_FIND_AIRPORT_ACCEPTANCE)) {
 				// We don't have any routes yet so try again at a lower acceptance limit
 				while(tile_2 == ERROR_FIND_AIRPORT_ACCEPTANCE) {
-					tile_2 = this.FindSuitableAirportSpot(airport_type, tile_1);
+					tile_2 = this.FindSuitableAirportSpot(airport_type, tile_1, towns);
 				}
 				if (tile_2 < 0) {
 					/* Blacklist the tile_1 town for a while. But first we need to find the town id. */
@@ -2083,20 +2096,12 @@ function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width
 }
 
 /**
- * Find a suitable spot for an airport, walking all towns hoping to find one.
- * When a town is used, it is marked as such and not re-used.
- * @param airport_type The type of airport we want to build.
- * @param center_tile The tile around which we will search for a spot for the airport.
- * @return tile where we can build the airport or an error code.
+ * Get a list of towns that is suitable to be searched for an airport location.
+ * @return AITownList with towns that can be used.
  */
-function WormAirManager::FindSuitableAirportSpot(airport_type, center_tile)
+function WormAirManager::GetTownListForAirportSearch()
 {
-	local airport_x, airport_y, airport_rad;
-
-	airport_x = AIAirport.GetAirportWidth(airport_type);
-	airport_y = AIAirport.GetAirportHeight(airport_type);
-	airport_rad = AIAirport.GetAirportCoverageRadius(airport_type);
-
+	/* Get the list of all existing towns. */
 	local town_list = AITownList();
 	local town_count = town_list.Count();
 	local debug_on = AIController.GetSetting("debug_show_lists") == 1;
@@ -2104,11 +2109,13 @@ function WormAirManager::FindSuitableAirportSpot(airport_type, center_tile)
 		AILog.Info("Number of towns: " + town_list.Count() + ", already used: " + this.towns_used.Count() +
 			", on blacklist: " + this.towns_blacklist.Count());
 	}
+	
 	/* Remove all the towns that already have an airport. */
 	town_list.RemoveList(this.towns_used);
 	/* Remove all the towns where we already tried to build an airport. */
 	town_list.RemoveList(this.towns_blacklist);
 
+	/* Remove all towns that are smaller than our minimum town size setting. */
 	town_list.Valuate(AITown.GetPopulation);
 	town_list.KeepAboveValue(AIController.GetSetting("min_town_size"));
 	if (debug_on) {
@@ -2117,10 +2124,7 @@ function WormAirManager::FindSuitableAirportSpot(airport_type, center_tile)
 	
 	local min_towns = 0;
 	if (town_count < 10) {
-		if (center_tile != 0)
-			min_towns = 1;
-		else
-			min_towns = 2;
+		min_towns = 2;
 	}
 	else if (town_count < 50)
 		min_towns = 5;
@@ -2133,9 +2137,36 @@ function WormAirManager::FindSuitableAirportSpot(airport_type, center_tile)
 		if (debug_on) {
 			AILog.Info("Not enough towns to choose from: " + town_list.Count());
 		}
-		return ERROR_FIND_AIRPORT_FINAL;
+		return null;
 	}
+
+	return town_list;
+}
+
+/**
+ * Find a suitable spot for an airport, walking all towns hoping to find one.
+ * When a town is used, it is marked as such and not re-used.
+ * @param airport_type The type of airport we want to build.
+ * @param center_tile The tile around which we will search for a spot for the airport.
+ * @param towns List of towns to search.
+ * @return tile where we can build the airport or an error code.
+ */
+function WormAirManager::FindSuitableAirportSpot(airport_type, center_tile, towns)
+{
+	if (towns == null)
+		return ERROR_FIND_AIRPORT_FINAL;
 	
+	local debug_on = AIController.GetSetting("debug_show_lists") == 1;
+	local airport_x, airport_y, airport_rad;
+
+	airport_x = AIAirport.GetAirportWidth(airport_type);
+	airport_y = AIAirport.GetAirportHeight(airport_type);
+	airport_rad = AIAirport.GetAirportCoverageRadius(airport_type);
+
+	/* We work on a copy of the towns list since we will be changing it. */
+	local town_list = AIList();
+	town_list.AddList(towns);
+
 	/* If we are looking for the second town of a new route then first remove all towns that
 	 * are not within the distance limits.
 	 */
@@ -2173,6 +2204,8 @@ function WormAirManager::FindSuitableAirportSpot(airport_type, center_tile)
 
 		/* Mark the town as used, so we don't use it again */
 		this.towns_used.AddItem(town, tile);
+		/* Also remove it from the  town list used for town searching (not our local copy). */
+		towns.RemoveItem(town);
 
 		return tile;
 	}
