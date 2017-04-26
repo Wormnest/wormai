@@ -214,13 +214,15 @@ class WormAirManager
 	 */
 	function TryToBuildAirport(tile_1, tile_2, is_first_airport, airport_type);
 	/**
-	 * Tries to upgrade airport from small to either large or metropolitan.
+	 * Tries to upgrade an airport.
 	 * @param nearest_town The nearest town according to town influence.
 	 * @param station_id The id of the airport to upgrade.
 	 * @param station_tile The tile of the airport.
+	 * @param airport_type The type of airport we want to upgrade to.
+	 * @param other_station_tile The tile of the airport at the other end of the route.
 	 * @return WormAirport.BUILD_SUCCESS if we succeed, or else one of the BUILD_XXX error codes.
 	 */
-	function UpgradeSmall(nearest_town, station_id, station_tile, airport_type, other_station_tile);
+	function UpgradeAirport(nearest_town, station_id, station_tile, airport_type, other_station_tile);
 	/// @}
 
 	/** @name Order handling */
@@ -1155,23 +1157,22 @@ function WormAirManager::SendAirplanesOffAirport(town_id, station_id)
 }
 
 /**
- * Tries to upgrade airport from small to either large or metropolitan.
+ * Tries to upgrade an airport.
  * @param nearest_town The nearest town according to town influence.
  * @param station_id The id of the airport to upgrade.
  * @param station_tile The tile of the airport.
+ * @param airport_type The type of airport we want to upgrade to.
+ * @param other_station_tile The tile of the airport at the other end of the route.
  * @return WormAirport.BUILD_SUCCESS if we succeed, or else one of the BUILD_XXX error codes.
  */
-function WormAirManager::UpgradeSmall(nearest_town, station_id, station_tile, airport_type, other_station_tile)
+function WormAirManager::UpgradeAirport(nearest_town, station_id, station_tile, airport_type, other_station_tile)
 {
 	if (!WormAirport.IsAirportEmpty(station_id)) {
 		AILog.Info("Can't upgrade, there are still airplanes on the airport.");
 		return WormAirport.BUILD_AIRPORT_NOT_EMPTY;
 	}
 
-//	AILog.Warning("[DEBUG] Current distance: " + WormMath.Sqrt(AITile.GetDistanceSquareToTile(station_tile, other_station_tile)));
-//	if (other_station_tile <= 0)
-//		AILog.Warning("[DEBUG] Other station tile = " + other_station_tile);
-
+	local current_airport_type = AIAirport.GetAirportType(station_tile);
 	// Find a new spot in same town for an airport
 	/// @todo Ideally we should include the tiles of the current airport in our search for a new spot!
 	/// @todo Maybe add as an extra parameter an optional list (default null) with the tiles of the airport
@@ -1180,7 +1181,7 @@ function WormAirManager::UpgradeSmall(nearest_town, station_id, station_tile, ai
 	local new_location = FindAirportSpotInTown(nearest_town, airport_type,
 		AIAirport.GetAirportWidth(airport_type), AIAirport.GetAirportHeight(airport_type),
 		AIAirport.GetAirportCoverageRadius(airport_type), other_station_tile, 50,
-		false, AIAirport.AT_SMALL);
+		false, current_airport_type);
 	// Check if we managed to find a spot
 	if (new_location < 0) {
 		// Blacklisting upgrading is done by caller
@@ -1188,7 +1189,7 @@ function WormAirManager::UpgradeSmall(nearest_town, station_id, station_tile, ai
 		return WormAirport.BUILD_NO_NEW_LOCATION;
 	}
 	
-	return WormAirport.UpgradeSmall(station_id, station_tile, airport_type, new_location);
+	return WormAirport.UpgradeAirport(station_id, station_tile, current_airport_type, airport_type, new_location);
 }
 
  /**
@@ -1277,7 +1278,7 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 				upgrade_result = WormAirport.UpgradeLargeToMetropolitan(nearest_town, station_id, station_tile);
 			}
 			else {
-				upgrade_result = UpgradeSmall(nearest_town, station_id, station_tile, optimal_airport, tile_other_st);
+				upgrade_result = UpgradeAirport(nearest_town, station_id, station_tile, optimal_airport, tile_other_st);
 			}
 			/* Need to check if it succeeds. */
 			if (upgrade_result == WormAirport.BUILD_SUCCESS) {
