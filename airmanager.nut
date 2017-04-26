@@ -223,6 +223,12 @@ class WormAirManager
 	 * @return WormAirport.BUILD_SUCCESS if we succeed, or else one of the BUILD_XXX error codes.
 	 */
 	function UpgradeAirport(nearest_town, station_id, station_tile, airport_type, other_station_tile);
+	/*
+	 * Check if we can upgrade an airport that is saturated.
+	 * @param st_id The station id of the airport.
+	 * @param st_tile The tile location of the airport.
+	 */
+	function CanWeUpgradeSaturatedAirport(st_id, st_tile);
 	/// @}
 
 	/** @name Order handling */
@@ -2739,6 +2745,41 @@ function WormAirManager::CheckOversaturatedRoutes()
 			SendToDepotForSelling(veh, VEH_TOO_MANY);
 		}
 	}
+}
+
+/*
+ * Check if we can upgrade an airport that is saturated.
+ * @param st_id The station id of the airport.
+ * @param st_tile The tile location of the airport.
+ */
+function WormAirManager::CanWeUpgradeSaturatedAirport(st_id, st_tile)
+{
+	local airport_type = AIAirport.GetAirportType(st_tile);
+	// Go to next town if station is already of optimal type
+	if (airport_type != AIAirport.AT_METROPOLITAN)
+		return false;
+	if (!(AIAirport.IsValidAirportType(AIAirport.AT_INTERNATIONAL)))
+		return false;
+	/// @todo Also check the station spread limits of stations.
+
+	local optimal_airport = AIAirport.AT_INTERNATIONAL;
+
+	if (!WormAirport.IsWithinNoiseLimit(st_tile, airport_type, optimal_airport)) {
+		//AILog.Warning("Can't upgrade airport due to noise limits.");
+		return false;
+	}
+	
+	// If town close to airport or town assigned to this route has bad rating then skip upgrading
+	local nearest_town = AIAirport.GetNearestTown(st_tile, airport_type);
+	if (!Town.TownRatingAllowStationBuilding(nearest_town))
+		return false;
+	
+	local st_town = GetTownFromStationTile(st_tile);
+	if (nearest_town != st_town)
+		if (!Town.TownRatingAllowStationBuilding(st_town))
+			return false;
+	
+	return true;
 }
 
 /**
