@@ -1523,7 +1523,7 @@ function WormAirManager::BuildAirportRoute()
 
 		local towns = GetTownListForAirportSearch();
 		if (towns == null) {
-			return return ERROR_FIND_AIRPORT1;
+			return ERROR_FIND_AIRPORT1;
 		}
 		tile_1 = this.FindSuitableAirportSpot(airport_type, 0, towns);
 		if (tile_1 < 0) {
