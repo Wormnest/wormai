@@ -54,9 +54,11 @@ class WormAirport
 
 	/**
 	 * Check whether the airport (including depots) is empty, meaning no airplanes.
-	 * @return true if it is empty, otherwise false
+	 * @param include_landing_queue (default true) Whether to include planes in the landing queue on tiles above the airport.
+	 * @return true if it is empty, otherwise false.
+	 * @note Airports can only be demolished when there are no planes on or above the airport.
 	 */
-	static function IsAirportEmpty(station_id);
+	static function IsAirportEmpty(station_id, include_landing_queue=true);
 
 	/**
 	 * Determines whether an airport at a given tile is allowed by the town authorities
@@ -191,9 +193,11 @@ function WormAirport::GetNumTerminals(airport_tile)
 
 /**
  * Check whether the airport (including depots) is empty, meaning no airplanes.
- * @return true if it is empty, otherwise false
+ * @param include_landing_queue (default true) Whether to include planes in the landing queue on tiles above the airport.
+ * @return true if it is empty, otherwise false.
+ * @note Airports can only be demolished when there are no planes on or above the airport.
  */
-function WormAirport::IsAirportEmpty(station_id)
+function WormAirport::IsAirportEmpty(station_id, include_landing_queue=true)
 {
 	local aircraft = AIVehicleList_Station(station_id);
 	if (aircraft.Count() == 0)
@@ -202,18 +206,37 @@ function WormAirport::IsAirportEmpty(station_id)
 	if (airport_tiles.IsEmpty())
 		return false;
 
+	/* Note that we should NOT adjust for plane speed here since testing showed us that a plane
+	 * leaves the airport at a speed of close to 320 km/h-ish.
+	 * Speed just before lifting off seems to be 268 km/h-ish, then when lifting off 284, 300, 317, 333.
+	 */
+	local broken_down_speed = 320 /*/ AIGameSettings.GetValue("plane_speed")*/;
+
 	foreach (plane, dummy in aircraft) {
 		local veh_tile = AIVehicle.GetLocation(plane);
 		//AILog.Info("[DEBUG] " + AIVehicle.GetName(plane) + ", location: " + WormStrings.WriteTile(veh_tile));
-		// If the location of one of our planes is on one of the airport tiles assume it's not empty.
+		// Check if the location of one of our planes is on one of the airport tiles.
 		if (airport_tiles.HasItem(veh_tile)) {
-			local veh_state = AIVehicle.GetState(plane);
-			// We need to exclude running and broken because those can also be circling around the airport
-			// and just by chance be above an airport tile. Ofcourse this way we will miss airplanes
-			// that are taxiing on the airport or landing/taking off but that can't be helped I think.
-			if ((veh_state != AIVehicle.VS_RUNNING) && (veh_state != AIVehicle.VS_BROKEN)) {
-				//AILog.Warning("[DEBUG] This is an airport tile.");
+			// If planes in the landing queue should also be taken into account then every plane
+			// on or above the airport tiles means not Empty.
+			if (include_landing_queue) {
 				return false;
+			}
+			local veh_state = AIVehicle.GetState(plane);
+			//AILog.Info("[DEBUG] " + AIVehicle.GetName(plane) + ", location: " + WormStrings.WriteTile(veh_tile) +
+			//	", speed: " + AIVehicle.GetCurrentSpeed(plane) + ", state: " + veh_state);
+			// Anything not running or broken down should be on the airport.
+			if ((veh_state != AIVehicle.VS_RUNNING) && (veh_state != AIVehicle.VS_BROKEN)) {
+				return false;
+			}
+			else {
+				// A running or broken down plane can also be flying over the airport or be in the
+				// waiting queue to land above the airport. Thus we need to check the speed to see if
+				// it's a plane on the airport or above the airport.
+				// Taxi-ing speed is 150 km-ish; Broken down = 320 kmh-ish.
+				// All default OpenTTD aircraft have a speed higher than 320 so we can use that.
+				if (AIVehicle.GetCurrentSpeed(plane) < broken_down_speed)
+					return false;
 			}
 		}
 	}
