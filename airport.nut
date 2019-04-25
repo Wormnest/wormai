@@ -289,6 +289,26 @@ function WormAirport::RemoveAirport(tile)
 }
 
 /**
+ * Demolish airport at specified tile. We will retry a few times before giving up.
+ * If removing fails then give a warning.
+ * @param tile The tile of the airport that should be removed.
+ */
+function WormAirport::DemolishAirport(tile)
+{
+	local cnt = 0;
+	while (cnt < 5) {
+		if (AITile.DemolishTile(tile)) {
+			//AILog.Warning("Demolish airport succeeded after " + cnt + " try/tries" );
+			return true;
+		}
+		cnt++;
+		AIController.Sleep(10);
+		AILog.Warning("Failed to demolish airport . Tries: " + cnt + ", Error: " + AIError.GetLastErrorString());
+	}
+	return false;
+}
+
+/**
  * Tries to upgrade airport from large to metropolitan in the same location since they are the same size.
  * @param nearest_town The nearest town according to town influence.
  * @param station_id The id of the airport to upgrade.
@@ -304,7 +324,7 @@ function WormAirport::UpgradeLargeToMetropolitan(nearest_town, station_id, stati
 	}
 	// Try to remove old airport
 	/// @todo Can we use RemoveAirport too or does that make it impossible to reuse station_id?
-	if (!AITile.DemolishTile(station_tile))
+	if (!WormAirport.DemolishAirport(station_tile))
 		return WormAirport.BUILD_REMOVE_FAILED;
 	// Try to build new airport in same spot
 	local airport_status = AIAirport.BuildAirport(station_tile, AIAirport.AT_METROPOLITAN, station_id);
@@ -332,7 +352,7 @@ function WormAirport::UpgradeAirport(station_id, station_tile, current_airport_t
 {
 	// Try to remove old airport
 	/// @todo Can we use RemoveAirport too or does that make it impossible to reuse station_id?
-	if (!AITile.DemolishTile(station_tile)) {
+	if (!WormAirport.DemolishAirport(station_tile)) {
 		AILog.Warning(AIError.GetLastErrorString());
 		AILog.Info("Removing old airport failed, can't upgrade (probably airplane in the way).");
 		return WormAirport.BUILD_REMOVE_FAILED;
