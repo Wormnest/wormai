@@ -1,3 +1,0 @@
-syntax: glob
-releases/*.tar
-dev/todo.txt
