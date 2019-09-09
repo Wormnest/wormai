@@ -12,9 +12,9 @@ Please report crashes and other bugs either in the discussion topic
 or the issue tracker listed below.
 
 License: see license.txt
-Discussion topic: http://www.tt-forums.net/viewtopic.php?f=65&t=67167
-Bug/Issue tracker: http://dev.openttdcoop.org/projects/ai-worm/issues
-Source repository: http://dev.openttdcoop.org/projects/ai-worm/repository
+Discussion topic: https://www.tt-forums.net/viewtopic.php?f=65&t=67167
+Bug/Issue tracker: https://github.com/Wormnest/wormai/issues
+Source repository: https://github.com/Wormnest/wormai
 
 
 Requirements
@@ -93,4 +93,4 @@ Air transport handling is based on WrightAI.
 Rail transport handling is based on SimpleAI.
 
 
-Wormnest (Jacob Boerema), 2013-2017
+Wormnest (Jacob Boerema), 2013-2019
