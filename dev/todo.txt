@@ -1,0 +1,210 @@
+WormAI TODO list
+================
+
+24-4-2019:
+Worm built a train connection but by the time it finished the accepting industry was gone.
+We should regularly check if there is an accepting industry for our stations.
+
+BUG/IMPROVEMENT:
+Shorter timeout for train track building. Samu showed on IRC that it took 5 years before
+WormAI timed out trying to find a connection between 2 stations with only water in between.
+
+BUG by Samu:
+https://imgur.com/um6QTxF
+WormAI building short bridges where they are not needed (no water) for high speed lines!
+
+29-1-2018
+Samu reports that WormAI is building too many bridges for train connections and sometimes
+fails to clean up all rails.
+Also on that server the max loan is 150000 and starting in 1935, no NewGRF, no ships
+WormAI is behaving very poorly.
+
+
+Features
+--------
++ Implement a pause AI option ingame
+  See: http://www.tt-forums.net/viewtopic.php?f=29&t=67201
++ Possibly per ai setting of max vehicles?
++ Ignore towns/industries used by competitors setting
+
++ Make extended class WormAIEngine that Extends AIEngine with:
+  - GetName that first checks for null engine where AIEngine.GetName crashes script, etc...
++ For selecting towns instead of based on population maybe select on fastest growing.
+  Possibly only when we selected Fast mode.
+  
+
+Trains:
++ Use maybe a combination of what SimpleAI and FastPTPAI do with trains.
+  FastPTPAI starts very fast with long cargo routes but single tracked so they
+  can't handle more than 1 train but bring in cash pretty fast.
+  SimpleAI seems to be pretty smart about good double track routes. However
+  multiple lines going to same destination (factory) should use the same destination
+  station if possible. Also it maybe does not allow diffeences in train length or changing
+  that depending on situation?
+
++ AIR: min/max route length should (also) depend on map size. On a smaller map like 512x512
+  a minimum of say not more than 100?
+  CHANGE: the AI settings for min/max to something like short/medium/long where
+  we compute ourselves what that exactly will be depending on the circumstances.
++ Also check at loading whether there are any stations that are not in our list
+  anymore, maybe only when we are debugging.
++ Also: In early games with low maximum speeds we may need to adjust maximum and 
+  maybe even minimum distance to get a round trip within a year.
++ MOVE HeadQuarters if we remove our station near the city where the HQ are.
++ We need another look at airplane crashing. It seems to me there's still a lot of
+  crashes. But maybe it's just because we have a lot of airplanes.
++ Airports: Compute max airports we should use not only based on max airplanes but
+  also on the best type of airport we can use. Since newer ones can handle more planes.
++ Max distance should also depend on the speed of our chosen airplane/capacity, and
+  possibly also on breakdowns being on/off.
+  
++ CLIMATES
+  We need to add support for sub-tropic and arctic since WormAI does not perform
+  too well there especially sub-tropic since towns need water and food.
+  
+ENDGAME
++ When we cant seem to add any more aircraft or airfields think of other things to do with our
+  time and money. If we are not maxed out with planes etc than start looking for less obvious places
+  or possibly other cargo. Or start making other routes reuising the already available airfields.
+
+I was going to separate all global consts into a separate unit but loading that with
+require doesn't seem to work: the consts values give: the index does not exist.
+So for now we keep the consts either in main.nut or in the file where we need them.
+
+AIR
+  When starting allow for more airports per max trains but after we have reached a certain
+  amount of airplanes start removing the worst performers. but after we have a certain amount
+  of airports increase the acceptance limit again so we don't get only poor performant spots.
+  Also start weeding out not so well performing airplanes a little before we reach max
+  airplanes instead of waiting until we are maxed out.
+AIR
+- If an airplane is performing considerably worse than the current best airplane think of
+  upgrading even if it's making a profit, but only if we have a reasonable amount of money on hand.
+
+TRAINS
+  Later in game if we have a reasonable amount of money on hand make stations longer and/or
+  all lines double or even completely double.
+- BuildHQ + Statues for trains (air might be turned off!).
+- On slow setting don't build stations if there is already taken away some.
+- On medium only i a little is taken.
+- If we have a reasonable amount of money try to optimize rail paths by finding unnecessary
+  corners especially near passing loops and stations.
+- If several trans on a line get sent to depot for lengthening at the same time and they are waiting
+  there for a while waiting cargo will increase meaning that as soon as they get lengthened there
+  still may be a lot of cargo waiting causing them to be sent to depot again to be lengthened
+  again. If they just got lengthened we should wait a while before sending them to depot again for lengthening or adding trains.
+- Optimal profits for trains should take into account that we have shorter and longer trains.
+  Just using 30% (or whatever) will cause most of the short train stations to be killed off.
+  Which might be ok if there is still a lot of playing room but on a map that's already very
+  crowded we might have troubel realizing enough better routes with longer stations.
+- If we build a route for wood. We should follow it up with a route that gets the goods produced from the wood.
+  Making trains for secondary products like goods depends on enough primary material cargo brought.
+  Take that into account when deciding about making those trains longer.
+- If it appears that a station can also receive other cargo than the targeted, maybe make a bigger
+  statin and also start transporting the other cargos from there.
+- longer trains can have a hard time pulling a lot of full cargo wagons depending on settings
+  we might need to check if we need extra engines for pulling
+
+UPDATE AYSTAR 4 ---> 6 BUT BEWARE DIFFERENT PARAMETERS!  
+
+EVERYTHING:
+- In idle moments run/continue a MapÉxplorer class that explores the map in a 16x 16 or something grid
+  possibly to identify big areas of water and huge height differences
+  For huge maps maybe explore a 128 x 128 grid area or user definable area first
+
+SELECTING ROAD AI:
++ Should preferrably also support TRAMS
+
+IMPROVEMENTS:
+- Better support for Industry sets. Especially NUTS seems to work poorly atm.
+- Better support for Subtropic climate and arctic
+- Take advantage of NewGRF vehicles even if for trains they have unusual lengths
+
+BUGS
+----
+* MEDIUM - After loading some vehicles are not part of the airports list anymore.
+  Possibly because the save happened in the middle of airport route removal/change.
+  NB: Not sure if the above is caused by old saves that were made before code
+  was correctly updated for handling airport removal. Should start a new game
+  and test again.
+  Also check at loading for airports not part of our lists. As soon as all aircraft
+  using that station are sold we should delete it.
+
+Codes: [CRASH] [MAJOR] [MEDIUM] [MINOR]
+(none?)
+
+TODO:
+Check if there are things we have added but haven't been added to save/load yet!!!!
+
+Airports
+--------
++ Define a maximum number of airplanes per airport type
+  NB: This also depends on the distance between airports, speed and capacity of airplanes
++ Optimize airport combinations for best distance/profits
++ Don't re-add airport we just removed
++ FindSuitableAirportSpot - in early years with low max speeds we may need to adjust max/min distance
++ Let min acceptance limit also depend on number of airports we already have
++ Routes where 1 airport has a lot higher amount of cargo than the other should have orders
+  where the low cargo airport doesn't have full load order.
++ If one of the airports of a route can't get upgraded for some reason try to add an airport
+  somewhere else so we can connect same types of airports for a route. After that delete the
+  old airport unless its real profitable.
++ If both airports of a route have been upgraded then we should check if we should upgrade
+  all airplanes on that route if the new allows big airplanes and the old didn't.
++ If we have the max amount of airplanes then analyze the routes with best profits
+  and if they can use more airplanes then remove airplanes from the lowest performing
+  airports and add them there.
++ Upgrading: later in the game with bigger cities it may be difficult to upgrade because we have
+  a fixed diameter of 15 from the center that may be all built full.
++ Upgrading: set a max amount of times that we try to upgrade an airport (since we are temporary
+  closing aiports when we try to upgrade).
++ Check for a minimum distance between our airports even after upgrading.
+  I think there is a distance list that we need to update too.
+
+Aircraft
+--------
++ Handle low reliability
++ Don't remove all aircraft from the same route all at once
++ Use groups for all using the same route
+  - Evaluate profits per group
+  - Favor capacity and speed over cost with high distance and good acceptance
++ ManageAirRoutes: When maintenance costs are on we should set low profit limit too at least
+  the yearly costs.
++ Start of year save profit of last year, move profit saved year before to profits year before
+  That way we can compare 2 full years of profits.
++ Instead of trying to sell vehicle again and again we could probably try AIVehicle::GetState
+  if state is VS_IN_DEPOT we can sell it.
++ When infrastructure maintenance is on it is very important to sell vehicles as soon as possible.
+  Listen to event vehicle in depot and then start the sell routine.
++ Once in a while check the route lists for invalid aircraft. Even thought we are listening to
+  the crashed events it's possible that we miss a crash or an aircraft gets invalid for whatever
+  reason. So check the route lists and remove invalid aircraft.
++ Check for changes in settings:
+  e.g. when breakdowns setting changes add/remove maintenance orders
++ If breakdowns are off then don't replace them at reaching old age but only if it can be
+  replaced by a better one.
++ Debug: check the list of sent to depot vehicles for ones that we can't seem to sell.
+
+Building
+--------
+AIAI doesn't use a fixed radius for SafeAddRectangle for determining airport distance instead it
+does sqrt(population/100))+15. Look into using something like that.
+Build HQ, bribe local authority, advertise etc when needed.
+Don't build in towns where competitors are present when that setting is on.
+
+Dev
+---
+- Make goalscript for ai debugging: send debug data to port etc...
+- Split into several files (refactor)
+  + Utils - Strings
+  + Tile - SafeAddRectangle from Rondje
+  + Vehicle general
+          - aircraft, trains, ...
+  - possibly - constants
+			 - requires/imports
+- Need month/year function
+
+Debug
+-----
+- function to show all aircraft on the list for selling
+- Option to only show the groups total profit and average not the individual aircraft details.
