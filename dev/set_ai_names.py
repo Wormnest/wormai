@@ -25,7 +25,7 @@ ai_dev_name_long  = "WormAIDev"
 
 # ----------------------------------
 # The information we are changing is in info.nut
-info_nut_file = "info.nut";
+info_nut_file = "..\\info.nut";
 
 # We want the date to be updated before releasing the tar
 # and the version number to be update after updating

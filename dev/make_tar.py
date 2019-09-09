@@ -13,7 +13,7 @@ ai_name = "WormAI"
 ai_pack_name = ai_name.replace(" ", "-")
 
 # ----------------------------------
-version_file = "version.nut";
+version_file = "../version.nut";
 
 # We want the date to be updated before releasing the tar
 # and the version number to be update after updating
@@ -52,7 +52,9 @@ if(version == -1):
     exit(-1)
 
 base_dir_name = ai_pack_name + "-v" + version
-temp_dir_name = "..\\temp"
+#temp_dir_name = "..\\temp"
+temp_dir_name = "..\\..\\temp"
+releases_dir = "..\\..\\wormai-releases\\"
 dir_name =  temp_dir_name + "\\" + base_dir_name
 tar_name = base_dir_name + ".tar"
 
@@ -78,14 +80,14 @@ def make_tarfile(output_filename, source_dir):
 # ----------------------------------------------------------------
 # Windows
 # Copies all files and non empty folders except the files/folders excluded in exclude.exc
-os.system("xcopy *.* " + dir_name + "\\ /S /EXCLUDE:dev\\exclude.exc");
+os.system("xcopy ..\\*.* " + dir_name + "\\ /S /EXCLUDE:exclude.exc");
 
 # Now tar the folder we just made
 # Since cd doesn't seem to work here we will do it in a batch file
-os.system("dev\\run_tar.bat " + tar_name + " " + base_dir_name)
+os.system("run_tar.bat " + tar_name + " " + base_dir_name)
 
-# Now copy it to our WormAI\releases folder...
-os.system("xcopy " + temp_dir_name + "\\" + tar_name + " releases\\");
+# Now copy it to wormai-releases folder...
+os.system("xcopy " + temp_dir_name + "\\" + tar_name + " " + releases_dir);
 os.system("del " + temp_dir_name + "\\" + tar_name)
 
 

@@ -18,10 +18,10 @@ name_AILibList = "AILIBLIST_VERSION";
 ver_AILibList = 0;
 
 # ai library folder
-lib_folder = os.path.abspath("../../../content_download/ai/library");
+lib_folder = os.path.abspath("../../../../content_download/ai/library");
 
 # nut file to put the version numbers in
-lib_versions_file = "libversions.nut";
+lib_versions_file = "../libversions.nut";
 
 
 # Get the number part of the filename
