@@ -985,7 +985,7 @@ function WormRailManager::AddVehicle(route, mainvehicle, engine, wagon)
 
 	// Do not try to add one if we have already reached the train limit
 	if (trains.Count() + 1 > AIGameSettings.GetValue("vehicle.max_trains")) {
-		AILog.Warning("We can't add more trains. We already have the maximum aount allowed.");
+		AILog.Warning("We can't add more trains. We already have the maximum amount allowed.");
 		return false;
 	}
 
