@@ -25,8 +25,8 @@ class Rail
 	_cost_tunnel_per_tile = null;  ///< The cost per tile of a new tunnel, this is added to _cost_tile.
 	_cost_coast = null;            ///< The extra cost for a coast tile.
 	_pathfinder = null;            ///< A reference to the used AyStar object.
-	_max_bridge_length = null;     ///< The maximum length of a bridge that will be build.
-	_max_tunnel_length = null;     ///< The maximum length of a tunnel that will be build.
+	_max_bridge_length = null;     ///< The maximum length of a bridge that will be built.
+	_max_tunnel_length = null;     ///< The maximum length of a tunnel that will be built.
 	// From AdmiralAI
 //	_cost_no_existing_rail = null; ///< The cost that is added to _cost_tile if new rail has to be built.
 	_cost_90_turn = null;          ///< The cost that is added to _cost_tile (and _cost_turn) for 90* turns.
@@ -419,10 +419,9 @@ function Rail::_GetDirection(pre_from, from, to, is_bridge)
 }
 
 /**
- * Get a list of all bridges and tunnels that can be build from the
- *  current tile. Bridges will only be build starting on non-flat tiles
- *  for performance reasons. Tunnels will only be build if no terraforming
- *  is needed on both ends.
+ * Get a list of all bridges and tunnels that can be built from the current tile.
+ * Bridges will only be built starting on non-flat tiles for performance reasons.
+ * Tunnels will only be built if no terraforming is needed on both ends.
  */
 function Rail::_GetTunnelsBridges(last_node, cur_node, bridge_dir)
 {
