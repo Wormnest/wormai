@@ -231,6 +231,12 @@ class WormRailBuilder
 	function MailWagonWorkaround(mailwagon, firstwagon, trainengine, crg);
 
 	/**
+	 * Remove one piece of rail track from tile.
+	 * @param tile The tile that has the rail track that needs to be removed.
+	 */
+    function RemoveRailFromTile(tile);
+    
+	/**
 	 * Remove a continuous segment of rail track starting from a single point. This includes depots
 	 * and stations, in all directions and braches. Basically the function deletes all rail tiles
 	 * which are reachable by a train from the starting point. This function is not static.
@@ -1004,7 +1010,7 @@ function WormRailBuilder::RetryRail(prevprev, pp1, pp2, pp3, head1, railbridges,
 	// Avoid infinite loops
 	recursiondepth++;
 	if (recursiondepth > 10) {
-		AILog.Error("It looks like I got into an infinite loop.");
+		AILog.Error("RetryRail: It looks like I got into an infinite loop.");
 		return false;
 	}
 	// pp1 is null if no track was built at all
@@ -1024,21 +1030,7 @@ function WormRailBuilder::RetryRail(prevprev, pp1, pp2, pp3, head1, railbridges,
 			// Do not remove it if we reach the station
 			break;
 		} else {
-			// Removing rail from a level crossing cannot be done with DemolishTile
-			if (AIRail.IsLevelCrossingTile(tile)) {
-				local track = AIRail.GetRailTracks(tile);
-				if (!AIRail.RemoveRailTrack(tile, track)) {
-					// Try again a few times if a road vehicle was in the way
-					local counter = 0;
-					AIController.Sleep(75);
-					while (!AIRail.RemoveRailTrack(tile, track) && counter < 3) {
-						counter++;
-						AIController.Sleep(75);
-					}
-				}
-			} else {
-				AITile.DemolishTile(tile);
-			}
+			WormRailBuilder.RemoveRailFromTile(tile);
 			head2[0] = tile;
 		}
 	}
@@ -1407,11 +1399,37 @@ function WormRailBuilder::MailWagonWorkaround(mailwagon, firstwagon, trainengine
 	AIVehicle.MoveWagon(trainengine, 1, firstwagon, 0);
 }
 
+function WormRailBuilder::RemoveRailFromTile(tile)
+{
+	if (AIRail.IsLevelCrossingTile(tile)) {
+	// Removing rail from a level crossing cannot be done with DemolishTile
+		local track = AIRail.GetRailTracks(tile);
+		if (!AIRail.RemoveRailTrack(tile, track)) {
+			// Try again a few times if a road vehicle was in the way
+			local counter = 0;
+			AIController.Sleep(25);
+			while (!AIRail.RemoveRailTrack(tile, track)) {
+				counter++;
+				if (counter >= 8) {
+					AILog.Warning("RemoveRailFromTile: Failed to remove rail track from level crossing. Probably vehicles are in the way.");
+					return;
+				}
+				AIController.Sleep(25);
+			}
+		}
+	} else {
+		if (!AITile.DemolishTile(tile)) {
+			AILog.Warning("RemoveRailFromTile: Failed to demolish tile with rail on it.");
+		}
+	}
+}
+
 function WormRailBuilder::RemoveRailLine(start_tile, rail_manager)
 {
 	if (start_tile == null) return;
 	// Rail line removal works without a valid start tile if the rail_manager's object's removelist is not empty, needed for save/load compatibility
 	if (!AIMap.IsValidTile(start_tile) && rail_manager.removelist.len() == 0) return;
+	AILog.Info("RemoveRailLine: Removing rail track starting at " + WormStrings.WriteTile(start_tile));
 	// Starting date is needed to avoid infinite loops
 	local startingdate = AIDate.GetCurrentDate();
 	rail_manager.buildingstage = rail_manager.BS_REMOVING;
@@ -1443,22 +1461,10 @@ function WormRailBuilder::RemoveRailLine(start_tile, rail_manager)
 				}
 			}
 		}
-		// Removing rail from a level crossing cannot be done with DemolishTile
-		if (AIRail.IsLevelCrossingTile(tile)) {
-			local track = AIRail.GetRailTracks(tile);
-			if (!AIRail.RemoveRailTrack(tile, track)) {
-				// Try again a few times if a road vehicle was in the way
-				local counter = 0;
-				AIController.Sleep(75);
-				while (!AIRail.RemoveRailTrack(tile, track) && counter < 3) {
-					counter++;
-					AIController.Sleep(75);
-				}
-			}
-		} else {
-			AITile.DemolishTile(tile);
-		}
+		WormRailBuilder.RemoveRailFromTile(tile);
 	}
+	local totalremovaldays = AIDate.GetCurrentDate() - startingdate;
+	AILog.Info("RemoveRailLine: Removing rail track took " + totalremovaldays + " days.");
 	rail_manager.buildingstage = rail_manager.BS_NOTHING;
 }
 
