@@ -79,6 +79,8 @@ class WormAirManager
 	max_distance_squared = 0;			///< Precomputed maximum distance squared based on current settings.
 	max_aircraft_distance = 0;			///< Highest distance that an aircraft can fly.
 	max_preferred_distance = 0;			///< Max preferred distance based on speed and reliability.
+	
+	airport_upgrader = null;			///< Airport upgrading class
 
 
 	/** Create an instance of WormAirManager and initialize our variables. */
@@ -96,6 +98,8 @@ class WormAirManager
 		this.acceptance_limit = STARTING_ACCEPTANCE_LIMIT;
 		/* Get the correct Passengers id even when an industry NewGRF is used. */
 		this.passenger_cargo_id = Helper.GetPAXCargo();
+		/* Create the handler for airport upgrading. */
+		this.airport_upgrader = WormAirportUpgrade(this);
 	}
 
     /// @{
@@ -1113,6 +1117,10 @@ function WormAirManager::UpdateAirportUpgradeList()
 					detail_text = " can handle the current amount of airplanes (";
 				}
 				break;
+			case AIAirport.AT_INTERNATIONAL:
+				// Has already been further upgraded beyond the default optimal type, no need to upgrade.
+				continue;
+				break;
 			default:
 				AILog.Error("Unexpected UPGRADE airport type!");
 				continue;
@@ -1148,7 +1156,18 @@ function WormAirManager::SendAirplanesOffAirport(town_id, station_id)
 		// If the location of one of our planes is on one of the airport tiles assume it's not empty.
 		if (airport_tiles.HasItem(veh_tile)) {
 			local veh_state = AIVehicle.GetState(plane);
-			if ((veh_state != AIVehicle.VS_RUNNING) && (veh_state != AIVehicle.VS_BROKEN)) {
+			//AILog.Info("[DEBUG] " + AIVehicle.GetName(plane) + ", location: " + WormStrings.WriteTile(veh_tile) +
+			//	", speed: " + AIVehicle.GetCurrentSpeed(plane) + ", state: " + veh_state);
+			local send_away = (veh_state != AIVehicle.VS_RUNNING) && (veh_state != AIVehicle.VS_BROKEN);
+			if (!send_away) {
+				// Aircraft can be flying above the airport. If the speed is lower than the
+				// speed of a broken down aircraft assume we are on the airport and not above it.
+				local broken_down_speed = 320 /*/ AIGameSettings.GetValue("plane_speed")*/;
+				if (AIVehicle.GetCurrentSpeed(plane) < broken_down_speed)
+					send_away = true;
+			}
+			//if ((veh_state != AIVehicle.VS_RUNNING) && (veh_state != AIVehicle.VS_BROKEN)) {
+			if (send_away) {
 				local cur_order = AIOrder.ResolveOrderPosition(plane, AIOrder.ORDER_CURRENT);
 				if (cur_order != skip_to_order) {
 					AIOrder.SkipToOrder(plane, skip_to_order);
@@ -1182,11 +1201,11 @@ function WormAirManager::UpgradeAirport(nearest_town, station_id, station_tile, 
 	// Find a new spot in same town for an airport
 	/// @todo Ideally we should include the tiles of the current airport in our search for a new spot!
 	/// @todo Maybe add as an extra parameter an optional list (default null) with the tiles of the airport
-	/// @todo Set acceptance to maybe 50 lower than acceptance of current airport?
-	/// On the other hand it will already go for the highest acceptance spot, maybe do acceptance = 50?
+	/// @todo Set acceptance to maybe 75 lower than acceptance of current airport?
+	/// On the other hand it will already go for the highest acceptance spot, maybe do acceptance = 75?
 	local new_location = FindAirportSpotInTown(nearest_town, airport_type,
 		AIAirport.GetAirportWidth(airport_type), AIAirport.GetAirportHeight(airport_type),
-		AIAirport.GetAirportCoverageRadius(airport_type), other_station_tile, 50,
+		AIAirport.GetAirportCoverageRadius(airport_type), other_station_tile, 75,
 		false, current_airport_type);
 	// Check if we managed to find a spot
 	if (new_location < 0) {
@@ -1224,6 +1243,12 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 		local station_id = AIStation.GetStationID(station_tile);
 		local airport_type = AIAirport.GetAirportType(station_tile);
 		local optimal_airport = WormAirport.GetOptimalAvailableAirportType();
+		
+		/* Skip if it's an international airport or airport is already in upgrade queue. */
+		if (airport_type == AIAirport.AT_INTERNATIONAL)
+			continue;
+		if (this.airport_upgrader.Exists(station_id))
+			continue;
 		
 		// Only upgrade if it's in the list of upgradable airports.
 		if (!upgrade_wanted.HasItem(t)) {
@@ -1377,6 +1402,164 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 			}
 		}
 	}
+	
+	// Run airport upgrader (also called in our main loop)
+	this.airport_upgrader.UpgradeAirports();
+}
+
+/**
+ * Try to upgrade an airport in specified town where old airport is at station_tile.
+ * @param town The town connected to the airport.
+ * @param station_tile The tile of the current airport.
+ * @param optimal_airport The airport type we want to upgrade to.
+ * @return false if we failed to upgrade, true if airport got upgraded.
+ */
+function WormAirManager::TryUpgradeAirport(town, station_tile, optimal_airport)
+{
+	local airport_type = AIAirport.GetAirportType(station_tile);
+	if (airport_type == optimal_airport)
+		return false;
+	local station_id = AIStation.GetStationID(station_tile);
+	if (!AIStation.IsValidStation(station_id))
+		return false;
+	if (!WormAirport.IsWithinNoiseLimit(station_tile, airport_type, optimal_airport))
+		return false;
+
+	/* Determine tile of other side of route: If station there is invalid we won't
+		try to upgrade this one since it will be soon deleted (after all aircraft
+		have been sold). */
+	local tile_other_st = GetAiportTileOtherEndOfRoute(town, station_tile);
+	local st_id_other = -1;
+	if (tile_other_st > -1) {
+		st_id_other = AIStation.GetStationID(tile_other_st);
+	}
+	
+	if (!AIStation.IsValidStation(st_id_other)) {
+		/* Make sure this station isn't closed because we may have to send
+			aircraft there in case of upgrade failure. */
+		if (AIStation.IsAirportClosed(station_id)) {
+			AIStation.OpenCloseAirport(station_id);
+			AILog.Warning("Opening airport " + AIStation.GetName(station_id) + " again since other one got removed.");
+		}
+		return false;
+	}
+	
+	/* Airport needs upgrading if possible... */
+	/* Close airport to make sure no airplanes will land, but those still there
+		will be handled. */
+	/* If airport still closed after one full loop then open it again after one more try. */
+	local old_airport_closed = AIStation.IsAirportClosed(station_id);
+	/* Make sure airport is closed. */
+	if (!old_airport_closed) {
+		AILog.Info("Closing airport " + AIStation.GetName(station_id) + " because it needs upgrading!");
+		closed_count++;
+		AIStation.OpenCloseAirport(station_id);
+		// Send all airplanes that are on the airport to their next order...
+		SendAirplanesOffAirport(town, station_id);
+	}
+	else {
+		AILog.Info("Try upgrading airport " + AIStation.GetName(station_id) + " again.");
+	}
+	local nearest_town = AIAirport.GetNearestTown(station_tile, airport_type);
+	local upgrade_result = WormAirport.BUILD_FAILED;
+	/* Try to upgrade airport. */
+	if ((airport_type == AIAirport.AT_LARGE) && (optimal_airport == AIAirport.AT_METROPOLITAN)) {
+		/// Since METROPOLITAN is the same size as LARGE we will try to rebuild it in the same spot!
+		upgrade_result = WormAirport.UpgradeLargeToMetropolitan(nearest_town, station_id, station_tile);
+	}
+	else {
+		upgrade_result = UpgradeAirport(nearest_town, station_id, station_tile, optimal_airport, tile_other_st);
+	}
+	/* Need to check if it succeeds. */
+	if (upgrade_result == WormAirport.BUILD_SUCCESS) {
+		/* Need to get the station id of the upgraded station. */
+		/* Check if old station_id is still valid */
+		if (AIStation.IsValidStation(station_id)) {
+			UpdateAirportTileInfo(town, station_id, station_tile);
+			/* It is possible that upgrading failed for whatever reason but that we then
+			 * managed to rebuild the original airport type. In that case upgrade result
+			 * will give SUCCESS too but upgrading obviously failed then so check for that.
+			 */
+			station_tile = towns_used.GetValue(town);
+			airport_type = AIAirport.GetAirportType(station_tile);
+			if (airport_type == optimal_airport)
+				AILog.Warning("Upgrading airport " + AIStation.GetName(station_id) + " succeeded!");
+			else {
+				AILog.Warning("Upgrading airport " + AIStation.GetName(station_id) + " failed!");
+				AILog.Warning("However we managed to build a replacement airport of an older type.");
+				// blacklist upgrading
+				this.upgrade_blacklist.AddItem(town, AIDate.GetCurrentDate()+500);
+			}
+		}
+		else {
+			AILog.Error("We're out of luck: station id is no longer valid!");
+			/*** @todo Figure out what we should do now.
+				Can we expect this to happen in normal situations? */
+		}
+		if (AIStation.IsAirportClosed(station_id))
+			{ AIStation.OpenCloseAirport(station_id); }
+	}
+	else if (upgrade_result == WormAirport.BUILD_REBUILD_FAILED) {
+		/* Oh boy. Airport was removed but rebuilding a replacement failed. */
+		AILog.Warning("We removed the old airport but failed to build a replacement!");
+		/* 1. Try to build a second airport as replacement. */
+		/* First get tile of other end of route. */
+		local tile_other_end = GetAiportTileOtherEndOfRoute(town, station_tile);
+		if (tile_other_end != -1) {
+			/* Try to build an airport somewhere. */
+			/*** @todo Currently we don't consider the case that if the new airport will
+			   be farther away than the old one that certain aircraft with limited
+			   range will cause problems. */
+			AILog.Info("Try to build a replacement airport somewhere else");
+			/// @todo Check if it is possible to init towns only once (set to null list outside loop),
+			/// then here check for it being null...
+			local towns = GetTownListForAirportSearch();
+			local tile_2 = this.FindSuitableAirportSpot(optimal_airport, tile_other_end, towns);
+			if (tile_2 >= 0) {
+				/* Valid tile for airport: try to build it. */
+				if (!AIAirport.BuildAirport(tile_2, optimal_airport, AIStation.STATION_NEW)) {
+					AILog.Warning(AIError.GetLastErrorString());
+					AILog.Error("Although the testing told us we could build an airport, it still failed at tile " + 
+					  WormStrings.WriteTile(tile_2) + ".");
+					this.towns_used.RemoveValue(tile_2);
+					SendAllVehiclesOfStationToDepot(station_id, VEH_STATION_REMOVAL);
+				}
+				else {
+					/* Building new airport succeeded. Now update tiles, routes and orders. */
+					ReplaceAirportTileInfo(town, station_tile, tile_2, tile_other_end);
+					AILog.Warning("Replaced airport " + AIStation.GetName(station_id) + 
+						" with " + AIStation.GetName(AIStation.GetStationID(tile_2)) + "." );
+				}
+			}
+			else {
+				AILog.Warning("Finding a suitable spot for a new airport failed.");
+				AILog.Info("Sending vehicles to depot to be sold.");
+				SendAllVehiclesOfStationToDepot(station_id, VEH_STATION_REMOVAL);
+			}
+		}
+		else {
+			/* Unlikely failure, send aircraft to hangar then delete aircraft and airport. */
+			AILog.Warning("We couldn't find the other station belonging to this route!");
+			AILog.Info("Sending vehicles to depot to be sold.");
+			SendAllVehiclesOfStationToDepot(station_id, VEH_STATION_REMOVAL);
+		}
+	}
+	else {
+		/* If airport was already closed before we started trying to upgrade and is now
+			still closed then open it again to give airplanes a chance to land and be
+			handled unless it was caused by airplanes still being on the airport.
+			We will try upgrading again at a later time. */
+		if (old_airport_closed && AIStation.IsAirportClosed(station_id) &&
+			(upgrade_result != WormAirport.BUILD_AIRPORT_NOT_EMPTY)) {
+			AIStation.OpenCloseAirport(station_id);
+			AILog.Info("We couldn't upgrade the airport this time, blacklisting it for a while.");
+			local days = 500;
+			if (airport_type == AIAirport.AT_SMALL)
+				days = 100; // We want to get rid of small airports faster in this case
+			this.upgrade_blacklist.AddItem(town, AIDate.GetCurrentDate()+days);
+		}
+	}
+	return true;
 }
 
 /**
@@ -2718,6 +2901,19 @@ function WormAirManager::CheckOversaturatedRoutes()
 			AILog.Warning("[DEBUG] Station " + AIStation.GetName(i) + ", " + list2.Count() + 
 				" vehicles, saturation: " + (-saturation) + ", (un)loading: " + loading);
 		}
+		
+		local airport_type = AIAirport.GetAirportType(t1);
+		// Need to get the "station" tile of the airport (not a random airport tile like t1).
+		local station_tile = Airport.GetAirportTile(i);
+		// If we can upgrade a saturated airport then add it to the upgrade queue.
+		if (this.CanWeUpgradeSaturatedAirport(i, station_tile)) {
+			if (this.airport_upgrader.AddAirportToUpgrade(i, station_tile, this.GetTownFromStationTile(station_tile), AIAirport.AT_INTERNATIONAL)) {
+				AILog.Warning("Added airport " + AIStation.GetName(i) + " to upgrade queue for upgrading to International airport.");
+			}
+			continue;
+		}
+		
+		
 		/* We check only aircraft here. */
 		list2.Valuate(AIVehicle.GetVehicleType);
 		list2.KeepValue(AIVehicle.VT_AIR);

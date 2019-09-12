@@ -55,6 +55,7 @@ require("tiles.nut");
 require("valuators.nut");
 require("rail_pathfinder.nut");
 require("airport.nut");
+require("airportupgrade.nut");
 require("airmanager.nut");
 require("railmanager.nut");
 require("railbuilder.nut");
@@ -480,6 +481,8 @@ function WormAI::Start()
 
 			/* Check for events once in a while */
 			this.air_manager.HandleEvents();
+			/* Handle airport upgrading */
+			this.air_manager.airport_upgrader.UpgradeAirports();
 		}
 		if (this.use_trains) {
 			if ((cur_ticker - old_ticker_rail > rail_delay_factor * this.delay_build_rail_route) || old_ticker_rail == 0) {
