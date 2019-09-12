@@ -30,9 +30,12 @@ class Rail
 	// From AdmiralAI
 //	_cost_no_existing_rail = null; ///< The cost that is added to _cost_tile if new rail has to be built.
 	_cost_90_turn = null;          ///< The cost that is added to _cost_tile (and _cost_turn) for 90* turns.
-	_cost_level_crossing = null;	///< The cost added if we are crossing a road
-	_reverse_signals = null;        ///< Don't pass through signals the right way, only trough the back of signals
+	_cost_level_crossing = null;   ///< The cost added if we are crossing a road
+	_reverse_signals = null;       ///< Don't pass through signals the right way, only trough the back of signals
 	_goal_estimate_tile = null;
+	// WormAI additions
+	_cost_farmtile = null          ///< The extra cost of a farm tile
+	_min_bridge_length = null;     ///< The minimum length of a bridge. Minimum allowed is 3.
 
 	cost = null;                   ///< Used to change the costs.
 	_running = null;
@@ -40,6 +43,7 @@ class Rail
 
 	constructor()
 	{
+		// @note You should normally not change the cost values here. Instead change it in your descendant class!
 		this._max_cost = 10000000;
 		this._cost_tile = 100;
 		this._cost_diagonal_tile = 70;
@@ -55,6 +59,9 @@ class Rail
 		this._cost_90_turn = 140;
 		this._cost_level_crossing = 500;
 		this._reverse_signals = false;
+		// WormAI
+		this._cost_farmtile = 50;
+		this._min_bridge_length = 3;
 
 		this._pathfinder = this._aystar_class(this._Cost, this._Estimate, this._Neighbours, this._CheckDirection, this, this, this, this);
 
@@ -125,6 +132,13 @@ class Rail.Cost
 			case "level_crossing":    this._main._cost_level_crossing = val; break;
 			case "90_turn":           this._main._cost_90_turn = val; break;
 			case "reverse_signals":   this._main._reverse_signals = val; break;
+			// WormAI
+			case "cost_farmtile":     this._main._cost_farmtile = val; break;
+			case "min_bridge_length":
+				// Minimum length of bridge is 3.
+				if (val < 3)
+					val = 3;
+				this._main._min_bridge_length = val; break;
 			default: throw("the index '" + idx + "' does not exist");
 		}
 
@@ -149,6 +163,9 @@ class Rail.Cost
 			case "level_crossing":    return this._main._cost_level_crossing;
 			case "90_turn":           return this._main._cost_90_turn;
 			case "reverse_signals":   return this._main._reverse_signals;
+			// WormAI
+			case "cost_farmtile":     return this._main._cost_farmtile;
+			case "min_bridge_length": return this._main._min_bridge_length;
 			default: throw("the index '" + idx + "' does not exist");
 		}
 	}
@@ -290,6 +307,11 @@ function Rail::_Cost(path, new_tile, new_direction, self)
 		cost += self._cost_coast;
 	}
 
+	/* Check if the new tile is a farmland tile. */
+	if (AITile.IsFarmTile(new_tile)) {
+		cost += self._cost_farmtile;
+	}
+
 	/* Check if the last tile was sloped. */
 	if (path_parent != null && !AIBridge.IsBridgeTile(prev_tile) && !AITunnel.IsTunnelTile(prev_tile)) {
 		cost += self._GetSlopeCost(path_parent, prev_tile, new_tile);
@@ -429,7 +451,9 @@ function Rail::_GetTunnelsBridges(last_node, cur_node, bridge_dir)
 	if (slope == AITile.SLOPE_FLAT && AITile.IsBuildable(cur_node + (cur_node - last_node))) return [];
 	local tiles = [];
 
-	for (local i = 2; i < this._max_bridge_length; i++) {
+	// Only survey bridges for our preferred minimum length.
+	local start_idx = this._min_bridge_length-1;
+	for (local i = start_idx; i < this._max_bridge_length; i++) {
 		local bridge_list = AIBridgeList_Length(i + 1);
 		local target = cur_node + i * (cur_node - last_node);
 		if (!bridge_list.IsEmpty() && AIBridge.BuildBridge(AIVehicle.VT_RAIL, bridge_list.Begin(), cur_node, target)) {
