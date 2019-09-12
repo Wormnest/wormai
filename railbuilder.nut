@@ -908,6 +908,8 @@ function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursion
 		pathfinder._max_bridge_length = 20;
 		pathfinder._max_tunnel_length = 20;
 	}
+	// We don't want real short bridges since they can slow down trains.
+	pathfinder._min_bridge_length = 4;
 
 	pathfinder.InitializePath([head1], [head2]);
 	AILog.Info("Pathfinding...");
