@@ -1440,8 +1440,8 @@ function WormRailBuilder::RemoveRailLine(start_tile, rail_manager)
 	local tile = null;
 	while (rail_manager.removelist.len() > 0) {
 		// Avoid infinite loops
-		if (AIDate.GetCurrentDate() - startingdate > 120) {
-			AILog.Error("It looks like I got into an infinite loop.");
+		if (AIDate.GetCurrentDate() - startingdate > 90) {
+			AILog.Error("RemoveRailLine: It looks like I got into an infinite loop.");
 			rail_manager.removelist = [];
 			return;
 		}
