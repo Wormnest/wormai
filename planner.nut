@@ -179,6 +179,18 @@ function WormPlanner::GetRoute(planned_route)
 	planned_route.IsSubsidy = false;
 	planned_route.CargoList = AICargoList();
 	planned_route.CargoList.Valuate(AIBase.RandItem);
+
+	// If we have enough money then increase the length of the routes...
+	local route_length_multiplier = 1;
+	if (AICompany.GetLoanAmount() == 0) {
+		local cur_money = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
+		if (cur_money > WormMoney.InflationCorrection(1000000))
+			route_length_multiplier = 2;
+		else if (cur_money > WormMoney.InflationCorrection(5000000) &&
+			(AIMap.GetMapSizeX() >= 1024) && (AIMap.GetMapSizeY() >= 1024))
+			route_length_multiplier = 3;
+	}
+
 	// Choose a source
 	foreach (icrg, dummy in planned_route.CargoList) {
 		// Passengers only if we're using air
@@ -248,9 +260,10 @@ function WormPlanner::GetRoute(planned_route)
 				planned_route.DestIsTown = true;
 				planned_route.DestList.Valuate(AITown.GetDistanceManhattanToTile, planned_route.SourceLocation);
 			}
+			
 			// Check the distance of the source and the destination
-			planned_route.DestList.KeepBelowValue(MAX_RAIL_ROUTE_LENGTH);
-			planned_route.DestList.KeepAboveValue(MIN_RAIL_ROUTE_LENGTH);
+			planned_route.DestList.KeepBelowValue(MAX_RAIL_ROUTE_LENGTH*route_length_multiplier);
+			planned_route.DestList.KeepAboveValue(MIN_RAIL_ROUTE_LENGTH*route_length_multiplier);
 			if (AICargo.GetTownEffect(icrg) == AICargo.TE_MAIL) planned_route.DestList.KeepBelowValue(110);
 
 			planned_route.DestList.Valuate(AIBase.RandItem);
