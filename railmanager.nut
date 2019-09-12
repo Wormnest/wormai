@@ -417,6 +417,7 @@ function WormRailManager::BuildRailway()
 	} else {
 
 		/* Double rail */
+		/// @todo Add support for more or less passing lanes depending on route size.
 
 		trains = 2;
 		local start, end = null;
