@@ -2199,15 +2199,22 @@ function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width
 	/* Remove all tiles where an airport can't be built. */
 	list.Valuate(AITile.IsBuildableRectangle, airport_width, airport_height);
 	list.KeepValue(1);
-	if (debug_on)
+	if (debug_on) {
 		AILog.Info("Tiles after buildable rectangle limiting: " + list.Count());
+		/*foreach (tile, dummy in list) {
+			AISign.BuildSign(tile, ".");
+		}*/
+	}
 
 	// Only keep tiles where we don't go over the noise limit.
-	/// @todo Is this really useful. Does it matter what tile we build on in same town?
 	list.Valuate(WormAirport.IsWithinNoiseLimit, old_airport_type, airport_type);
 	list.KeepValue(1);
-	if (debug_on)
+	if (debug_on) {
 		AILog.Info("Tiles after noise limiting: " + list.Count());
+		/*foreach (tile, dummy in list) {
+			AISign.BuildSign(tile, "*");
+		}*/
+	}
 
 	// If Count is 0 here we should blacklist regardless of acceptance and regardless of distance
 	if (list.Count() == 0) {
@@ -2242,8 +2249,12 @@ function WormAirManager::FindAirportSpotInTown(town, airport_type, airport_width
 	/* Sort on acceptance, remove places that don't have acceptance */
 	list.Valuate(AITile.GetCargoAcceptance, this.passenger_cargo_id, airport_width, airport_height, coverage_radius);
 	list.RemoveBelowValue(minimum_acceptance);
-	if (debug_on)
+	if (debug_on) {
 		AILog.Info("Tiles after acceptance (" + minimum_acceptance + ") limiting: " + list.Count());
+		/*foreach (tile, dummy in list) {
+			AISign.BuildSign(tile, "a");
+		}*/
+	}
 	
 	/* Couldn't find a suitable place for this town, skip to the next */
 	if (list.Count() == 0) {
