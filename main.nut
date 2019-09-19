@@ -83,6 +83,7 @@ const ERROR_BUILD_AIRCRAFT = -30;				///< General error trying to build an aircr
 const ERROR_BUILD_AIRCRAFT_INVALID = -31;		///< No suitable aircraft found when trying to build an aircraft.
 const ERROR_BUILD_TRAIN = -40;					///< General error trying to build a train (engine, wagon).
 const ERROR_BUILD_TRAIN_BLACKLISTED = -41		///< Train engine or wagon was blacklisted (unusable for our purposes).
+const ERROR_INDUSTRY_DISAPPEARED = -50			///< The industry near our station that we needed disappeared.
 /// @}
 
 /**
