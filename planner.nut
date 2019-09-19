@@ -145,9 +145,6 @@ function WormPlanner::GetSubsidizedRoute(planned_route)
 		// Skip if we are already transporting this cargo from this source.
 		if (_rail_manager.serviced.HasItem(planned_route.SourceID * 256 + planned_route.Cargo)) continue;
 		
-		// Some random chance not to choose this subsidy
-		//if (!AIBase.Chance(AIController.GetSetting("subsidy_chance"), 11) || (!root.use_roadvehs && !root.use_trains)) continue;
-		
 		if (planned_route.SourceIsTown) {
 			planned_route.SourceLocation = AITown.GetLocation(planned_route.SourceID);
 		} else {
