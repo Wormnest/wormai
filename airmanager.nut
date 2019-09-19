@@ -2329,6 +2329,8 @@ function WormAirManager::GetTownListForAirportSearch()
 	if (town_count < 10) {
 		min_towns = 2;
 	}
+	else if (town_count < 25)
+		min_towns = 4;
 	else if (town_count < 50)
 		min_towns = 5;
 	else if (town_count < 200)
