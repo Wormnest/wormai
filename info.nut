@@ -39,7 +39,7 @@ class WormAI extends AIInfo {
 			description = "The minimum size of towns to be considered for getting an airport",
 			min_value = 100,
 			max_value = 10000,
-			easy_value = 2500,
+			easy_value = 1500,
 			medium_value = 1000,
 			hard_value = 500,
 			custom_value = 500,
