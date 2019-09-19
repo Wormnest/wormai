@@ -449,6 +449,8 @@ function WormRailBuilder::BuildSingleRailStation(is_source, platform_length, rou
 	if (!success) return false;
 
 	// Build the station itself
+	// @todo The setting "newgrf_stations" was taken from SimpleAI and is currently not available
+	//       as a setting in our AI so this if will currently always return false.
 	if (AIController.GetSetting("newgrf_stations") == 1 && !route_data.SourceIsTown && !route_data.DestIsTown) {
 		// Build a NewGRF rail station
 		success = success && AIRail.BuildNewGRFRailStation(station_data.statop, station_data.stationdir,
@@ -650,6 +652,8 @@ function WormRailBuilder::BuildRailStation(is_source, lanes, platform_length, ro
 	}
 
 	// Build the station itself
+	// @todo The setting "newgrf_stations" was taken from SimpleAI and is currently not available
+	//       as a setting in our AI so this if will currently always return false.
 	if (AIController.GetSetting("newgrf_stations") == 1 && !route_data.SourceIsTown && !route_data.DestIsTown) {
 		// Build a NewGRF rail station
 		success = success && AIRail.BuildNewGRFRailStation(station_data.statop, station_data.stationdir,

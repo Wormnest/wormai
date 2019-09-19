@@ -607,10 +607,13 @@ function WormRailManager::RegisterRoute(route_data, station_data, vehtype, group
 	route.vehtype = vehtype;
 	route.railtype = AIRail.GetCurrentRailType();
 	switch (vehtype) {
+		/* This part was taken from SimpleAI and is disabled for now...
 		case AIVehicle.VT_ROAD:
 			route.maxvehicles = AIController.GetSetting("max_roadvehs");
 			break;
+		*/
 		case AIVehicle.VT_RAIL:
+			// @todo: This should be adapted for longer routes but for that we also need more passing lanes!
 			route.maxvehicles = route_data.double ? (route_data.distance_manhattan > 150 ? 5 :
 				(route_data.distance_manhattan > 100 ? 4 : 3)) : 1;
 			break;
