@@ -528,10 +528,19 @@ function WormRailManager::BuildRailway()
 	local group = AIGroup.CreateGroup(vehtype);
 	this.SetGroupName(group, _planner.route.Cargo, station_data.stasrc);
 	
-	/* Create trains for this route. */
-	local build_result = WormRailBuilder.BuildAndStartTrains(trains, 2 * starting_train_size - 2, engine, wagon, null, group,
-		_planner.route.Cargo, station_data, engine_blacklist);
+	local build_result = ALL_OK;
+	// If destination is industry check if our destination station still gets cargo.
+	if (!_planner.route.DestIsTown &&
+		!WormRailManager.IsCargoAcceptedByStation(station_data.stadst, _planner.route.Cargo)) {
+		build_result = ERROR_INDUSTRY_DISAPPEARED;
+		AILog.Warning("New route marked for deletion because the accepting industry disappeared before we could use it!");
+	} else {
+		/* Create trains for this route. */
+		build_result = WormRailBuilder.BuildAndStartTrains(trains, 2 * starting_train_size - 2, engine, wagon, null, group,
+			_planner.route.Cargo, station_data, engine_blacklist);
+	}
 	
+	/* To make sure the route gets deleted it needs to first be registered even in case of ERROR_INDUSTRY_DISAPPEARED! */
 	last_route = WormRailManager.RegisterRoute(_planner.route, station_data, vehtype, group, starting_train_size*16);
 	
 	// Retry if route was abandoned due to blacklisting
@@ -631,6 +640,33 @@ function WormRailManager::RegisterRoute(route_data, station_data, vehtype, group
 	return route;
 }
 
+function WormRailManager::IsCargoProducedByStation(stationID, cargoID)
+{
+	/* For now simply check if it has a cargo rating. */
+	/* But only for stations at least 1 year old since it can take a while to get a cargo rating. */
+	if (AIBaseStation.GetConstructionDate(stationID) + 365 > AIDate.GetCurrentDate() ||
+		AIStation.HasCargoRating(stationID, cargoID))
+		return true;
+	return false;
+}
+
+function WormRailManager::IsCargoAcceptedByStation(stationID, cargoID)
+{
+	local cargolist = AICargoList_StationAccepting(stationID);
+	foreach (cargo, dummy in cargolist) {
+		if (cargo == cargoID)
+			return true;
+	}
+	return false;
+}
+
+function WormRailManager::SellAllTrains(route)
+{
+	local trainlist = AIVehicleList_Station (route.stasrc);
+	foreach (train, dummy in trainlist) {
+		WormRailManager.SendTrainToDepotForSelling(train);
+	}
+}
 function WormRailManager::CheckRoutes()
 {
 	/* Since routes are used in a loop as index we can not remove them inside this loop.
@@ -805,6 +841,32 @@ function WormRailManager::CheckRoutes()
 			*/
 			/* We handle it different than SimpleAI for now: */
 			HandleVehicleInDepot(vehicle);
+		}
+		
+		if (route_without_trains != route.group) {
+			vehicles = AIVehicleList_Group(route.group);
+			if (vehicles.Count() > 0) {
+				/* Check for routes where the cargo isn't accepted at destination (industry removed). */
+				if (!WormRailManager.IsCargoAcceptedByStation(route.stadst, route.crg)) {
+					AILog.Warning("Cargo " + AICargo.GetCargoLabel(route.crg) + " is not accepted anymore by station " + 
+						AIStation.GetName(route.stadst) + ". Selling all vehicles.");
+					WormRailManager.SellAllTrains(route);
+				}
+				if (!route.town2town) {
+					/* Check for routes where the cargo isn't produced near destination (industry removed). */
+					if (!WormRailManager.IsCargoProducedByStation(route.stasrc, route.crg)) {
+						AILog.Warning("Cargo " + AICargo.GetCargoLabel(route.crg) + " is not produced anymore near station " + 
+							AIStation.GetName(route.stasrc) + ". Selling all vehicles.");
+						WormRailManager.SellAllTrains(route);
+					}
+				} else {
+					if (!WormRailManager.IsCargoAcceptedByStation(route.stasrc, route.crg)) {
+						AILog.Warning("Cargo " + AICargo.GetCargoLabel(route.crg) + " is not accepted anymore by station " + 
+							AIStation.GetName(route.stasrc) + ". Selling all vehicles.");
+						WormRailManager.SellAllTrains(route);
+					}
+				}
+			}
 		}
 	}
 	
