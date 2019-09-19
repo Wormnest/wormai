@@ -6,7 +6,7 @@
  * Requirement: aystar library.
  *
  * License: GNU GPL - version 2 (see license.txt)
- * Changes made by Wormnest (Jacob Boerema) are Copyright Jacob Boerema, 2016.
+ * Changes made by Wormnest (Jacob Boerema) are Copyright Jacob Boerema, 2016-2019.
  *
  */ 
 
@@ -15,7 +15,25 @@
  */
 class Rail
 {
-	_aystar_class = import("graph.aystar", "", 4);
+	static dir_SW_NE = 16;         // 0x0010
+	static dir_SW_NW = 64;         // 0x0040
+	static dir_SW_SE = 128;        // 0x0080
+
+	static dir_NE_SW = 512;        // 0x0200
+	static dir_NE_NW = 1024;       // 0x0400
+	static dir_NE_SE = 2048;       // 0x0800
+
+	static dir_SE_NE = 4096;       // 0x1000
+	static dir_SE_SW = 8192;       // 0x2000
+	static dir_SE_NW = 16384;      // 0x4000
+
+	static dir_NW_NE = 65536;      // 0x10000
+	static dir_NW_SW = 131072;     // 0x20000
+	static dir_NW_SE = 524288;     // 0x80000
+
+	static dir_INVALID = 255;      // 0x00FF
+
+	_aystar_class = import("graph.aystar", "", 6);
 	_max_cost = null;              ///< The maximum cost for a route.
 	_cost_tile = null;             ///< The cost for a single tile.
 	_cost_diagonal_tile = null;    ///< The cost for a diagonal tile.
@@ -36,6 +54,7 @@ class Rail
 	// WormAI additions
 	_cost_farmtile = null          ///< The extra cost of a farm tile
 	_min_bridge_length = null;     ///< The minimum length of a bridge. Minimum allowed is 3.
+	_shortest_distance = null;
 
 	cost = null;                   ///< Used to change the costs.
 	_running = null;
@@ -63,7 +82,7 @@ class Rail
 		this._cost_farmtile = 50;
 		this._min_bridge_length = 3;
 
-		this._pathfinder = this._aystar_class(this._Cost, this._Estimate, this._Neighbours, this._CheckDirection, this, this, this, this);
+		this._pathfinder = this._aystar_class(this, this._Cost, this._Estimate, this._Neighbours, this._CheckDirection);
 
 		this.cost = this.Cost(this);
 		this._running = false;
@@ -77,13 +96,8 @@ class Rail
 	 * @see AyStar::InitializePath()
 	 */
 	function InitializePath(sources, goals, ignored_tiles = []) {
-		local nsources = [];
+		//AILog.Info("Initialize path...");
 
-		foreach (node in sources) {
-			local path = this._pathfinder.Path(null, node[1], 0xFF, this._Cost, this);
-			path = this._pathfinder.Path(path, node[0], 0xFF, this._Cost, this);
-			nsources.push(path);
-		}
 		this._goals = goals;
 		this._goal_estimate_tile = goals[0][0];
 		foreach (tile in goals) {
@@ -91,7 +105,19 @@ class Rail
 				this._goal_estimate_tile = tile[0];
 			}
 		}
+		this._shortest_distance = AIMap.DistanceManhattan(sources[0][0], this._goal_estimate_tile);
+		//AILog.Info("Shortest path distance: " + this._shortest_distance);
+
+		local nsources = [];
+
+		foreach (node in sources) {
+			local path = this._pathfinder.Path(null, node[1], 0xFF, this._Cost, this);
+			path = this._pathfinder.Path(path, node[0], 0xFF, this._Cost, this);
+			nsources.push(path);
+		}
+
 		this._pathfinder.InitializePath(nsources, goals, ignored_tiles);
+		//AILog.Info("Initialize path...finished");
 	}
 
 	/**
@@ -217,7 +243,8 @@ function Rail::_nonzero(a, b)
 	return a != 0 ? a : b;
 }
 
-function Rail::_Cost(path, new_tile, new_direction, self)
+
+function Rail::_Cost(self, path, new_tile, new_direction)
 {
 	// First line added from AdmiralAI
 	if (AITile.GetMaxHeight(new_tile) == 0) return self._max_cost;
@@ -264,8 +291,17 @@ function Rail::_Cost(path, new_tile, new_direction, self)
 		if (AITunnel.GetOtherTunnelEnd(new_tile) == prev_tile) {
 			cost += distance_new_prev * (self._cost_tile + self._cost_tunnel_per_tile);
 		} else {
+			/* Check if the bridge ramps will be on a coast tile (more expensive). */
+			local cost_coastramp = 0;
+			if (AITile.IsCoastTile(new_tile)) {
+				cost_coastramp += 200;
+			}
+			if (AITile.IsCoastTile(prev_tile)) {
+				cost_coastramp += 200;
+			}
 			cost += distance_new_prev * (self._cost_tile + self._cost_bridge_per_tile) +
-				self._GetBridgeNumSlopes(new_tile, prev_tile) * self._cost_slope;
+				self._GetBridgeNumSlopes(new_tile, prev_tile) * self._cost_slope +
+				cost_coastramp;
 		}
 		if (path_parent != null && path_grandparent != null &&
 			path_grandparent.GetTile() - parent_tile !=
@@ -273,6 +309,12 @@ function Rail::_Cost(path, new_tile, new_direction, self)
 			/ distance_new_prev) {
 			cost += self._cost_turn;
 		}
+		/*
+		AILog.Info("DEBUG: Bridge/Tunnel tile from: " + WormStrings.WriteTile(prev_tile) + " to: " +
+			WormStrings.WriteTile(new_tile) + ", direction: " + WormStrings.DecToHex(new_direction) +
+			", cost: " + cost);
+		*/
+
 		return cost;
 	}
 
@@ -293,12 +335,20 @@ function Rail::_Cost(path, new_tile, new_direction, self)
 		cost += self._cost_turn;
 	}
 
-	/* Check for a double turn (AIAI) = 90 degree turn? */
-	if (long) {
-		local path_greatgrandparent = path_grandparent.GetParent();
-		if ((path_greatgrandparent != null) &&
-			self._IsTurn(path_greatgrandparent.GetTile(), path_grandparent.GetTile(), parent_tile, prev_tile)) {
+	if (path_parent != null) {
+		/*
+		AILog.Info("DEBUG: 90 degree test from: " + WormStrings.WriteTile(prev_tile) + " to: " +
+			WormStrings.WriteTile(new_tile) + ", new direction: " + WormStrings.DecToHex(new_direction) +
+			", parent tile: " + WormStrings.WriteTile(parent_tile) + ", parent direction: " + 
+			WormStrings.DecToHex(path_parent.GetDirection()));
+		AILog.Info("Direction: " + WormStrings.DecToHex(new_direction) +
+			", path direction: " + WormStrings.DecToHex(path.GetDirection()) +
+			", parentpath direction: " + WormStrings.DecToHex(path_parent.GetDirection()));
+		*/
+		if (self._Is90DegreeTurn(path_parent.GetDirection(), new_direction)) {
+			// Or path.Parent.GetDirection?????
 			cost += self._cost_90_turn;
+			//AILog.Info("DEBUG: 90 degree turn found");
 		}
 	}
 	
@@ -315,12 +365,39 @@ function Rail::_Cost(path, new_tile, new_direction, self)
 	/* Check if the last tile was sloped. */
 	if (path_parent != null && !AIBridge.IsBridgeTile(prev_tile) && !AITunnel.IsTunnelTile(prev_tile)) {
 		cost += self._GetSlopeCost(path_parent, prev_tile, new_tile);
+	/*
+		AILog.Info("DEBUG: Slope cost from: " + WormStrings.WriteTile(prev_tile) + " to: " +
+			WormStrings.WriteTile(new_tile) + ", direction: " + WormStrings.DecToHex(new_direction) +
+			", slope cost: " + self._GetSlopeCost(path_parent, prev_tile, new_tile));
+	*/
 	}
 
 	/* Check if the next tile is a road tile. */
 	if (AITile.HasTransportType(new_tile, AITile.TRANSPORT_ROAD)) {
 		cost += self._cost_level_crossing;
 	}
+
+	local dist_prevtile = AIMap.DistanceManhattan(self._goal_estimate_tile, prev_tile);
+	local dist_newtile = AIMap.DistanceManhattan(self._goal_estimate_tile, new_tile);
+	if (dist_newtile > dist_prevtile) {
+		// We're getting farther away from destination
+		cost += 50;
+	} else if (dist_newtile == dist_prevtile) {
+		// We're getting farther away from destination
+		cost += 10;
+	}
+
+	local dist_to_dest = AIMap.DistanceManhattan(self._goal_estimate_tile, new_tile);
+	if (dist_to_dest > 2*self._shortest_distance) {
+		if (dist_to_dest > 3*self._shortest_distance)
+			cost += self._max_cost;
+		else if (dist_to_dest > 2.5*self._shortest_distance)
+			cost += 10000;
+		else
+			cost += 1000;
+	} else if (dist_to_dest > 1.5*self._shortest_distance)
+		cost += 100;
+
 
 	/* We don't use already existing rail, so the following code is unused. It
 	 * assigns if no rail exists along the route.
@@ -332,10 +409,16 @@ function Rail::_Cost(path, new_tile, new_direction, self)
 	}
 	*/
 
+	/*
+	AILog.Info("DEBUG: Tile from: " + WormStrings.WriteTile(prev_tile) + " to: " +
+		WormStrings.WriteTile(new_tile) + ", direction: " + WormStrings.DecToHex(new_direction) +
+		", cost: " + (path.GetCost() + cost));
+	*/
+
 	return path.GetCost() + cost;
 }
 
-function Rail::_Estimate(cur_tile, cur_direction, goal_tiles, self)
+function Rail::_Estimate(self, cur_tile, cur_direction, goal_tiles)
 {
 	local min_cost = self._max_cost;
 	/* As estimate we multiply the lowest possible cost for a single tile with
@@ -346,10 +429,15 @@ function Rail::_Estimate(cur_tile, cur_direction, goal_tiles, self)
 		min_cost = min(min_cost, min(dx, dy) * (self._cost_diagonal_tile /*+self._cost_no_existing_rail*/)
 			* 2 + (max(dx, dy) - min(dx, dy)) * (self._cost_tile /*+self._cost_no_existing_rail*/));
 	}
-	return min_cost;
+	/*
+	AILog.Info("tile: " + WormStrings.WriteTile(cur_tile) + ", min_cost: " + min_cost +
+		", direction: " + WormStrings.DecToHex(cur_direction));
+	*/
+
+		return min_cost;
 }
 
-function Rail::_Neighbours(path, cur_node, self)
+function Rail::_Neighbours(self, path, cur_node)
 {
 	/// @todo If we ever want to reuse some of ourown tracks then we need to comment the next line and
 	/// replace part of this function with the implementation from AdmiralAI!
@@ -370,6 +458,10 @@ function Rail::_Neighbours(path, cur_node, self)
 	if (AIBridge.IsBridgeTile(cur_node) || AITunnel.IsTunnelTile(cur_node)) {
 		/* We don't use existing rails, so neither existing bridges / tunnels. */
 	} else if (path_parent != null && AIMap.DistanceManhattan(cur_node, parent_tile) > 1) {
+		/*
+		AILog.Info("DEBUG: Distance > 1: " + WormStrings.WriteTile(cur_node) + ", " +
+			WormStrings.WriteTile(parent_tile));
+		*/
 		local other_end = parent_tile;
 		local next_tile = cur_node + (cur_node - other_end) / AIMap.DistanceManhattan(cur_node, other_end);
 		foreach (offset in offsets) {
@@ -412,10 +504,20 @@ function Rail::_Neighbours(path, cur_node, self)
 			}
 		}
 	}
+
+	/*
+	local debug_tiles = tiles;
+	local debug_neighbors = "Neighbors: ";
+	foreach (node in debug_tiles) {
+		debug_neighbors += WormStrings.WriteTile(node[0]) + " "; // node[1] = direction
+	}
+	AILog.Info("DEBUG: " + debug_neighbors);
+	*/
+
 	return tiles;
 }
 
-function Rail::_CheckDirection(tile, existing_direction, new_direction, self)
+function Rail::_CheckDirection(self, tile, existing_direction, new_direction)
 {
 	return false;
 }
@@ -450,14 +552,39 @@ function Rail::_GetTunnelsBridges(last_node, cur_node, bridge_dir)
 	local slope = AITile.GetSlope(cur_node);
 	if (slope == AITile.SLOPE_FLAT && AITile.IsBuildable(cur_node + (cur_node - last_node))) return [];
 	local tiles = [];
+	
+	/*
+	AILog.Info("DEBUG: Get available bridges for node from: " + WormStrings.WriteTile(last_node) +
+		", to: " + WormStrings.WriteTile(cur_node) + ", direction: " + WormStrings.DecToHex(bridge_dir));
+	*/
 
 	// Only survey bridges for our preferred minimum length.
 	local start_idx = this._min_bridge_length-1;
 	for (local i = start_idx; i < this._max_bridge_length; i++) {
 		local bridge_list = AIBridgeList_Length(i + 1);
 		local target = cur_node + i * (cur_node - last_node);
-		if (!bridge_list.IsEmpty() && AIBridge.BuildBridge(AIVehicle.VT_RAIL, bridge_list.Begin(), cur_node, target)) {
-			tiles.push([target, bridge_dir]);
+		if (!bridge_list.IsEmpty()) {
+			local bridgeID = bridge_list.Begin();
+			local best_bridge = null;
+			local low_price = null;
+			/* @todo: We also need to check the max speed of the bridge compared to what our 
+				chosen engine has as max speed. */
+			while (!bridge_list.IsEnd()) {
+				/* If price of this bridge is more than 20% of our available money then don't use it. */
+				local _price = AIBridge.GetPrice(bridgeID, i+1);
+				if (_price < 0.2*AICompany.GetBankBalance(AICompany.COMPANY_SELF)) {
+					if (low_price == null || _price < low_price) {
+						best_bridge = bridgeID;
+						low_price = _price;
+					}
+				}
+				bridgeID = bridge_list.Next();
+			}
+			if (!(best_bridge == null)) {
+				if (AIBridge.BuildBridge(AIVehicle.VT_RAIL, best_bridge, cur_node, target)) {
+					tiles.push([target, bridge_dir]);
+				}
+			}
 		}
 	}
 
@@ -479,6 +606,39 @@ function Rail::_IsTurn(pre, start, middle, end)
 	//AIMap.DistanceManhattan(new_tile, path.GetParent().GetParent().GetTile()) == 3 &&
 	//path.GetParent().GetParent().GetTile() - path.GetParent().GetTile() != prev_tile - new_tile) {
 	return AIMap.DistanceManhattan(end, pre) == 3 && pre - start != middle - end;
+}
+
+/** Is there a 90 degree turn from direction prev_dir to direction cur_dir. */
+function Rail::_Is90DegreeTurn(cur_dir, prev_dir)
+{
+	switch(cur_dir)
+	{
+		case Rail.dir_NW_SW:
+		case Rail.dir_SW_NW:
+			if (prev_dir == Rail.dir_NW_NE || prev_dir == Rail.dir_NE_NW ||
+				prev_dir == Rail.dir_SW_SE || prev_dir == Rail.dir_SE_SW)
+				return true;
+			break;
+		case Rail.dir_NW_NE:
+		case Rail.dir_NE_NW:
+			if (prev_dir == Rail.dir_NE_SE || prev_dir == Rail.dir_SE_NE || 
+				prev_dir == Rail.dir_NW_SW || prev_dir == Rail.dir_SW_NW)
+				return true;
+			break;
+		case Rail.dir_NE_SE:
+		case Rail.dir_SE_NE:
+			if (prev_dir == Rail.dir_NW_NE || prev_dir == Rail.dir_NE_NW || 
+				prev_dir == Rail.dir_SW_SE || prev_dir == Rail.dir_SE_SW)
+				return true;
+			break;
+		case Rail.dir_SW_SE:
+		case Rail.dir_SE_SW:
+			if (prev_dir == Rail.dir_NW_SW || prev_dir == Rail.dir_SW_NW || 
+				prev_dir == Rail.dir_NE_SE || prev_dir == Rail.dir_SE_NE)
+				return true;
+			break;
+	}
+	return false;
 }
 
 function Rail::_NumSlopes(path, prev, cur)
