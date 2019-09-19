@@ -24,6 +24,13 @@ class WormAirport
 
 
 	/**
+	 * Get the minimum station spread needed for the specified airport.
+	 * @param airport_type The type of airport we want to know the minimum station spread of.
+	 * @return The minimum required station spread.
+	 */
+	static function GetMinimumStationSpread(airport_type);
+
+	/**
 	 * Get the optimal type of airport that is available.
 	 * @note For now we only choose between small, large and metropolitan. Larger ones would only
 	 * be useful for very high cargo/passenger amounts with many airplanes.
@@ -103,6 +110,20 @@ class WormAirport
 }
 
 /**
+ * Get the minimum station spread needed for the specified airport.
+ * @param airport_type The type of airport we want to know the minimum station spread of.
+ * @return The minimum required station spread.
+ */
+function WormAirport::GetMinimumStationSpread(airport_type)
+{
+	local min_spread = AIAirport.GetAirportWidth(airport_type);
+	local h = AIAirport.GetAirportHeight(airport_type);
+	if (h > min_spread)
+		min_spread = h;
+	return min_spread;
+}
+
+/**
  * Get the optimal type of airport that is available.
  * @note For now we only choose between small, large and metropolitan. Larger ones would only
  * be useful for very high cargo/passenger amounts with many airplanes.
@@ -110,14 +131,21 @@ class WormAirport
  */
 function WormAirport::GetOptimalAvailableAirportType()
 {
+	// We also need to check whether the station spread settings allow the selected airport.
+	// Sometimes it is set so low that certain airports can't be built!
+	local station_spread = AIGameSettings.GetValue("station_spread");
+
 	local AirType = null;
-	if (AIAirport.IsValidAirportType(AIAirport.AT_METROPOLITAN)) {
+	if (AIAirport.IsValidAirportType(AIAirport.AT_METROPOLITAN) && 
+		WormAirport.GetMinimumStationSpread(AIAirport.AT_METROPOLITAN) <= station_spread) {
 		AirType = AIAirport.AT_METROPOLITAN;
 	}
-	else if (AIAirport.IsValidAirportType(AIAirport.AT_LARGE)) {
+	else if (AIAirport.IsValidAirportType(AIAirport.AT_LARGE) && 
+		WormAirport.GetMinimumStationSpread(AIAirport.AT_LARGE) <= station_spread) {
 		AirType = AIAirport.AT_LARGE;
 	}
-	else if (AIAirport.IsValidAirportType(AIAirport.AT_SMALL)) {
+	else if (AIAirport.IsValidAirportType(AIAirport.AT_SMALL) && 
+		WormAirport.GetMinimumStationSpread(AIAirport.AT_SMALL) <= station_spread) {
 		AirType = AIAirport.AT_SMALL;
 	}
 	return AirType;

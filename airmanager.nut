@@ -1034,7 +1034,7 @@ function WormAirManager::UpdateAirportUpgradeList()
 {
 	local optimal_airport = WormAirport.GetOptimalAvailableAirportType();
 	// If optimal airport is earliest available type then we don't need to upgrade.
-	if (optimal_airport == AIAirport.AT_SMALL) {
+	if (optimal_airport == null || optimal_airport == AIAirport.AT_SMALL) {
 		this.upgrade_wanted == null;
 		return;
 	}
@@ -1243,6 +1243,8 @@ function WormAirManager::CheckForAirportsNeedingToBeUpgraded()
 		local station_id = AIStation.GetStationID(station_tile);
 		local airport_type = AIAirport.GetAirportType(station_tile);
 		local optimal_airport = WormAirport.GetOptimalAvailableAirportType();
+		if (optimal_airport == null)
+			break;
 		
 		/* Skip if it's an international airport or airport is already in upgrade queue. */
 		if (airport_type == AIAirport.AT_INTERNATIONAL)
@@ -2956,9 +2958,13 @@ function WormAirManager::CanWeUpgradeSaturatedAirport(st_id, st_tile)
 		return false;
 	if (!(AIAirport.IsValidAirportType(AIAirport.AT_INTERNATIONAL)))
 		return false;
-	/// @todo Also check the station spread limits of stations.
 
 	local optimal_airport = AIAirport.AT_INTERNATIONAL;
+	
+	// Check the station spread limits.
+	local station_spread = AIGameSettings.GetValue("station_spread");
+	if (WormAirport.GetMinimumStationSpread(optimal_airport) > station_spread)
+		return false;
 
 	if (!WormAirport.IsWithinNoiseLimit(st_tile, airport_type, optimal_airport)) {
 		//AILog.Warning("Can't upgrade airport due to noise limits.");
