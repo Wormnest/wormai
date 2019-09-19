@@ -953,9 +953,14 @@ function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursion
 				} else {
 					// If we are building a bridge
 					/// @todo  Maybe also valuate on price of the bridge and depend on the max speed we need maybe + a little extra for when we upgrade trains...
-					local bridgelist = AIBridgeList_Length(AIMap.DistanceManhattan(path.GetTile(), prev) + 1);
+					local bridgelen = AIMap.DistanceManhattan(path.GetTile(), prev) + 1;
+					local bridgelist = AIBridgeList_Length(bridgelen);
 					bridgelist.Valuate(AIBridge.GetMaxSpeed);
-					if (!AIBridge.BuildBridge(AIVehicle.VT_RAIL, bridgelist.Begin(), prev, path.GetTile())) {
+					local _price = AIBridge.GetPrice(bridgelist.Begin(), bridgelen);
+					if (_price > 0.5*AICompany.GetBankBalance(AICompany.COMPANY_SELF)) {
+						AILog.Warning("Bridge is too expensive. Construction aborted.");
+						return false;
+					} else if (!AIBridge.BuildBridge(AIVehicle.VT_RAIL, bridgelist.Begin(), prev, path.GetTile())) {
 						AILog.Warning("An error occured while I was building the rail: " + AIError.GetLastErrorString());
 						if (AIError.GetLastError() == AIError.ERR_NOT_ENOUGH_CASH) {
 							AILog.Warning("That bridge would be too expensive. Construction aborted.");
