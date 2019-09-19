@@ -290,14 +290,14 @@ function WormAirport::IsWithinNoiseLimit(tile, old_airport_type, new_airport_typ
 		local increase = AIAirport.GetNoiseLevelIncrease(tile, new_airport_type) -
 			AIAirport.GetNoiseLevelIncrease(tile, old_airport_type);
 		// return here or else we need to declare the two local's outside the if
-		return (increase < allowed);
+		return (increase <= allowed);
 	}
 	else {
 		// No existing airport
 		local allowed = AITown.GetAllowedNoise(AIAirport.GetNearestTown(tile, new_airport_type));
 		local increase = AIAirport.GetNoiseLevelIncrease(tile, new_airport_type);
 		// return here or else we need to declare the two local's outside the if
-		return (increase < allowed);
+		return (increase <= allowed);
 	}
 }
 
