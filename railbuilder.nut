@@ -1005,7 +1005,8 @@ function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursion
 		local wanted_money = AICompany.GetLoanInterval() + WormMoney.GetMinimumCashNeeded();
 		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < wanted_money) {
 			if (!WormMoney.GetMoney(wanted_money, WormMoney.WM_SILENT)) {
-				AILog.Warning("We're short on money, let's wait a short while.");
+				AILog.Warning("We're short on money, let's wait a short while. Wanted: " + 
+					wanted_money + ". We have:" + AICompany.GetBankBalance(AICompany.COMPANY_SELF));
 				if (!WormMoney.WaitForMoney(wanted_money, 100, 25)) {
 					AILog.Warning("I don't have enough money to complete the route and waiting took too long.");
 					return false;
