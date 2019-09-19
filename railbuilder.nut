@@ -1019,6 +1019,9 @@ function WormRailBuilder::InternalBuildRail(head1, head2, railbridges, recursion
 
 function WormRailBuilder::RetryRail(prevprev, pp1, pp2, pp3, head1, railbridges, recursiondepth)
 {
+	// @todo Since it's possible here that we start from a diagonal track we need to take into
+	//       account that we can get a 90 degree turn. I have seen where that happened continuing
+	//       from a track build failure.
 	// Avoid infinite loops
 	recursiondepth++;
 	if (recursiondepth > 10) {
