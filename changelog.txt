@@ -1,6 +1,35 @@
 WormAI Changelog
 ================
 
+Version 8, 2019-09-19
+---------------------
++ Fix: Determination of 90 degree turn in rail pathfinder was wrong causing
+  rollercoaster tracks and difficulties finding a path.
++ Fix: Remove rail tracks by using RemoveRailTrack as much as possible since
+  that is cheaper than using DemolishTile which makes it less likely that we
+  run out of money early in the game with a failed train route.
++ Fix: Not building airports in spots where the noise level will equal the
+  maximum allowed noise level.
++ Fix: Take station spread setting into account when determining best
+  airport type.
++ Add: Manage over saturated air routes by either removing planes from route
+  or upgrading airports.
++ Add: Upgrade airports to International airports in certain cases.
++ Add: Regular checks that industries we use on a rail route are still
+  accepting/producing our cargo. If not we will sell the vehicles and
+  close the route.
++ Add: Extra pathfinding penalties to make it less likely the pathfinder
+  continues a path far away from our destination.
++ Change: Improve finding airport spots adding towns to blacklist more
+  often and only checking towns within distance limits.
++ Change: Adjust max aircraft route distance in early starting games
+  depending on plane speed and reliability.
++ Change: Rail: Increase length of train routes if we have enough money.
++ Change: Lower minimum town for airport size in easy setting from 2500
+  to 1500.
++ Change: Use Graph.AyStar version 6 instead of version 4.
++ Change: Moved repository and issue tracker to Github.
+
 Version 7, 2017-04-16
 ---------------------
 + Fix: Not checking air route range at startup under certain conditions.
