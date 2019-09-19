@@ -585,16 +585,17 @@ function WormRailManager::RegisterRoute(route_data, station_data, vehtype, group
 {
 	/* Table with info about a completed route. */
 	local route = {
-		src = null
-		dst = null
-		stasrc = null
-		stadst = null
-		homedepot = null
-		group = null
-		crg = null
-		vehtype = null
-		railtype = null
-		maxvehicles = null
+		src = null              ///< ID of source town or industry
+		dst = null              ///< ID of destination town or industry
+		stasrc = null           ///< Station ID of source station
+		stadst = null           ///< Station ID of destination station
+		homedepot = null        ///< The depot at the source station
+		group = null            ///< The group ID of this route
+		crg = null              ///< The cargo selected to be transported
+		vehtype = null          ///< The vehicle type selected for this route
+		railtype = null         ///< The rail type used for the rail tracks on this route
+		maxvehicles = null      ///< The maximum number of vehicles this route can handle currently
+		town2town = null        ///< Whether this route is a town to town route or not.
 	}
 	/// @todo Also save IsSubsidy, ...
 	route.src = route_data.SourceID;
@@ -621,6 +622,7 @@ function WormRailManager::RegisterRoute(route_data, station_data, vehtype, group
 			route.maxvehicles = 0;
 			break;
 	}
+	route.town2town = (route_data.SourceIsTown && route_data.DestIsTown);
 	routes.push(route);
 	serviced.AddItem(route_data.SourceID * 256 + route_data.Cargo, 0);
 	groups.AddItem(group, routes.len() - 1);
