@@ -1416,25 +1416,46 @@ function WormRailBuilder::MailWagonWorkaround(mailwagon, firstwagon, trainengine
 
 function WormRailBuilder::RemoveRailFromTile(tile)
 {
-	if (AIRail.IsLevelCrossingTile(tile)) {
-	// Removing rail from a level crossing cannot be done with DemolishTile
-		local track = AIRail.GetRailTracks(tile);
+	// Remove rail tracks by using RemoveRailTrack as much as possible since that is cheaper than
+	// using DemolishTile. However we can't do that when removing a station or depot.
+	local track = AIRail.GetRailTracks(tile);
+	if (!(AIRail.IsRailStationTile(tile) || AIRail.IsRailDepotTile(tile) || AIRail.IsRailWaypointTile(tile)) &&
+		((track == AIRail.RAILTRACK_NE_SW) ||
+		(track == AIRail.RAILTRACK_NW_SE) ||
+		(track == AIRail.RAILTRACK_NW_NE) ||
+		(track == AIRail.RAILTRACK_SW_SE) ||
+		(track == AIRail.RAILTRACK_NW_SW) ||
+		(track == AIRail.RAILTRACK_NE_SE))) {
 		if (!AIRail.RemoveRailTrack(tile, track)) {
+			if (AIError.GetLastError() == AIError.ERR_PRECONDITION_FAILED) {
+				AILog.Error("RemoveRailFromTile: Failed to remove rail track. Reason: Precondition failed at " +
+					WormStrings.WriteTile(tile) + ", track: " + WormStrings.DecToHex(track));
+				return;
+			}
+			else {
+				AILog.Warning("RemoveRailFromTile: Failed to remove rail track. Reason: " + 
+					AIError.GetLastErrorString() + ", at: " + WormStrings.WriteTile(tile) + ", track: " + WormStrings.DecToHex(track));
+			}
 			// Try again a few times if a road vehicle was in the way
 			local counter = 0;
 			AIController.Sleep(25);
 			while (!AIRail.RemoveRailTrack(tile, track)) {
 				counter++;
 				if (counter >= 8) {
-					AILog.Warning("RemoveRailFromTile: Failed to remove rail track from level crossing. Probably vehicles are in the way.");
+					AILog.Warning("RemoveRailFromTile: Failed to remove rail track from level crossing. Reason: " + 
+						AIError.GetLastErrorString());
 					return;
 				}
 				AIController.Sleep(25);
 			}
 		}
 	} else {
+		// Do this as a last resort since it's cheaper to just remove the track instead of demolishing.
 		if (!AITile.DemolishTile(tile)) {
-			AILog.Warning("RemoveRailFromTile: Failed to demolish tile with rail on it.");
+			// Possible reason for failure: not enough money!
+			// Especially if it is near water demolishing can cost a lot!
+			AILog.Warning("RemoveRailFromTile: Failed to demolish tile with rail on it: " + 
+				AIError.GetLastErrorString());
 		}
 	}
 }
@@ -1444,7 +1465,7 @@ function WormRailBuilder::RemoveRailLine(start_tile, rail_manager)
 	if (start_tile == null) return;
 	// Rail line removal works without a valid start tile if the rail_manager's object's removelist is not empty, needed for save/load compatibility
 	if (!AIMap.IsValidTile(start_tile) && rail_manager.removelist.len() == 0) return;
-	AILog.Info("RemoveRailLine: Removing rail track starting at " + WormStrings.WriteTile(start_tile));
+	//AILog.Info("RemoveRailLine: Removing rail track starting at " + WormStrings.WriteTile(start_tile));
 	// Starting date is needed to avoid infinite loops
 	local startingdate = AIDate.GetCurrentDate();
 	rail_manager.buildingstage = rail_manager.BS_REMOVING;
@@ -1478,8 +1499,8 @@ function WormRailBuilder::RemoveRailLine(start_tile, rail_manager)
 		}
 		WormRailBuilder.RemoveRailFromTile(tile);
 	}
-	local totalremovaldays = AIDate.GetCurrentDate() - startingdate;
-	AILog.Info("RemoveRailLine: Removing rail track took " + totalremovaldays + " days.");
+	//local totalremovaldays = AIDate.GetCurrentDate() - startingdate;
+	//AILog.Info("RemoveRailLine: Removing rail track took " + totalremovaldays + " days.");
 	rail_manager.buildingstage = rail_manager.BS_NOTHING;
 }
 
