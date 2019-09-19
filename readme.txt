@@ -7,7 +7,6 @@ WormAI is an ai that tries to be competitive. It currently supports pax
 air transport and since version 5 also train support for all cargos.
 In the tests I have done it usually performs fairly well as long as
 you haven't turned on infrastructure maintenance.
-Trains currently require that 90 degree turns are allowed.
 Please report crashes and other bugs either in the discussion topic
 or the issue tracker listed below.
 
@@ -20,8 +19,13 @@ Source repository: https://github.com/Wormnest/wormai
 Requirements
 ------------
 OpenTTD 1.4 or later.
-SuperLib, AyStar, AILibList and AILibCommon (used by AILibList).
-The library versions should be the latest versions at the time of release.
+AI libraries:
++ SuperLib
++ Graph.AyStar version 6
++ AILibList
++ AILibCommon (used by AILibList).
+The library versions usually should be the latest versions at the time
+of release.
 
 
 Features
@@ -29,12 +33,12 @@ Features
 Building airports and managing airport routes connecting two airports.
 Saving and loading are supported.
 Aircraft maximum distance supported.
-Handling of reaching maximum allowed aircraft.
-Handling of breakdown setting and selling of old aircraft.
+Handling of reaching maximum allowed vehicles.
+Handling of breakdown setting and selling of old vehicles.
 Handling of airport upgrading.
 Building of headquarters and statues.
 Building train routes, renew trains, change length when needed, sell
-when unprofitable.
+when unprofitable, electrify rail.
 
 
 Settings
@@ -77,14 +81,16 @@ changed during the game.
 Limitations and shortcomings
 ----------------------------
 It doesn't do very well when infrastructure maintenance is on.
-Every air route consists of 2 airports, unconnected to other airports.
-Trains currently require that 90 degree turns are allowed.
+Every air and train route consists of 2 stations, unconnected to
+other stations. That means there is no interconnected network of
+stations, only point to point routes.
 Only well tested in temperate climate. Performance in arctic is
 not as good but overall not too bad. In sub-tropic it doesn't do
-very well since it only transports passengers but not water or food.
+very well with airplanes since it only transports passengers but
+not water or food.
 Doesn't start building as fast as some other AI's meaning that
 in situations with a limited amount of suitable spots for airports
-it might have a difficult time starting.
+and/or train stations it may have a difficult time.
 
 
 Credits
