@@ -10,7 +10,7 @@ class WormAI extends AIInfo {
 	function MinVersionToLoad() { return 1; }
 	function CreateInstance()   { return "WormAI"; }
 	function GetAPIVersion()    { return "1.4"; }
-	function GetURL()           { return "http://www.tt-forums.net/viewtopic.php?f=65&t=67167"; }
+	function GetURL()           { return "https://www.tt-forums.net/viewtopic.php?f=65&t=67167"; }
 
 	function GetSettings() {
 		AddSetting({name = "use_trains", description = "Enable trains", easy_value = 1, medium_value = 1, hard_value = 1, custom_value = 1, flags = AICONFIG_BOOLEAN | AICONFIG_INGAME});
