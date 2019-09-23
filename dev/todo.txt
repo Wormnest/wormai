@@ -1,23 +1,10 @@
 WormAI TODO list
 ================
 
-24-4-2019:
-Worm built a train connection but by the time it finished the accepting industry was gone.
-We should regularly check if there is an accepting industry for our stations.
-
 BUG/IMPROVEMENT:
 Shorter timeout for train track building. Samu showed on IRC that it took 5 years before
 WormAI timed out trying to find a connection between 2 stations with only water in between.
-
-BUG by Samu:
-https://imgur.com/um6QTxF
-WormAI building short bridges where they are not needed (no water) for high speed lines!
-
-29-1-2018
-Samu reports that WormAI is building too many bridges for train connections and sometimes
-fails to clean up all rails.
-Also on that server the max loan is 150000 and starting in 1935, no NewGRF, no ships
-WormAI is behaving very poorly.
+[might be fixed by fixing the 90 degree bug in pathfinder]
 
 
 Features
@@ -104,8 +91,6 @@ TRAINS
   statin and also start transporting the other cargos from there.
 - longer trains can have a hard time pulling a lot of full cargo wagons depending on settings
   we might need to check if we need extra engines for pulling
-
-UPDATE AYSTAR 4 ---> 6 BUT BEWARE DIFFERENT PARAMETERS!  
 
 EVERYTHING:
 - In idle moments run/continue a MapÉxplorer class that explores the map in a 16x 16 or something grid
