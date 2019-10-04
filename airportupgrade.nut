@@ -34,7 +34,7 @@ class WormAirportUpgrade
 
 	upgrade_list = [];						///< Array of all airports needing an upgrade
 	in_progress = [];						///< Array of airports where an upgrade is in progress (waiting for airport to be cleared)
-	air_manager = null						///< WormAirManager class.
+	air_manager = null;						///< WormAirManager class.
 	upgrade_idx = 0;
 	
 	closed_count = 0;
