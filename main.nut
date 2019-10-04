@@ -158,7 +158,8 @@ class WormAI extends AIController {
 	 * Welcome says hello to the user and prints out the current AI gamesettings.
 	 */
 	function Welcome();
-	/* This is our SuperLib.Log acceptable log levels functions for debugging, returning always true.
+	/**
+	 * This is our SuperLib.Log acceptable log levels functions for debugging, returning always true.
 	 * Only to be used when we want to debug inside SuperLib.
 	 */
 	function SuperLib_Log_IsLevelAccepted_Function(log_level);
@@ -281,7 +282,8 @@ function WormAI::CanBuildTrains()
 	return false;
 }
 
-/* This is our SuperLib.Log acceptable log levels functions for debugging, returning always true.
+/**
+ * This is our SuperLib.Log acceptable log levels functions for debugging, returning always true.
  * Only to be used when we want to debug inside SuperLib.
  */
 function WormAI::SuperLib_Log_IsLevelAccepted_Function(log_level)
