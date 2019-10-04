@@ -1,6 +1,6 @@
 require("version.nut");
 
-class WormAI extends AIInfo {
+class WormAIInfo extends AIInfo {
 	function GetAuthor()        { return "Wormnest"; }
 	function GetName()          { return "WormAIDev"; }
 	function GetShortName()     { return "WOR0"; }
@@ -84,4 +84,4 @@ class WormAI extends AIInfo {
 	}
 }
 
-RegisterAI(WormAI());
+RegisterAI(WormAIInfo());
