@@ -9,6 +9,9 @@
  *
  */ 
 
+/**
+ * Class to store information about the airports we want to upgrade.
+ */
 class WormAirportToUpgrade
 {
 	station_id = 0;
@@ -60,6 +63,8 @@ class WormAirportUpgrade
 	function Remove(st_id); // Remove airport from upgrade queue.
 	
 	function UpgradeAirports();
+
+	function TryUpgradeAirport(airport);
 }
 
 /**

@@ -218,6 +218,14 @@ class WormAirManager
 	 */
 	function TryToBuildAirport(tile_1, tile_2, is_first_airport, airport_type);
 	/**
+	 * Try to upgrade an airport in specified town where old airport is at station_tile.
+	 * @param town The town connected to the airport.
+	 * @param station_tile The tile of the current airport.
+	 * @param optimal_airport The airport type we want to upgrade to.
+	 * @return false if we failed to upgrade, true if airport got upgraded.
+	 */
+	function TryUpgradeAirport(town, station_tile, optimal_airport);
+	/**
 	 * Tries to upgrade an airport.
 	 * @param nearest_town The nearest town according to town influence.
 	 * @param station_id The id of the airport to upgrade.
@@ -233,6 +241,13 @@ class WormAirManager
 	 * @param st_tile The tile location of the airport.
 	 */
 	function CanWeUpgradeSaturatedAirport(st_id, st_tile);
+	/**
+	 * Compute the optimal maximum distance an aircraft should fly based on the supplied maximum speed.
+	 * @param speed The maximum speed of the aircraft.
+	 * @param reliability The reliability of the aircraft.
+	 * @return The maximum distance in tiles.
+	 */
+	function GetPreferredMaxDistance(speed, reliability);
 	/// @}
 
 	/** @name Order handling */

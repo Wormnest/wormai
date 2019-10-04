@@ -79,6 +79,13 @@ class WormAirport
 	static function IsWithinNoiseLimit(tile, old_airport_type, new_airport_type);
 
 	/**
+	 * Demolish airport at specified tile. We will retry a few times before giving up.
+	 * If removing fails then give a warning.
+	 * @param tile The tile of the airport that should be removed.
+	 */
+	function DemolishAirport(tile);
+
+	/**
 	 * Remove airport at specified tile.
 	 * If removing fails then give a warning.
 	 * @note Note that using Sleep(x) here and trying again doesn't work for some reason (removing still fails)

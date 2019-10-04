@@ -114,6 +114,28 @@ class WormRailManager
 	function RegisterRoute(route_data, station_data, vehtype, group, train_length);
 
 	/**
+	 * Check if the specified cargo is currently produced by the specified station.
+	 * For now we simply check if it has a cargo rating, but only for stations at least
+	 * 1 year old since it can take a while to get a cargo rating.
+	 * @param statinID The ID of the station.
+	 * @param cargoID The ID of the cargo.
+	 */
+	function IsCargoProducedByStation(stationID, cargoID);
+
+	/**
+	 * Check if the specified cargo is currently accepted by the specified station.
+	 * @param statinID The ID of the station.
+	 * @param cargoID The ID of the cargo.
+	 */
+	function IsCargoAcceptedByStation(stationID, cargoID);
+
+	/**
+	 * Sell all trains that belong to the specified route.
+	 * @param route The route which has the trains that need to be sold.
+	 */
+	function SellAllTrains(route);
+
+	/**
 	 * Checks all routes. Empty routes are removed, new vehicles are added if needed, old vehicles are replaced,
 	 * vehicles are restarted if sitting in the depot for no reason, rails are electrified, short trains are lengthened.
 	 */
