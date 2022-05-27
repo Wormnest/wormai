@@ -1,6 +1,6 @@
 /**
  * This file is part of WormAI: An OpenTTD AI.
- * 
+ *
  * @file planner.nut Class that does planning for WormAI.
  * Based partially on code from SimpleAI.
  *
@@ -8,7 +8,7 @@
  * Author: Wormnest (Jacob Boerema)
  * Copyright: Jacob Boerema, 2016.
  *
- */ 
+ */
 
 /**
  * Define the WormRoute class which holds the details about a planned route.
@@ -28,7 +28,7 @@ class WormRoute
 	CargoList = null;
 	double = null;
 	distance_manhattan = null;
-	
+
 	/**
 	 * Constructor for WormRoute class.
 	 */
@@ -36,7 +36,7 @@ class WormRoute
 	{
 		this.ResetRoute();
 	}
-	
+
 	/**
 	 * Resets variables in WormRoute class to default values.
 	 */
@@ -73,7 +73,7 @@ class WormPlanner
 	route = null;				///< Details about the route we planned.
 	_rail_manager = null;
 	_last_sub_tried = -1;		///< Last subsidy we tried.
-	
+
 	constructor (rail_manager)
 	{
 		route = WormRoute();
@@ -141,10 +141,10 @@ function WormPlanner::GetSubsidizedRoute(planned_route)
 		planned_route.Cargo = AISubsidy.GetCargoType(sub);
 		planned_route.SourceIsTown = (AISubsidy.GetSourceType(sub) == AISubsidy.SPT_TOWN);
 		planned_route.SourceID = AISubsidy.GetSourceIndex(sub); // ID of Town or Industry
-		
+
 		// Skip if we are already transporting this cargo from this source.
 		if (_rail_manager.serviced.HasItem(planned_route.SourceID * 256 + planned_route.Cargo)) continue;
-		
+
 		if (planned_route.SourceIsTown) {
 			planned_route.SourceLocation = AITown.GetLocation(planned_route.SourceID);
 		} else {
@@ -257,7 +257,7 @@ function WormPlanner::GetRoute(planned_route)
 				planned_route.DestIsTown = true;
 				planned_route.DestList.Valuate(AITown.GetDistanceManhattanToTile, planned_route.SourceLocation);
 			}
-			
+
 			// Check the distance of the source and the destination
 			planned_route.DestList.KeepBelowValue(MAX_RAIL_ROUTE_LENGTH*route_length_multiplier);
 			planned_route.DestList.KeepAboveValue(MIN_RAIL_ROUTE_LENGTH*route_length_multiplier);
@@ -317,7 +317,7 @@ function WormPlanner::PlanRailRoute()
 	/// @todo replace number by a definied constant
 	if (route.distance_manhattan > 80) route.double = true;
 	else route.double = false;
-	
+
 	return true;
 }
 
@@ -332,6 +332,10 @@ function WormPlanner::GetMailCargo()
 
 function WormPlanner::GetLastMonthTransportedPercentage(ind, cargo)
 {
-	return (100 * AIIndustry.GetLastMonthTransported(ind, cargo) / AIIndustry.GetLastMonthProduction(ind, cargo));
+	local production = AIIndustry.GetLastMonthProduction(ind, cargo);
+	if (production > 0)
+		return (100 * AIIndustry.GetLastMonthTransported(ind, cargo) / production);
+	else
+		return 0;
 }
 
