@@ -64,7 +64,7 @@ for i, line in enumerate(lines):
             do_replace = False;
             replace_name = "";
         if (do_replace):
-            print "Replacing: '" +  quoted_name + "' with: '" + replace_name + "'";
+            print("Replacing: '" + quoted_name + "' with: '" + replace_name + "'")
             line = line[:r.start(1)] + replace_name + line[r.end(1):];
     # Write the possibly changed line back to file
     info_file.write(line);
