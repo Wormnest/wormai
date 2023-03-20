@@ -1,1 +1,1 @@
-e:\Python27\python.exe update_library_versions.py
+d:\msys64\mingw64\bin\python.exe update_library_versions.py
