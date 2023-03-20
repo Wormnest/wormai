@@ -54,7 +54,7 @@ changed during the game.
 2. Enable trains [default: on]
    This setting turns on or off train building.
 
-2. How fast this AI will think [default depends on AI competitor speed 
+2. How fast this AI will think [default depends on AI competitor speed
    setting]
    This setting regulates the thinking speed of WormAI. Slower speed means
    the AI will wait longer between building and managing airports and
@@ -99,4 +99,4 @@ Air transport handling is based on WrightAI.
 Rail transport handling is based on SimpleAI.
 
 
-Wormnest (Jacob Boerema), 2013-2019
+Wormnest (Jacob Boerema), 2013-2023
