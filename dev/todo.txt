@@ -10,6 +10,9 @@ If you leave easy, medium, hard it does:
 When we start using this we should set minimum API version to 14.
 See: see https://docs.openttd.org/ai-api/classAIInfo
 
+Note: we could always add a "AI contest on/off" boolean setting that overrules
+any user settings.
+
 BUG/IMPROVEMENT:
 Shorter timeout for train track building. Samu showed on IRC that it took 5 years before
 WormAI timed out trying to find a connection between 2 stations with only water in between.
