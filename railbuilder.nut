@@ -1306,23 +1306,25 @@ function WormRailBuilder::BuildAndStartTrains(number, length, engine, wagon, ord
 	if ((length > 3) && (AICargo.GetTownEffect(cargo) == AICargo.TE_PASSENGERS)) {
 		// Choose a wagon for mail
 		local mailcargo = WormPlanner.GetMailCargo();
-		mailwagontype = WormRailBuilder.ChooseWagon(mailcargo, engineblacklist);
-		if (mailwagontype == null) mailwagontype = wagon;
-		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < AIEngine.GetPrice(mailwagontype)) {
-			WormMoney.GetMoney(AIEngine.GetPrice(mailwagontype), WormMoney.WM_SILENT);
-		}
-		mailwagon = AIVehicle.BuildVehicle(station_data.homedepot, mailwagontype);
-		if (mailwagon != null) {
-			// Try to refit the mail wagon if needed
-			local mailwagoncargo = AIEngine.GetCargoType(AIVehicle.GetEngineType(mailwagon));
-			if (AICargo.GetTownEffect(mailwagoncargo) != AICargo.TE_MAIL) {
-				if (mailwagontype == wagon) {
-					// Some workaround if the mail wagon type is the same as the wagon type
-					WormRailBuilder.MailWagonWorkaround(mailwagon, firstwagon, trainengine, mailcargo);
-				} else {
-					if (!AIVehicle.RefitVehicle(mailwagon, mailcargo)) {
-						// If no mail wagon was found, and the other wagons needed to be refitted, refit the "mail wagon" as well
-						if (mailwagoncargo != cargo) AIVehicle.RefitVehicle(mailwagon, cargo);
+		if (mailcargo != null) {
+			mailwagontype = WormRailBuilder.ChooseWagon(mailcargo, engineblacklist);
+			if (mailwagontype == null) mailwagontype = wagon;
+			if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < AIEngine.GetPrice(mailwagontype)) {
+				WormMoney.GetMoney(AIEngine.GetPrice(mailwagontype), WormMoney.WM_SILENT);
+			}
+			mailwagon = AIVehicle.BuildVehicle(station_data.homedepot, mailwagontype);
+			if (mailwagon != null) {
+				// Try to refit the mail wagon if needed
+				local mailwagoncargo = AIEngine.GetCargoType(AIVehicle.GetEngineType(mailwagon));
+				if (AICargo.GetTownEffect(mailwagoncargo) != AICargo.TE_MAIL) {
+					if (mailwagontype == wagon) {
+						// Some workaround if the mail wagon type is the same as the wagon type
+						WormRailBuilder.MailWagonWorkaround(mailwagon, firstwagon, trainengine, mailcargo);
+					} else {
+						if (!AIVehicle.RefitVehicle(mailwagon, mailcargo)) {
+							// If no mail wagon was found, and the other wagons needed to be refitted, refit the "mail wagon" as well
+							if (mailwagoncargo != cargo) AIVehicle.RefitVehicle(mailwagon, cargo);
+						}
 					}
 				}
 			}
