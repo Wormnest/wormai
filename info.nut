@@ -18,6 +18,11 @@ class WormAIInfo extends AIInfo {
 		AddSetting({name = "use_planes", description = "Enable aircraft", easy_value = 1, medium_value = 1, hard_value = 1, custom_value = 1, flags = AICONFIG_BOOLEAN | AICONFIG_INGAME});
 		//AddSetting({name = "use_ships", description = "Enable ships", easy_value = 1, medium_value = 1, hard_value = 1, custom_value = 1, flags = AICONFIG_BOOLEAN | AICONFIG_INGAME});
 
+		// FIXME: easy, medium, hard, custom are gone: replace by default and
+		//        random_deviation, then set API version to 14!
+		//        For now leave it as is, to keep compatibility.
+		// see https://docs.openttd.org/ai-api/classAIInfo
+
 		AddSetting({
 			name = "ai_speed",
 			description = "How fast this AI will think (can't be changed in the game)",
@@ -30,7 +35,7 @@ class WormAIInfo extends AIInfo {
 			flags = CONFIG_NONE
 		});
 		AddLabels("ai_speed", {
-		  _1 = "Slow", 
+		  _1 = "Slow",
 		  _2 = "Normal",
 		  _3 = "Fast"
 		  });

@@ -1,6 +1,15 @@
 WormAI TODO list
 ================
 
+In OpenTTD 14 AddSetting in info.nut was changed.
+No more easy, medium, hard value, instead you set a "default"value and
+optionally a deviation that randomizes the value at startup.
+If you leave easy, medium, hard it does:
+"if you used easy/medium/hard it's converted to default = medium and
+ random deviation = (hard-easy) / 2"
+When we start using this we should set minimum API version to 14.
+See: see https://docs.openttd.org/ai-api/classAIInfo
+
 BUG/IMPROVEMENT:
 Shorter timeout for train track building. Samu showed on IRC that it took 5 years before
 WormAI timed out trying to find a connection between 2 stations with only water in between.
@@ -18,7 +27,7 @@ Features
   - GetName that first checks for null engine where AIEngine.GetName crashes script, etc...
 + For selecting towns instead of based on population maybe select on fastest growing.
   Possibly only when we selected Fast mode.
-  
+
 
 Trains:
 + Use maybe a combination of what SimpleAI and FastPTPAI do with trains.
@@ -35,7 +44,7 @@ Trains:
   we compute ourselves what that exactly will be depending on the circumstances.
 + Also check at loading whether there are any stations that are not in our list
   anymore, maybe only when we are debugging.
-+ Also: In early games with low maximum speeds we may need to adjust maximum and 
++ Also: In early games with low maximum speeds we may need to adjust maximum and
   maybe even minimum distance to get a round trip within a year.
 + MOVE HeadQuarters if we remove our station near the city where the HQ are.
 + We need another look at airplane crashing. It seems to me there's still a lot of
@@ -44,11 +53,11 @@ Trains:
   also on the best type of airport we can use. Since newer ones can handle more planes.
 + Max distance should also depend on the speed of our chosen airplane/capacity, and
   possibly also on breakdowns being on/off.
-  
+
 + CLIMATES
   We need to add support for sub-tropic and arctic since WormAI does not perform
   too well there especially sub-tropic since towns need water and food.
-  
+
 ENDGAME
 + When we cant seem to add any more aircraft or airfields think of other things to do with our
   time and money. If we are not maxed out with planes etc than start looking for less obvious places
