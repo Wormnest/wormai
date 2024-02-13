@@ -1,6 +1,17 @@
 WormAI Changelog
 ================
 
+Version 10, 2024-02-13
+---------------------
+  + Fix: crash when there is no mail cargo.
+
+Version 9, 2023-03-20
+---------------------
+  + Fix: divide by zero when production is zero.
+  + Doxygen documentation improvements.
+  + Use https links.
+  + Use python3 for making releases.
+
 Version 8, 2019-09-19
 ---------------------
 + Fix: Determination of 90 degree turn in rail pathfinder was wrong causing
