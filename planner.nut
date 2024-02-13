@@ -105,7 +105,7 @@ class WormPlanner
 	/**
 	 * Gets the CargoID associated with mail.
 	 * @note Taken from SimpleAI.
-	 * @return The CargoID of mail.
+	 * @return The CargoID of mail or null if no mail cargo was found.
 	 */
 	static function GetMailCargo();
 
