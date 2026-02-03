@@ -23,7 +23,7 @@ Log <- SuperLib.Log;
 Helper <- SuperLib.Helper;
 Data <- SuperLib.DataStore;
 ScoreList <- SuperLib.ScoreList;
-Money <- SuperLib.Money;
+//Money <- SuperLib.Money;
 
 Tile <- SuperLib.Tile;
 Direction <- SuperLib.Direction;

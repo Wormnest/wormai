@@ -385,7 +385,7 @@ function WormRailBuilder::TrainEngineValuator(engine, weight, max_speed, money)
 	local speed = AIEngine.GetMaxSpeed(engine);
 	local speed_points = (speed > max_speed) ? (360 * max_speed / 112.0) : (360 * speed / 112.0)
 	value += speed_points;
-	local runningcost_limit = (6000 / Money.GetInflationRate()).tointeger();
+	local runningcost_limit = (6000 / WormMoney.GetInflationRate()).tointeger();
 	local runningcost = AIEngine.GetRunningCost(engine).tofloat();
 	local runningcost_penalty = (runningcost > runningcost_limit) ? ((runningcost > 3 * runningcost_limit) ?
 		(runningcost / 20.0 - 550.0) : (runningcost / 40.0 - 100.0)) : (runningcost / 120.0)

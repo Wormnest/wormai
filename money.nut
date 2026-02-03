@@ -34,7 +34,14 @@ class WormMoney
 	 * @return Boolean saying if we got the needed money or not.
 	 */
 	static function GetMoney(money, silent = false);
-	
+
+	/**
+	 * Compute the inflation rate.
+	 * @return The inflation rate.
+	 * @note Adapted from SuperLib.Money.GetInflationRate: protect against division by zero.
+	 */
+	static function GetInflationRate();
+
 	/**
 	 * Compute the amount of money corrected for inflation.
 	 * @param money The uncorrected amount of money.
@@ -100,10 +107,23 @@ function WormMoney::GetMoney(money, silent = false)
 	return AICompany.SetLoanAmount(loan);
 }
 
+function WormMoney::GetInflationRate()
+{
+	/* This value can be zero and then normally used in combination with a gamescript. */
+	local max_loan     = AIGameSettings.GetValue("difficulty.max_loan");
+	local inflated_max = AICompany.GetMaxLoanAmount();
+
+	if (max_loan >= 100 && inflated_max >= 100) {
+		return inflated_max / (max_loan / 100);
+	}
+	/* Can't determine inflation rate, return 100 as if there is no inflation. */
+	return 100;
+}
+
 function WormMoney::InflationCorrection(money)
 {
 	/* Using a local variable to compute inflation only once should be faster I think. */
-	local inflation = _SuperLib_Money.GetInflationRate();
+	local inflation = WormMoney.GetInflationRate();
 	return (money / 100) * inflation + (money % 100) * inflation / 100;
 }
 
