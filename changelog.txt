@@ -1,6 +1,9 @@
 WormAI Changelog
 ================
 
+Version 11, 2026-02-03
+  + Fix: division by zero in SuperLib.GetInflationRate.
+
 Version 10, 2024-02-13
 ---------------------
   + Fix: crash when there is no mail cargo.
